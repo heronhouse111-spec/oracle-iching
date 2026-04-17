@@ -29,6 +29,13 @@ export default function Home() {
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const chatAbortRef = useRef<AbortController | null>(null);
+
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
     setStep("question");
@@ -160,6 +167,62 @@ export default function Home() {
     }
   };
 
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || isChatLoading || !hexagram) return;
+
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    const newMessages = [...chatMessages, { role: "user" as const, content: userMsg }];
+    setChatMessages(newMessages);
+    setIsChatLoading(true);
+
+    // Build hexagram context for the AI
+    const hexContext = locale === "zh"
+      ? `本卦：第${hexagram.number}卦 ${hexagram.nameZh}\n卦辭：${hexagram.judgmentZh}\n象辭：${hexagram.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
+      : `Hexagram ${hexagram.number}: ${hexagram.nameEn}\nJudgment: ${hexagram.judgmentEn}\nImage: ${hexagram.imageEn}\nQuestion: ${userQuestion}\nReading: ${aiReading}`;
+
+    if (chatAbortRef.current) chatAbortRef.current.abort();
+    const controller = new AbortController();
+    chatAbortRef.current = controller;
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMessages,
+          hexagramContext: hexContext,
+          locale,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) throw new Error("API error");
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullReply = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (controller.signal.aborted) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullReply += chunk;
+          setChatMessages([...newMessages, { role: "assistant", content: fullReply }]);
+        }
+      }
+
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setChatMessages([...newMessages, { role: "assistant", content: t("抱歉，暫時無法回覆。", "Sorry, unable to reply at the moment.") }]);
+    } finally {
+      if (!controller.signal.aborted) setIsChatLoading(false);
+    }
+  };
+
   const handleReset = () => {
     setStep("category");
     setSelectedCategory("");
@@ -173,6 +236,9 @@ export default function Home() {
     setRelatingHexagram(null);
     setAiReading("");
     setIsLoadingAI(false);
+    setChatMessages([]);
+    setChatInput("");
+    setIsChatLoading(false);
   };
 
   return (
@@ -391,6 +457,81 @@ export default function Home() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Chat with Master */}
+              <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 16 }}>
+                  {t("繼續請教老師", "Ask the Master")}
+                </h3>
+
+                {/* Chat messages */}
+                {chatMessages.length > 0 && (
+                  <div style={{ maxHeight: 360, overflowY: "auto", marginBottom: 16, paddingRight: 4 }}>
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} style={{
+                        display: "flex",
+                        justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                        marginBottom: 12,
+                      }}>
+                        <div style={{
+                          maxWidth: "80%",
+                          padding: "10px 14px",
+                          borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                          background: msg.role === "user" ? "rgba(212,168,85,0.2)" : "rgba(30,30,60,0.8)",
+                          border: msg.role === "user" ? "1px solid rgba(212,168,85,0.3)" : "1px solid rgba(192,192,208,0.15)",
+                          color: msg.role === "user" ? "#e8e0d0" : "rgba(192,192,208,0.9)",
+                          fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
+                        }}>
+                          {msg.role === "assistant" && (
+                            <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 4 }}>
+                              {t("老師", "Master")}
+                            </span>
+                          )}
+                          {msg.content}
+                          {isChatLoading && i === chatMessages.length - 1 && msg.role === "assistant" && (
+                            <motion.span
+                              animate={{ opacity: [1, 0] }}
+                              transition={{ duration: 0.8, repeat: Infinity }}
+                              style={{ display: "inline-block", width: 6, height: 14, background: "#d4a855", marginLeft: 2, verticalAlign: "middle" }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+
+                {/* Input area */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
+                    placeholder={t("想問老師什麼呢...", "Ask the master anything...")}
+                    disabled={isChatLoading || isLoadingAI}
+                    style={{
+                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      background: "rgba(10,10,26,0.5)", border: "1px solid rgba(212,168,85,0.2)",
+                      color: "white", fontSize: 14, outline: "none",
+                      fontFamily: "'Noto Sans TC', sans-serif",
+                    }}
+                  />
+                  <button
+                    onClick={sendChatMessage}
+                    disabled={!chatInput.trim() || isChatLoading || isLoadingAI}
+                    style={{
+                      padding: "10px 18px", borderRadius: 12,
+                      background: chatInput.trim() && !isChatLoading ? "linear-gradient(135deg, #d4a855, #b8860b)" : "rgba(212,168,85,0.2)",
+                      border: "none", color: chatInput.trim() && !isChatLoading ? "#1a1a2e" : "rgba(192,192,208,0.4)",
+                      fontSize: 14, fontWeight: 600, cursor: chatInput.trim() && !isChatLoading ? "pointer" : "default",
+                    }}
+                  >
+                    {t("送出", "Send")}
+                  </button>
+                </div>
               </div>
 
               {/* Actions */}
