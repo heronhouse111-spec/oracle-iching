@@ -317,25 +317,53 @@ export default function Home() {
                   )}
                 </div>
 
-                <div style={{ borderTop: "1px solid rgba(212,168,85,0.1)", paddingTop: 16, marginTop: 16 }}>
-                  <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, fontStyle: "italic", fontFamily: "'Noto Serif TC', serif" }}>
-                    {locale === "zh" ? hexagram.judgmentZh : hexagram.judgmentEn}
-                  </p>
-                </div>
               </div>
 
-              {/* AI Reading */}
+              {/* 卦辭 Judgment Section */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
-                <h3 className="text-gold-gradient" style={{ fontSize: 18, fontFamily: "'Noto Serif TC', serif", marginBottom: 12 }}>
-                  ✦ {t("AI 智慧解讀", "AI Interpretation")}
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                  {t("卦辭", "Judgment")}
                 </h3>
+                <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
+                  {locale === "zh" ? hexagram.judgmentZh : hexagram.judgmentEn}
+                </p>
+                {locale === "zh" && hexagram.judgmentVernacularZh && (
+                  <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                    {hexagram.judgmentVernacularZh}
+                  </p>
+                )}
+              </div>
+
+              {/* 象辭 Image Section */}
+              <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                  {t("象辭", "Image")}
+                </h3>
+                <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
+                  {locale === "zh" ? hexagram.imageZh : hexagram.imageEn}
+                </p>
+                {locale === "zh" && hexagram.imageVernacularZh && (
+                  <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                    {hexagram.imageVernacularZh}
+                  </p>
+                )}
+              </div>
+
+              {/* AI Analysis - clearly marked */}
+              <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 4 }}>
+                  ✦ {t("AI 個人化分析", "AI Personalized Analysis")}
+                </h3>
+                <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginBottom: 12 }}>
+                  {t("以下內容由 AI 根據您的問題生成", "The following is AI-generated based on your question")}
+                </p>
 
                 {isLoadingAI && !aiReading ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "32px 0" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "24px 0" }}>
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       style={{ fontSize: 24 }}>☯</motion.div>
                     <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14 }}>
-                      {t("正在解讀卦象...", "Interpreting the hexagram...")}
+                      {t("正在為您分析...", "Analyzing for you...")}
                     </span>
                   </div>
                 ) : (
