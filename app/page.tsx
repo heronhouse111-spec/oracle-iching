@@ -367,12 +367,9 @@ export default function Home() {
 
               {/* AI Analysis - clearly marked */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
-                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 4 }}>
-                  ✦ {t("AI 個人化分析", "AI Personalized Analysis")}
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                  ✦ {t("老師解盤", "Master's Reading")}
                 </h3>
-                <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginBottom: 12 }}>
-                  {t("以下內容由 AI 根據您的問題生成", "The following is AI-generated based on your question")}
-                </p>
 
                 {isLoadingAI && !aiReading ? (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "24px 0" }}>
