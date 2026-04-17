@@ -19,25 +19,97 @@ interface Record {
   primary_lines: number[];
 }
 
+type Source = "supabase" | "local" | null;
+
+const isSupabaseConfigured =
+  typeof window !== "undefined" &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_url_here";
+
 export default function HistoryPage() {
   const { locale, t } = useLanguage();
   const [records, setRecords] = useState<Record[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [source, setSource] = useState<Source>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("divination_history");
-    if (stored) setRecords(JSON.parse(stored));
-    setIsLoading(false);
+    const loadFromLocal = () => {
+      try {
+        const stored = localStorage.getItem("divination_history");
+        if (stored) setRecords(JSON.parse(stored));
+      } catch (e) {
+        console.error("localStorage read failed:", e);
+      }
+      setSource("local");
+      setIsLoading(false);
+    };
+
+    const load = async () => {
+      if (!isSupabaseConfigured) {
+        loadFromLocal();
+        return;
+      }
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          loadFromLocal();
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("divinations")
+          .select(
+            "id, created_at, question, category, hexagram_number, primary_lines, changing_lines, ai_reading"
+          )
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Supabase fetch failed:", error);
+          loadFromLocal();
+          return;
+        }
+
+        setRecords((data as Record[]) ?? []);
+        setSource("supabase");
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Supabase error:", e);
+        loadFromLocal();
+      }
+    };
+
+    load();
   }, []);
 
   return (
     <div style={{ minHeight: "100vh" }}>
       <Header />
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
-        <h1 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif", textAlign: "center", marginBottom: 24 }}>
+        <h1 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif", textAlign: "center", marginBottom: 8 }}>
           {t("占卜紀錄", "Divination History")}
         </h1>
+
+        {source && !isLoading && (
+          <p
+            style={{
+              textAlign: "center",
+              color: "rgba(192,192,208,0.4)",
+              fontSize: 11,
+              marginBottom: 20,
+            }}
+          >
+            {source === "supabase"
+              ? t("☁ 雲端同步中", "☁ Synced to cloud")
+              : t("📱 僅存於本機(登入後可跨裝置同步)", "📱 Local only (sign in to sync across devices)")}
+          </p>
+        )}
 
         {isLoading ? (
           <div style={{ textAlign: "center", padding: 48, color: "rgba(192,192,208,0.6)" }}>
