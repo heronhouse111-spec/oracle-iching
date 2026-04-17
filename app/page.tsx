@@ -460,31 +460,31 @@ export default function Home() {
               </div>
 
               {/* Chat with Master */}
-              <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
-                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 16 }}>
+              <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
                   {t("繼續請教老師", "Ask the Master")}
                 </h3>
 
                 {/* Chat messages */}
                 {chatMessages.length > 0 && (
-                  <div style={{ maxHeight: 360, overflowY: "auto", marginBottom: 16, paddingRight: 4 }}>
+                  <div style={{ maxHeight: 320, overflowY: "auto", marginBottom: 12 }}>
                     {chatMessages.map((msg, i) => (
                       <div key={i} style={{
                         display: "flex",
                         justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
-                        marginBottom: 12,
+                        marginBottom: 10,
                       }}>
                         <div style={{
-                          maxWidth: "80%",
-                          padding: "10px 14px",
-                          borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                          maxWidth: "85%",
+                          padding: "8px 12px",
+                          borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
                           background: msg.role === "user" ? "rgba(212,168,85,0.2)" : "rgba(30,30,60,0.8)",
                           border: msg.role === "user" ? "1px solid rgba(212,168,85,0.3)" : "1px solid rgba(192,192,208,0.15)",
                           color: msg.role === "user" ? "#e8e0d0" : "rgba(192,192,208,0.9)",
                           fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
                         }}>
                           {msg.role === "assistant" && (
-                            <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 4 }}>
+                            <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
                               {t("老師", "Master")}
                             </span>
                           )}
@@ -503,30 +503,32 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Input area */}
-                <div style={{ display: "flex", gap: 8 }}>
+                {/* Input area - mobile optimized */}
+                <div style={{ display: "flex", gap: 6, width: "100%", boxSizing: "border-box" }}>
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
-                    placeholder={t("想問老師什麼呢...", "Ask the master anything...")}
+                    placeholder={t("想問老師什麼呢...", "Ask the master...")}
                     disabled={isChatLoading || isLoadingAI}
                     style={{
-                      flex: 1, padding: "10px 14px", borderRadius: 12,
+                      flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10,
                       background: "rgba(10,10,26,0.5)", border: "1px solid rgba(212,168,85,0.2)",
                       color: "white", fontSize: 14, outline: "none",
                       fontFamily: "'Noto Sans TC', sans-serif",
+                      boxSizing: "border-box",
                     }}
                   />
                   <button
                     onClick={sendChatMessage}
                     disabled={!chatInput.trim() || isChatLoading || isLoadingAI}
                     style={{
-                      padding: "10px 18px", borderRadius: 12,
+                      flexShrink: 0, padding: "10px 14px", borderRadius: 10,
                       background: chatInput.trim() && !isChatLoading ? "linear-gradient(135deg, #d4a855, #b8860b)" : "rgba(212,168,85,0.2)",
                       border: "none", color: chatInput.trim() && !isChatLoading ? "#1a1a2e" : "rgba(192,192,208,0.4)",
                       fontSize: 14, fontWeight: 600, cursor: chatInput.trim() && !isChatLoading ? "pointer" : "default",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {t("送出", "Send")}
