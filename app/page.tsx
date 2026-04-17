@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
@@ -27,6 +27,7 @@ export default function Home() {
   const [relatingHexagram, setRelatingHexagram] = useState<Hexagram | null>(null);
   const [aiReading, setAiReading] = useState("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
@@ -87,6 +88,14 @@ export default function Home() {
 
   const fetchAIReading = async (result: DivinationResult, hex: Hexagram | null) => {
     if (!hex) return;
+
+    // Abort any previous in-flight request to prevent interleaved text
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoadingAI(true);
     setAiReading("");
 
@@ -106,6 +115,7 @@ export default function Home() {
           category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
           locale,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) throw new Error("API error");
@@ -118,29 +128,35 @@ export default function Home() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          if (controller.signal.aborted) break;
           const chunk = decoder.decode(value, { stream: true });
           fullText += chunk;
-          setAiReading((prev) => prev + chunk);
+          setAiReading(fullText);
         }
       }
 
-      await saveDivination({
-        question: userQuestion,
-        category: selectedCategory,
-        hexagramNumber: hex.number,
-        primaryLines: result.primaryLines,
-        changingLines: result.changingLines,
-        relatingHexagramNumber: relHex?.number ?? null,
-        aiReading: fullText,
-        locale,
-      });
-    } catch {
+      if (!controller.signal.aborted) {
+        await saveDivination({
+          question: userQuestion,
+          category: selectedCategory,
+          hexagramNumber: hex.number,
+          primaryLines: result.primaryLines,
+          changingLines: result.changingLines,
+          relatingHexagramNumber: relHex?.number ?? null,
+          aiReading: fullText,
+          locale,
+        });
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setAiReading(
         t("抱歉，AI 解讀暫時無法使用。請確認 API 金鑰已設定。",
           "Sorry, AI reading is temporarily unavailable. Please check your API key.")
       );
     } finally {
-      setIsLoadingAI(false);
+      if (!controller.signal.aborted) {
+        setIsLoadingAI(false);
+      }
     }
   };
 
