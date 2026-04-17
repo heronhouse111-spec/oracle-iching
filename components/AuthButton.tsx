@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 // Check if Supabase is configured
@@ -79,13 +80,30 @@ export default function AuthButton() {
       </button>
       {showMenu && (
         <div className="mystic-card" style={{
-          position: "absolute", right: 0, top: 40, padding: 12, minWidth: 160, zIndex: 50,
+          position: "absolute", right: 0, top: 40, padding: 12, minWidth: 180, zIndex: 50,
         }}>
-          <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: 0 }}>
             {user.email}
           </p>
+          <Link
+            href="/account"
+            onClick={() => setShowMenu(false)}
+            style={{
+              display: "block",
+              color: "#d4a855",
+              fontSize: 12,
+              marginTop: 10,
+              paddingTop: 8,
+              borderTop: "1px solid rgba(212,168,85,0.1)",
+              textDecoration: "none",
+            }}
+          >
+            {t("我的會員", "My Account")} →
+          </Link>
           <button onClick={handleLogout} style={{
-            color: "#d4a855", fontSize: 12, background: "none", border: "none", cursor: "pointer", marginTop: 8,
+            color: "#d4a855", fontSize: 12, background: "none", border: "none", cursor: "pointer",
+            marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(212,168,85,0.1)",
+            width: "100%", textAlign: "left",
           }}>
             {t("登出", "Sign Out")}
           </button>
