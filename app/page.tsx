@@ -1,16 +1,22 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import HexagramDisplay from "@/components/HexagramDisplay";
 import CoinAnimation from "@/components/CoinAnimation";
+import ShareCard from "@/components/ShareCard";
 import { performDivination, questionCategories, type DivinationResult, type CoinThrow } from "@/lib/divination";
 import { findHexagram, type Hexagram } from "@/data/hexagrams";
 import { saveDivination } from "@/lib/saveDivination";
 
 type Step = "category" | "question" | "divination" | "result";
+
+const isSupabaseConfigured =
+  typeof window !== "undefined" &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_url_here";
 
 export default function Home() {
   const { locale, t } = useLanguage();
@@ -35,6 +41,73 @@ export default function Home() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const chatAbortRef = useRef<AbortController | null>(null);
+
+  // Share state(訂閱判定 + 下載狀態)
+  const [isActive, setIsActive] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
+
+  // 拿登入者訂閱狀態 — 只要走進結果頁就跑一次
+  useEffect(() => {
+    if (step !== "result") return;
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+        const { data } = await supabase
+          .from("user_subscription_summary")
+          .select("is_active")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!cancelled) setIsActive(Boolean(data?.is_active));
+      } catch (e) {
+        console.error("訂閱狀態查詢失敗:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
+
+  const handleShare = async () => {
+    if (!hexagram || !divinationResult || isSharing) return;
+    setIsSharing(true);
+    setShareMessage(null);
+    try {
+      const { toPng } = await import("html-to-image");
+      // 等一個 animation frame 確保 ShareCard 已經 mount 進 DOM
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const node = shareCardRef.current;
+      if (!node) throw new Error("ShareCard not mounted");
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 1080,
+        height: 1350,
+      });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      const ts = new Date().toISOString().slice(0, 10);
+      link.download = `oracle-iching-${hexagram.number}-${ts}.png`;
+      link.click();
+      setShareMessage(t("分享圖已下載 ✨", "Share image downloaded ✨"));
+    } catch (e) {
+      console.error("下載分享圖失敗:", e);
+      setShareMessage(
+        t("下載失敗,請再試一次", "Download failed, please try again")
+      );
+    } finally {
+      setIsSharing(false);
+      setTimeout(() => setShareMessage(null), 4000);
+    }
+  };
 
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
@@ -239,6 +312,8 @@ export default function Home() {
     setChatMessages([]);
     setChatInput("");
     setIsChatLoading(false);
+    setIsSharing(false);
+    setShareMessage(null);
   };
 
   return (
@@ -459,6 +534,39 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Share card download */}
+              {!isLoadingAI && aiReading && (
+                <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: "1 1 200px" }}>
+                      <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 4 }}>
+                        📤 {t("分享這次占卜", "Share this divination")}
+                      </h3>
+                      <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, lineHeight: 1.6 }}>
+                        {isActive
+                          ? t("下載無浮水印分享圖（付費會員專屬）", "Clean share image (premium member perk)")
+                          : t("下載分享圖（免費版含浮水印，升級即可移除）", "Download share image (free version has watermark)")}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleShare}
+                      disabled={isSharing}
+                      className="btn-gold"
+                      style={{ fontSize: 14, padding: "10px 20px", flexShrink: 0 }}
+                    >
+                      {isSharing
+                        ? t("產生中…", "Generating…")
+                        : t("下載分享圖", "Download")}
+                    </button>
+                  </div>
+                  {shareMessage && (
+                    <div style={{ marginTop: 10, fontSize: 13, color: "#fde68a" }}>
+                      {shareMessage}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Chat with Master */}
               <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
@@ -546,6 +654,39 @@ export default function Home() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Hidden off-screen ShareCard — 只在 result step 渲染 */}
+      {step === "result" && hexagram && divinationResult && (() => {
+        const cat = questionCategories.find((c) => c.id === selectedCategory);
+        return (
+          <div
+            aria-hidden
+            style={{
+              position: "fixed",
+              left: -99999,
+              top: 0,
+              pointerEvents: "none",
+              opacity: 1,
+            }}
+          >
+            <ShareCard
+              ref={shareCardRef}
+              hexagram={hexagram}
+              relatingHexagram={relatingHexagram}
+              primaryLines={divinationResult.primaryLines}
+              relatingLines={divinationResult.relatingLines}
+              changingLines={divinationResult.changingLines}
+              question={userQuestion}
+              categoryIcon={cat?.icon ?? "🔮"}
+              categoryNameZh={cat?.nameZh ?? "綜合"}
+              categoryNameEn={cat?.nameEn ?? "General"}
+              aiReading={aiReading}
+              locale={locale}
+              showWatermark={!isActive}
+            />
+          </div>
+        );
+      })()}
 
       {/* Background decoration */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: -1 }}>
