@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
@@ -21,6 +22,8 @@ interface Record {
 
 type Source = "supabase" | "local" | null;
 
+const FREE_VISIBLE_LIMIT = 3;
+
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -32,6 +35,8 @@ export default function HistoryPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [source, setSource] = useState<Source>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const loadFromLocal = () => {
@@ -62,21 +67,32 @@ export default function HistoryPage() {
           return;
         }
 
-        const { data, error } = await supabase
-          .from("divinations")
-          .select(
-            "id, created_at, question, category, hexagram_number, primary_lines, changing_lines, ai_reading"
-          )
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+        setUserEmail(user.email ?? null);
 
-        if (error) {
-          console.error("Supabase fetch failed:", error);
+        // Fetch subscription status + divinations in parallel
+        const [subRes, divRes] = await Promise.all([
+          supabase
+            .from("user_subscription_summary")
+            .select("is_active")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("divinations")
+            .select(
+              "id, created_at, question, category, hexagram_number, primary_lines, changing_lines, ai_reading"
+            )
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        if (divRes.error) {
+          console.error("Supabase fetch failed:", divRes.error);
           loadFromLocal();
           return;
         }
 
-        setRecords((data as Record[]) ?? []);
+        setIsActive(Boolean(subRes.data?.is_active));
+        setRecords((divRes.data as Record[]) ?? []);
         setSource("supabase");
         setIsLoading(false);
       } catch (e) {
@@ -87,6 +103,22 @@ export default function HistoryPage() {
 
     load();
   }, []);
+
+  // Subscription gating (only applies when signed into Supabase)
+  const gatingApplies = source === "supabase" && !isActive;
+  const visibleRecords = gatingApplies
+    ? records.slice(0, FREE_VISIBLE_LIMIT)
+    : records;
+  const lockedCount = gatingApplies
+    ? Math.max(0, records.length - FREE_VISIBLE_LIMIT)
+    : 0;
+
+  // Watermark text: email + date (for expanded AI reading)
+  const watermarkText = userEmail
+    ? `${userEmail} · ${new Date().toLocaleDateString(
+        locale === "zh" ? "zh-TW" : "en-US"
+      )}`
+    : null;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -125,7 +157,7 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {records.map((record) => {
+            {visibleRecords.map((record) => {
               const hex = getHexagramByNumber(record.hexagram_number);
               const cat = questionCategories.find((c) => c.id === record.category);
               const isExpanded = expandedId === record.id;
@@ -156,18 +188,167 @@ export default function HistoryPage() {
 
                   {isExpanded && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                      style={{ borderTop: "1px solid rgba(212,168,85,0.1)", padding: 16 }}>
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                      style={{ borderTop: "1px solid rgba(212,168,85,0.1)", padding: 16, position: "relative", overflow: "hidden" }}>
+                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, position: "relative", zIndex: 1 }}>
                         <HexagramDisplay lines={record.primary_lines} changingLines={record.changing_lines} size="sm" animate={false} />
                       </div>
-                      <div style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                      <div style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", position: "relative", zIndex: 1 }}>
                         {record.ai_reading}
                       </div>
+
+                      {/* Translucent watermark to deter unauthorized screenshot sharing */}
+                      {watermarkText && (
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            pointerEvents: "none",
+                            overflow: "hidden",
+                            zIndex: 0,
+                            opacity: 0.07,
+                            userSelect: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%) rotate(-25deg)",
+                              whiteSpace: "nowrap",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 48,
+                              fontSize: 14,
+                              color: "#d4a855",
+                              fontFamily: "'Noto Serif TC', serif",
+                            }}
+                          >
+                            {[0, 1, 2, 3, 4].map((i) => (
+                              <div key={i} style={{ letterSpacing: 3 }}>
+                                {watermarkText} · {watermarkText} · {watermarkText}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </motion.div>
               );
             })}
+
+            {/* Locked records upsell */}
+            {lockedCount > 0 && (
+              <div
+                className="mystic-card"
+                style={{
+                  position: "relative",
+                  padding: 24,
+                  overflow: "hidden",
+                  border: "1px solid rgba(212,168,85,0.25)",
+                }}
+              >
+                {/* Faux "locked" card rows behind the overlay */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    filter: "blur(6px)",
+                    opacity: 0.35,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: 10,
+                      }}
+                    >
+                      <div style={{ fontSize: 22 }}>䷀</div>
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            height: 10,
+                            width: "40%",
+                            background: "rgba(212,168,85,0.3)",
+                            borderRadius: 4,
+                            marginBottom: 6,
+                          }}
+                        />
+                        <div
+                          style={{
+                            height: 8,
+                            width: "75%",
+                            background: "rgba(192,192,208,0.2)",
+                            borderRadius: 4,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Lock + upsell CTA */}
+                <div
+                  style={{
+                    position: "relative",
+                    textAlign: "center",
+                    marginTop: 8,
+                  }}
+                >
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🔒</div>
+                  <p
+                    style={{
+                      color: "#d4a855",
+                      fontFamily: "'Noto Serif TC', serif",
+                      fontSize: 15,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {t(
+                      `還有 ${lockedCount} 筆紀錄已鎖定`,
+                      `${lockedCount} more record${lockedCount === 1 ? "" : "s"} locked`
+                    )}
+                  </p>
+                  <p
+                    style={{
+                      color: "rgba(192,192,208,0.7)",
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      marginBottom: 16,
+                      maxWidth: 320,
+                      marginLeft: "auto",
+                      marginRight: "auto",
+                    }}
+                  >
+                    {t(
+                      "免費會員僅顯示最近 3 筆占卜紀錄。升級訂閱後可解鎖全部歷史,並支援無浮水印輸出。",
+                      "Free members can see the 3 most recent divinations. Upgrade to unlock full history and watermark-free output."
+                    )}
+                  </p>
+                  <Link
+                    href="/account"
+                    className="btn-gold"
+                    style={{
+                      display: "inline-block",
+                      textDecoration: "none",
+                      padding: "10px 24px",
+                      fontSize: 13,
+                    }}
+                  >
+                    {t("升級解鎖 →", "Upgrade to unlock →")}
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
