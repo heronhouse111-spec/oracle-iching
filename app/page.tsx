@@ -10,9 +10,25 @@ import ShareCard from "@/components/ShareCard";
 import { performDivination, questionCategories, type DivinationResult, type CoinThrow } from "@/lib/divination";
 import { findHexagram, type Hexagram } from "@/data/hexagrams";
 import { saveDivination } from "@/lib/saveDivination";
+import {
+  drawThreeCards,
+  THREE_CARD_POSITIONS,
+  SUIT_NAMES_ZH,
+  SUIT_NAMES_EN,
+  CARD_BACK_IMAGE,
+  type DrawnCard,
+} from "@/data/tarot";
 
-type Step = "category" | "question" | "mode-select" | "divination" | "result";
+type Step =
+  | "category"
+  | "question"
+  | "divine-type"
+  | "mode-select"
+  | "divination"
+  | "tarot-reveal"
+  | "result";
 type DivinationMode = "manual" | "auto";
+type DivineType = "iching" | "tarot";
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -59,6 +75,13 @@ export default function Home() {
   // 占卜模式(auto/manual)+ 上次選擇(localStorage 記住)
   const [divinationMode, setDivinationMode] = useState<DivinationMode | null>(null);
   const [lastModePref, setLastModePref] = useState<DivinationMode | null>(null);
+
+  // 占卜類型(易經 / 塔羅)
+  const [divineType, setDivineType] = useState<DivineType | null>(null);
+
+  // 塔羅 state:抽到的三張牌 + 已翻開幾張
+  const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
+  const [revealedCount, setRevealedCount] = useState(0);
 
   // mount 時讀 localStorage 拿上次選的 mode,給 mode-select 畫面做「上次選了 X」提示
   useEffect(() => {
@@ -183,10 +206,30 @@ export default function Home() {
   };
 
   const handleQuestionSubmit = () => {
-    setStep("mode-select");
+    setStep("divine-type");
     setCurrentThrow(0);
     setThrows([]);
     setCurrentCoins(null);
+    setDrawnCards([]);
+    setRevealedCount(0);
+  };
+
+  const handleDivineTypeSelect = (type: DivineType) => {
+    setDivineType(type);
+    if (type === "iching") {
+      setStep("mode-select");
+    } else {
+      // 塔羅:直接抽三張,進入 reveal 畫面讓使用者翻牌
+      setDrawnCards(drawThreeCards());
+      setRevealedCount(0);
+      setStep("tarot-reveal");
+    }
+  };
+
+  const handleRevealCard = (idx: number) => {
+    // 只能依序翻開(0 → 1 → 2),防止點錯順序
+    if (idx !== revealedCount) return;
+    setRevealedCount((n) => n + 1);
   };
 
   const handleModeSelect = (mode: DivinationMode) => {
@@ -339,6 +382,81 @@ export default function Home() {
     }
   };
 
+  // 塔羅版 AI 解讀 — 打 /api/tarot,streaming 跟 fetchAIReading 同一套邏輯
+  // Phase A 先不存 Supabase(等 Phase B)
+  const fetchTarotReading = async (cards: DrawnCard[]) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsLoadingAI(true);
+    setAiReading("");
+
+    try {
+      const category = questionCategories.find((c) => c.id === selectedCategory);
+      const payload = {
+        cards: cards.map((d, i) => ({
+          cardId: d.card.id,
+          position: THREE_CARD_POSITIONS[i].key,
+          isReversed: d.isReversed,
+        })),
+        question: userQuestion,
+        category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
+        locale,
+      };
+
+      const response = await fetch("/api/tarot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) throw new Error("API error");
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (controller.signal.aborted) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          setAiReading(fullText);
+        }
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setAiReading(
+        t("抱歉,AI 解讀暫時無法使用。請確認 API 金鑰已設定。",
+          "Sorry, AI reading is temporarily unavailable. Please check your API key.")
+      );
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsLoadingAI(false);
+      }
+    }
+  };
+
+  // 三張塔羅牌全翻開 → 自動進 result 畫面 + 觸發 AI 解讀
+  useEffect(() => {
+    if (step !== "tarot-reveal") return;
+    if (revealedCount < 3) return;
+    if (drawnCards.length !== 3) return;
+    const timer = setTimeout(() => {
+      setStep("result");
+      fetchTarotReading(drawnCards);
+    }, 1200); // 讓最後一張翻牌動畫跑完再切
+    return () => clearTimeout(timer);
+    // fetchTarotReading 故意不放 deps — 新的 render 才產 new ref,會造成重複觸發
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, revealedCount, drawnCards]);
+
   const sendChatMessage = async () => {
     if (!chatInput.trim() || isChatLoading || !hexagram) return;
 
@@ -419,6 +537,10 @@ export default function Home() {
     setCopyStatus("idle");
     // divinationMode 清掉讓下次重選(lastModePref 留著做「上次選了 X」提示)
     setDivinationMode(null);
+    // 塔羅 state 也一併清掉
+    setDivineType(null);
+    setDrawnCards([]);
+    setRevealedCount(0);
   };
 
   return (
@@ -499,6 +621,99 @@ export default function Home() {
                     {t("開始搖卦", "Begin Divination")}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== STEP 2.25: Divine Type Select (易經 / 塔羅) ===== */}
+          {step === "divine-type" && (
+            <motion.div key="dt" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
+                <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
+                  {t("選擇占卜工具", "Choose Your Oracle")}
+                </h2>
+                <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6 }}>
+                  {t("兩種系統皆以你提出的問題為核心給出指引", "Both systems will center on the question you asked")}
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+                {/* 易經 */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleDivineTypeSelect("iching")}
+                  className="mystic-card"
+                  style={{
+                    padding: 20,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border: "1px solid rgba(212,168,85,0.2)",
+                    background: "rgba(13,13,43,0.8)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 32 }}>☯</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+                        {t("易經占卜", "I Ching")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
+                        {t(
+                          "擲銅錢成卦,由六十四卦卦辭為你指點方向",
+                          "Throw coins to form a hexagram; guidance from the 64 hexagrams"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                {/* 塔羅 */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleDivineTypeSelect("tarot")}
+                  className="mystic-card"
+                  style={{
+                    padding: 20,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border: "1px solid rgba(212,168,85,0.2)",
+                    background: "rgba(13,13,43,0.8)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 32 }}>🎴</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+                        {t("塔羅占卜", "Tarot")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
+                        {t(
+                          "抽三張牌(過去・現在・未來),以七十八張塔羅為你解讀",
+                          "Draw three cards (past · present · future) from the 78-card tarot deck"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button
+                  onClick={() => setStep("question")}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 9999,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    color: "#d4a855",
+                    fontSize: 13,
+                    background: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("返回修改問題", "Back to edit question")}
+                </button>
               </div>
             </motion.div>
           )}
@@ -619,7 +834,7 @@ export default function Home() {
 
               <div style={{ textAlign: "center", marginTop: 16 }}>
                 <button
-                  onClick={() => setStep("question")}
+                  onClick={() => setStep("divine-type")}
                   style={{
                     padding: "8px 20px",
                     borderRadius: 9999,
@@ -630,7 +845,7 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回修改問題", "Back to edit question")}
+                  {t("返回選擇工具", "Back to choose oracle")}
                 </button>
               </div>
             </motion.div>
@@ -715,8 +930,181 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* ===== STEP 4: Result ===== */}
-          {step === "result" && hexagram && (
+          {/* ===== STEP 3T: Tarot Reveal (抽牌 + 翻牌) ===== */}
+          {step === "tarot-reveal" && drawnCards.length === 3 && (
+            <motion.div key="tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
+                <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
+                  {t("翻牌揭示", "Reveal Your Cards")}
+                </h2>
+                <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginTop: 4 }}>
+                  {revealedCount === 0
+                    ? t("依序點擊牌卡翻開(過去 → 現在 → 未來)", "Tap each card in order (past → present → future)")
+                    : revealedCount < 3
+                    ? t(`已翻開 ${revealedCount} / 3 張`, `Revealed ${revealedCount} of 3`)
+                    : t("三張牌已揭示,老師正在為你解讀...", "All three cards revealed. Reading now...")}
+                </p>
+              </div>
+
+              {/* 三張牌 */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 10,
+                marginTop: 16,
+              }}>
+                {drawnCards.map((drawn, idx) => {
+                  const isRevealed = idx < revealedCount;
+                  const isNext = idx === revealedCount;
+                  const pos = THREE_CARD_POSITIONS[idx];
+                  const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
+                  const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                  const orientationLabel = drawn.isReversed
+                    ? t("逆位", "Reversed")
+                    : t("正位", "Upright");
+
+                  return (
+                    <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      {/* 位置標籤 */}
+                      <div style={{
+                        color: "#d4a855",
+                        fontSize: 13,
+                        fontFamily: "'Noto Serif TC', serif",
+                        marginBottom: 8,
+                        textAlign: "center",
+                      }}>
+                        {locale === "zh" ? pos.labelZh : pos.labelEn}
+                      </div>
+
+                      {/* 翻牌卡(CSS 3D flip) */}
+                      <motion.button
+                        onClick={() => handleRevealCard(idx)}
+                        disabled={!isNext && !isRevealed}
+                        whileHover={isNext ? { scale: 1.04 } : {}}
+                        whileTap={isNext ? { scale: 0.96 } : {}}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "2 / 3.5",
+                          padding: 0,
+                          border: "none",
+                          background: "transparent",
+                          cursor: isNext ? "pointer" : "default",
+                          perspective: 1000,
+                        }}
+                      >
+                        <motion.div
+                          animate={{ rotateY: isRevealed ? 180 : 0 }}
+                          transition={{ duration: 0.7, ease: "easeInOut" }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            position: "relative",
+                            transformStyle: "preserve-3d",
+                          }}
+                        >
+                          {/* 牌背 */}
+                          <div style={{
+                            position: "absolute",
+                            inset: 0,
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
+                            borderRadius: 8,
+                            overflow: "hidden",
+                            border: isNext
+                              ? "1.5px solid rgba(212,168,85,0.8)"
+                              : "1px solid rgba(212,168,85,0.25)",
+                            boxShadow: isNext
+                              ? "0 0 18px rgba(212,168,85,0.45)"
+                              : "0 2px 8px rgba(0,0,0,0.4)",
+                            background: "rgba(13,13,43,0.9)",
+                          }}>
+                            <img
+                              src={CARD_BACK_IMAGE}
+                              alt="Card back"
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                            />
+                          </div>
+
+                          {/* 牌面 */}
+                          <div style={{
+                            position: "absolute",
+                            inset: 0,
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
+                            transform: "rotateY(180deg)",
+                            borderRadius: 8,
+                            overflow: "hidden",
+                            border: "1px solid rgba(212,168,85,0.4)",
+                            boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+                            background: "rgba(13,13,43,0.9)",
+                          }}>
+                            <img
+                              src={drawn.card.imagePath}
+                              alt={cardName}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                                transform: drawn.isReversed ? "rotate(180deg)" : "none",
+                              }}
+                            />
+                          </div>
+                        </motion.div>
+                      </motion.button>
+
+                      {/* 翻開後顯示:牌名 + 正逆位 */}
+                      {isRevealed && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5 }}
+                          style={{ marginTop: 8, textAlign: "center" }}
+                        >
+                          <div style={{
+                            color: "#e8e8f0",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            fontFamily: "'Noto Serif TC', serif",
+                            lineHeight: 1.3,
+                          }}>
+                            {cardName}
+                          </div>
+                          <div style={{
+                            color: drawn.isReversed ? "#f59e7a" : "#d4a855",
+                            fontSize: 10,
+                            marginTop: 2,
+                          }}>
+                            {suitNames[drawn.card.suit]} · {orientationLabel}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: 24 }}>
+                <button
+                  onClick={() => setStep("divine-type")}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 9999,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    color: "#d4a855",
+                    fontSize: 13,
+                    background: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("返回選擇工具", "Back to choose oracle")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== STEP 4a: Result (易經) ===== */}
+          {step === "result" && divineType !== "tarot" && hexagram && (
             <motion.div key="res" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               {/* Hexagram card */}
               <div className="mystic-card" style={{ padding: 32, textAlign: "center", marginTop: 16 }}>
@@ -1040,6 +1428,170 @@ export default function Home() {
                     {t("送出", "Send")}
                   </button>
                 </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ marginTop: 16 }}>
+                <button onClick={handleReset} className="btn-gold" style={{ width: "100%", fontSize: 16 }}>
+                  {t("重新占卜", "New Divination")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== STEP 4b: Result (塔羅) ===== */}
+          {step === "result" && divineType === "tarot" && drawnCards.length === 3 && (
+            <motion.div key="res-tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              {/* 三張牌展示 */}
+              <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
+                <div style={{ textAlign: "center", marginBottom: 16 }}>
+                  <span style={{ fontSize: 40, display: "block" }}>🎴</span>
+                  <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif", marginTop: 4 }}>
+                    {t("三牌占卜", "Three-Card Spread")}
+                  </h2>
+                  <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>
+                    {t("過去 · 現在 · 未來", "Past · Present · Future")}
+                  </p>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 10,
+                }}>
+                  {drawnCards.map((drawn, idx) => {
+                    const pos = THREE_CARD_POSITIONS[idx];
+                    const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
+                    const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                    const orientationLabel = drawn.isReversed
+                      ? t("逆位", "Reversed")
+                      : t("正位", "Upright");
+                    return (
+                      <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <div style={{
+                          color: "#d4a855",
+                          fontSize: 13,
+                          fontFamily: "'Noto Serif TC', serif",
+                          marginBottom: 6,
+                        }}>
+                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                        </div>
+                        <div style={{
+                          width: "100%",
+                          aspectRatio: "2 / 3.5",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.4)",
+                          boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+                          background: "rgba(13,13,43,0.9)",
+                        }}>
+                          <img
+                            src={drawn.card.imagePath}
+                            alt={cardName}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              display: "block",
+                              transform: drawn.isReversed ? "rotate(180deg)" : "none",
+                            }}
+                          />
+                        </div>
+                        <div style={{ marginTop: 6, textAlign: "center" }}>
+                          <div style={{
+                            color: "#e8e8f0",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            fontFamily: "'Noto Serif TC', serif",
+                            lineHeight: 1.3,
+                          }}>
+                            {cardName}
+                          </div>
+                          <div style={{
+                            color: drawn.isReversed ? "#f59e7a" : "#d4a855",
+                            fontSize: 10,
+                            marginTop: 2,
+                          }}>
+                            {suitNames[drawn.card.suit]} · {orientationLabel}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 每張牌的牌義 */}
+              <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                  {t("牌義速覽", "Card Meanings")}
+                </h3>
+                {drawnCards.map((drawn, idx) => {
+                  const pos = THREE_CARD_POSITIONS[idx];
+                  const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                  const meaning = drawn.isReversed
+                    ? (locale === "zh" ? drawn.card.reversedMeaningZh : drawn.card.reversedMeaningEn)
+                    : (locale === "zh" ? drawn.card.uprightMeaningZh : drawn.card.uprightMeaningEn);
+                  const orientationLabel = drawn.isReversed
+                    ? t("逆位", "Reversed")
+                    : t("正位", "Upright");
+                  return (
+                    <div key={idx} style={{
+                      marginBottom: idx < 2 ? 14 : 0,
+                      paddingBottom: idx < 2 ? 14 : 0,
+                      borderBottom: idx < 2 ? "1px dashed rgba(212,168,85,0.15)" : "none",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
+                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                        </span>
+                        <span style={{ color: "#e8e8f0", fontSize: 14, fontWeight: 600, fontFamily: "'Noto Serif TC', serif" }}>
+                          {cardName}
+                        </span>
+                        <span style={{
+                          color: drawn.isReversed ? "#f59e7a" : "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          padding: "1px 8px",
+                          borderRadius: 9999,
+                          background: drawn.isReversed ? "rgba(245,158,122,0.12)" : "rgba(212,168,85,0.08)",
+                        }}>
+                          {orientationLabel}
+                        </span>
+                      </div>
+                      <p style={{ color: "rgba(192,192,208,0.85)", fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                        {meaning}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* AI 解讀 */}
+              <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                  ✦ {t("老師解盤", "Master's Reading")}
+                </h3>
+
+                {isLoadingAI && !aiReading ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "24px 0" }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      style={{ fontSize: 24 }}>🎴</motion.div>
+                    <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14 }}>
+                      {t("正在為您分析...", "Analyzing for you...")}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ color: "rgba(192,192,208,0.9)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+                    {aiReading}
+                    {isLoadingAI && (
+                      <motion.span
+                        animate={{ opacity: [1, 0] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                        style={{ display: "inline-block", width: 6, height: 16, background: "#d4a855", marginLeft: 2, verticalAlign: "middle" }}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
