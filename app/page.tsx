@@ -11,7 +11,8 @@ import { performDivination, questionCategories, type DivinationResult, type Coin
 import { findHexagram, type Hexagram } from "@/data/hexagrams";
 import { saveDivination } from "@/lib/saveDivination";
 
-type Step = "category" | "question" | "divination" | "result";
+type Step = "category" | "question" | "mode-select" | "divination" | "result";
+type DivinationMode = "manual" | "auto";
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -54,6 +55,23 @@ export default function Home() {
   const [isPublic, setIsPublic] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+
+  // 占卜模式(auto/manual)+ 上次選擇(localStorage 記住)
+  const [divinationMode, setDivinationMode] = useState<DivinationMode | null>(null);
+  const [lastModePref, setLastModePref] = useState<DivinationMode | null>(null);
+
+  // mount 時讀 localStorage 拿上次選的 mode,給 mode-select 畫面做「上次選了 X」提示
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = window.localStorage.getItem("oracle-iching:mode");
+      if (saved === "manual" || saved === "auto") {
+        setLastModePref(saved);
+      }
+    } catch {
+      // storage disabled / SSR — no-op
+    }
+  }, []);
 
   // 拿登入者訂閱狀態 — 只要走進結果頁就跑一次
   useEffect(() => {
@@ -165,19 +183,36 @@ export default function Home() {
   };
 
   const handleQuestionSubmit = () => {
-    setStep("divination");
+    setStep("mode-select");
     setCurrentThrow(0);
     setThrows([]);
     setCurrentCoins(null);
   };
 
-  const handleThrowCoins = useCallback(() => {
+  const handleModeSelect = (mode: DivinationMode) => {
+    setDivinationMode(mode);
+    setLastModePref(mode);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("oracle-iching:mode", mode);
+      }
+    } catch {
+      // storage disabled — ignore
+    }
+    setStep("divination");
+  };
+
+  const handleThrowCoins = useCallback((fast = false) => {
     if (isFlipping) return;
     setIsFlipping(true);
     setCurrentCoins(null);
 
     const result = performDivination();
     const thisThrow = result.throws[currentThrow];
+
+    // fast = 自動模式,每爻 ~500ms;手動模式保留 1400ms 的儀式感
+    const flipDelay = fast ? 500 : 1400;
+    const finishDelay = fast ? 700 : 1500;
 
     setTimeout(() => {
       setCurrentCoins(thisThrow.coins);
@@ -209,12 +244,25 @@ export default function Home() {
         setTimeout(() => {
           setStep("result");
           fetchAIReading(fullResult, foundHex || null);
-        }, 1500);
+        }, finishDelay);
       } else {
         setCurrentThrow(currentThrow + 1);
       }
-    }, 1400);
+    }, flipDelay);
   }, [currentThrow, isFlipping, throws]);
+
+  // 自動模式 cascade:step=divination && mode=auto 時連續 trigger 下一爻,每爻之間 ~250ms 間隔
+  useEffect(() => {
+    if (step !== "divination") return;
+    if (divinationMode !== "auto") return;
+    if (isFlipping) return;
+    if (throws.length >= 6) return;
+    if (currentThrow > 5) return;
+    // 第一爻前稍微多等一下讓 UI 進場,後續爻之間短間隔
+    const pause = throws.length === 0 ? 400 : 250;
+    const timer = setTimeout(() => handleThrowCoins(true), pause);
+    return () => clearTimeout(timer);
+  }, [step, divinationMode, isFlipping, currentThrow, throws.length, handleThrowCoins]);
 
   const fetchAIReading = async (result: DivinationResult, hex: Hexagram | null) => {
     if (!hex) return;
@@ -369,6 +417,8 @@ export default function Home() {
     setIsPublic(false);
     setIsTogglingPublic(false);
     setCopyStatus("idle");
+    // divinationMode 清掉讓下次重選(lastModePref 留著做「上次選了 X」提示)
+    setDivinationMode(null);
   };
 
   return (
@@ -453,6 +503,139 @@ export default function Home() {
             </motion.div>
           )}
 
+          {/* ===== STEP 2.5: Mode Select (自動 / 手動) ===== */}
+          {step === "mode-select" && (
+            <motion.div key="mode" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
+                <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
+                  {t("選擇占卜方式", "Choose Divination Mode")}
+                </h2>
+                <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6 }}>
+                  {t("兩種方式都能得到相同品質的卦象", "Both modes produce the same quality reading")}
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+                {/* 自動占卜 */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleModeSelect("auto")}
+                  className="mystic-card"
+                  style={{
+                    padding: 20,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border:
+                      lastModePref === "auto"
+                        ? "1.5px solid rgba(212,168,85,0.6)"
+                        : "1px solid rgba(212,168,85,0.2)",
+                    background: "rgba(13,13,43,0.8)",
+                    position: "relative",
+                  }}
+                >
+                  {lastModePref === "auto" && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 12,
+                        fontSize: 11,
+                        color: "#d4a855",
+                        background: "rgba(212,168,85,0.12)",
+                        padding: "3px 10px",
+                        borderRadius: 9999,
+                      }}
+                    >
+                      {t("上次選擇", "Last used")}
+                    </span>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 32 }}>⚡</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+                        {t("自動占卜", "Auto")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
+                        {t(
+                          "按一下,系統連續擲出六個爻(約 3 秒完成)",
+                          "One click — system throws all six lines in sequence (~3 seconds)"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+
+                {/* 手動占卜 */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleModeSelect("manual")}
+                  className="mystic-card"
+                  style={{
+                    padding: 20,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    border:
+                      lastModePref === "manual"
+                        ? "1.5px solid rgba(212,168,85,0.6)"
+                        : "1px solid rgba(212,168,85,0.2)",
+                    background: "rgba(13,13,43,0.8)",
+                    position: "relative",
+                  }}
+                >
+                  {lastModePref === "manual" && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 10,
+                        right: 12,
+                        fontSize: 11,
+                        color: "#d4a855",
+                        background: "rgba(212,168,85,0.12)",
+                        padding: "3px 10px",
+                        borderRadius: 9999,
+                      }}
+                    >
+                      {t("上次選擇", "Last used")}
+                    </span>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 32 }}>🪙</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+                        {t("手動占卜", "Manual")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
+                        {t(
+                          "親手擲六次,感受每一爻的儀式感",
+                          "Throw the coins six times yourself, one line at a time"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.button>
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button
+                  onClick={() => setStep("question")}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 9999,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    color: "#d4a855",
+                    fontSize: 13,
+                    background: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("返回修改問題", "Back to edit question")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           {/* ===== STEP 3: Coin Throwing ===== */}
           {step === "divination" && (
             <motion.div key="div" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -489,11 +672,45 @@ export default function Home() {
               </div>
 
               <div style={{ textAlign: "center", marginTop: 24 }}>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                  onClick={handleThrowCoins} disabled={isFlipping || currentThrow >= 6}
-                  className="btn-gold" style={{ fontSize: 18, padding: "14px 48px" }}>
-                  {isFlipping ? t("擲銅錢中...", "Throwing...") : t("擲銅錢", "Throw Coins")}
-                </motion.button>
+                {divinationMode === "auto" ? (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "14px 32px",
+                      borderRadius: 9999,
+                      background: "rgba(212,168,85,0.12)",
+                      border: "1px solid rgba(212,168,85,0.3)",
+                      color: "#d4a855",
+                      fontSize: 16,
+                    }}
+                  >
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      style={{ display: "inline-block" }}
+                    >
+                      ☯
+                    </motion.span>
+                    <span>
+                      {throws.length >= 6
+                        ? t("占卜完成,正在為您解讀...", "Divination complete, reading...")
+                        : t("自動占卜進行中...", "Auto divination in progress...")}
+                    </span>
+                  </div>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleThrowCoins(false)}
+                    disabled={isFlipping || currentThrow >= 6}
+                    className="btn-gold"
+                    style={{ fontSize: 18, padding: "14px 48px" }}
+                  >
+                    {isFlipping ? t("擲銅錢中...", "Throwing...") : t("擲銅錢", "Throw Coins")}
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           )}
