@@ -21,6 +21,8 @@ export const contentType = "image/png";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+// Supabase SSR client 需 cookies / Node built-ins,明確指定 nodejs runtime 以免誤跑 edge。
+export const runtime = "nodejs";
 
 interface SavedTarotCard {
   cardId: string;
@@ -137,15 +139,25 @@ export default async function Image({
       : null;
 
   // 塔羅資料整理 — 解析 card + 公開 CDN 絕對 URL(Satori 需絕對 URL 才能 fetch 圖)
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "https://oracle.heronhouse.me";
+  // ⚠️ 運算子優先序很容易踩雷:`a || b ? x : y` 會先算 `(a || b)`,導致
+  // 明明給了 NEXT_PUBLIC_SITE_URL 卻拿去用 VERCEL_* 的 template。改用顯式判斷。
+  const resolveBaseUrl = (): string => {
+    const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (explicit) {
+      return explicit.startsWith("http") ? explicit : `https://${explicit}`;
+    }
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    }
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
+    return "https://oracle.heronhouse.me";
+  };
+  const baseUrl = resolveBaseUrl();
 
-  const tarotRender =
+  // 先解析卡牌資料 + 組絕對 URL
+  const tarotResolved =
     isTarot && d?.tarot_cards
       ? d.tarot_cards
           .map((tc) => {
@@ -160,6 +172,29 @@ export default async function Image({
           })
           .filter((x): x is NonNullable<typeof x> => x !== null)
       : [];
+
+  // ⚠️ Satori 的 <img src> 若 fetch 失敗會整張 OG 圖 500。
+  // 為了不讓 Line / 社群 unfurl 抓不到縮圖,先 server-side 把圖抓下來轉 data URI,
+  // 失敗的圖 fallback 成 null,UI 只顯示卡牌文字,保證 endpoint 永遠回 200 + 一張圖。
+  const tarotRender = await Promise.all(
+    tarotResolved.map(async (tc) => {
+      let dataUri: string | null = null;
+      try {
+        const res = await fetch(tc.imageUrl, {
+          // 用 no-store 避開 Vercel edge cache 對 deployment 間的 stale 問題
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const buf = await res.arrayBuffer();
+          const base64 = Buffer.from(buf).toString("base64");
+          dataUri = `data:image/png;base64,${base64}`;
+        }
+      } catch {
+        // 吞例外,改走純文字牌卡
+      }
+      return { ...tc, dataUri };
+    })
+  );
 
   return new ImageResponse(
     (
@@ -427,21 +462,53 @@ export default async function Image({
                           overflow: "hidden",
                           border: "2px solid rgba(212,168,85,0.5)",
                           background: "rgba(13,13,43,0.9)",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={tc.imageUrl}
-                          alt={tc.card.nameEn}
-                          width={200}
-                          height={320}
-                          style={{
-                            width: 200,
-                            height: 320,
-                            objectFit: "cover",
-                            transform: tc.isReversed ? "rotate(180deg)" : "none",
-                          }}
-                        />
+                        {tc.dataUri ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={tc.dataUri}
+                            alt={tc.card.nameEn}
+                            width={200}
+                            height={320}
+                            style={{
+                              width: 200,
+                              height: 320,
+                              objectFit: "cover",
+                              transform: tc.isReversed ? "rotate(180deg)" : "none",
+                            }}
+                          />
+                        ) : (
+                          // 圖抓失敗 → 顯示純文字牌卡,至少 unfurl 有東西
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              width: 200,
+                              height: 320,
+                              padding: 16,
+                              background:
+                                "linear-gradient(135deg, rgba(212,168,85,0.15), rgba(139,92,246,0.15))",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                fontSize: 22,
+                                fontWeight: 700,
+                                color: "#f0d78c",
+                                textAlign: "center",
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {tc.card.nameEn}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div
                         style={{
