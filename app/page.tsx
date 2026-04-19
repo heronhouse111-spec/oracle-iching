@@ -579,13 +579,20 @@ export default function Home() {
           {step === "category" && (
             <motion.div key="cat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 32 }}>
-                <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  style={{ fontSize: 64, display: "inline-block" }}>☯</motion.div>
-                <h1 className="text-gold-gradient" style={{ fontSize: 30, fontFamily: "'Noto Serif TC', serif", fontWeight: 700, marginTop: 16 }}>
-                  {t("易經占卜", "Oracle I Ching")}
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
+                  <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    style={{ fontSize: 56, display: "inline-block", lineHeight: 1 }}>☯</motion.div>
+                  <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    style={{ fontSize: 52, display: "inline-block", lineHeight: 1 }}>🎴</motion.div>
+                </div>
+                <h1 className="text-gold-gradient" style={{ fontSize: 32, fontFamily: "'Noto Serif TC', serif", fontWeight: 700, marginTop: 16, letterSpacing: 2 }}>
+                  {t("Oracle 神諭", "Oracle")}
                 </h1>
-                <p style={{ color: "rgba(192,192,208,0.7)", fontSize: 14, maxWidth: 360, margin: "8px auto 0" }}>
-                  {t("以古老的易經智慧，結合人工智慧為你解讀天機", "Ancient I Ching wisdom meets AI for personalized divination")}
+                <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 14, maxWidth: 400, margin: "10px auto 0", lineHeight: 1.6 }}>
+                  {t(
+                    "東方易經 · 西方塔羅 · AI 即時解盤",
+                    "Eastern I Ching · Western Tarot · Real-time AI readings"
+                  )}
                 </p>
               </div>
 

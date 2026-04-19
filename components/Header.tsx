@@ -18,9 +18,9 @@ export default function Header() {
         height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <span style={{ fontSize: 24 }}>☯</span>
+          <span style={{ fontSize: 22, letterSpacing: 1 }}>☯&nbsp;🎴</span>
           <span className="text-gold-gradient" style={{ fontFamily: "'Noto Serif TC', serif", fontWeight: 700, fontSize: 18 }}>
-            {t("易經占卜", "Oracle I Ching")}
+            {t("Oracle 神諭", "Oracle")}
           </span>
         </Link>
 

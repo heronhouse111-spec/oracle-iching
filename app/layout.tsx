@@ -3,8 +3,8 @@ import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 
 export const metadata: Metadata = {
-  title: "易經占卜 | Oracle I Ching",
-  description: "透過古老的易經智慧，結合 AI 為你解讀卦象。Ancient I Ching wisdom with AI-powered interpretations.",
+  title: "Oracle 神諭 | 易經 × 塔羅 · AI 占卜",
+  description: "東方易經 · 西方塔羅 · AI 即時解盤。Eastern I Ching meets Western Tarot, with AI-powered interpretations.",
 };
 
 export default function RootLayout({
