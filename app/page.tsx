@@ -48,6 +48,13 @@ export default function Home() {
   const [shareMessage, setShareMessage] = useState<string | null>(null);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
 
+  // v2 公開分享 state
+  const [divinationId, setDivinationId] = useState<string | null>(null);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+
   // 拿登入者訂閱狀態 — 只要走進結果頁就跑一次
   useEffect(() => {
     if (step !== "result") return;
@@ -60,7 +67,9 @@ export default function Home() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
+        if (cancelled) return;
+        setIsSignedIn(Boolean(user));
+        if (!user) return;
         const { data } = await supabase
           .from("user_subscription_summary")
           .select("is_active")
@@ -75,6 +84,47 @@ export default function Home() {
       cancelled = true;
     };
   }, [step]);
+
+  const handleTogglePublic = async () => {
+    if (!divinationId || !isSignedIn || isTogglingPublic) return;
+    setIsTogglingPublic(true);
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const next = !isPublic;
+      const { error } = await supabase
+        .from("divinations")
+        .update({ is_public: next })
+        .eq("id", divinationId);
+      if (error) throw error;
+      setIsPublic(next);
+    } catch (e) {
+      console.error("公開狀態切換失敗:", e);
+      setShareMessage(
+        t("切換失敗,請稍候再試", "Toggle failed, please try again")
+      );
+      setTimeout(() => setShareMessage(null), 3000);
+    } finally {
+      setIsTogglingPublic(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!divinationId) return;
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/r/${divinationId}`
+        : `/r/${divinationId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyStatus("copied");
+      setTimeout(() => setCopyStatus("idle"), 2000);
+    } catch (e) {
+      console.error("複製失敗:", e);
+      setShareMessage(t("複製失敗", "Copy failed"));
+      setTimeout(() => setShareMessage(null), 3000);
+    }
+  };
 
   const handleShare = async () => {
     if (!hexagram || !divinationResult || isSharing) return;
@@ -216,7 +266,7 @@ export default function Home() {
       }
 
       if (!controller.signal.aborted) {
-        await saveDivination({
+        const saved = await saveDivination({
           question: userQuestion,
           category: selectedCategory,
           hexagramNumber: hex.number,
@@ -226,6 +276,7 @@ export default function Home() {
           aiReading: fullText,
           locale,
         });
+        if (saved?.id) setDivinationId(saved.id);
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -314,6 +365,10 @@ export default function Home() {
     setIsChatLoading(false);
     setIsSharing(false);
     setShareMessage(null);
+    setDivinationId(null);
+    setIsPublic(false);
+    setIsTogglingPublic(false);
+    setCopyStatus("idle");
   };
 
   return (
@@ -534,20 +589,20 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Share card download */}
+              {/* Share card download + public link */}
               {!isLoadingAI && aiReading && (
                 <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
+                  <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                    📤 {t("分享這次占卜", "Share this divination")}
+                  </h3>
+
+                  {/* v1: 下載分享圖 */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ flex: "1 1 200px" }}>
-                      <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 4 }}>
-                        📤 {t("分享這次占卜", "Share this divination")}
-                      </h3>
-                      <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, lineHeight: 1.6 }}>
-                        {isActive
-                          ? t("下載無浮水印分享圖（付費會員專屬）", "Clean share image (premium member perk)")
-                          : t("下載分享圖（免費版含浮水印，升級即可移除）", "Download share image (free version has watermark)")}
-                      </p>
-                    </div>
+                    <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                      {isActive
+                        ? t("📥 下載無浮水印分享圖（付費會員專屬）", "📥 Clean share image (premium member perk)")
+                        : t("📥 下載分享圖（免費版含浮水印，升級即可移除）", "📥 Download share image (free version has watermark)")}
+                    </p>
                     <button
                       onClick={handleShare}
                       disabled={isSharing}
@@ -559,6 +614,132 @@ export default function Home() {
                         : t("下載分享圖", "Download")}
                     </button>
                   </div>
+
+                  {/* v2: 公開分享連結 */}
+                  <div
+                    style={{
+                      marginTop: 16,
+                      paddingTop: 16,
+                      borderTop: "1px dashed rgba(212,168,85,0.2)",
+                    }}
+                  >
+                    {!divinationId || !isSignedIn ? (
+                      <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                        🔗 {t(
+                          "登入會員即可產生公開分享連結（貼到 Line/Twitter 會自動展開預覽）",
+                          "Sign in to generate a public share link (unfurls automatically on Line/Twitter)"
+                        )}
+                      </p>
+                    ) : !isPublic ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                          🔗 {t(
+                            "產生公開分享連結（匿名公開，不露出你的帳號資訊）",
+                            "Generate public share link (anonymous, no account info revealed)"
+                          )}
+                        </p>
+                        <button
+                          onClick={handleTogglePublic}
+                          disabled={isTogglingPublic}
+                          style={{
+                            padding: "10px 20px",
+                            borderRadius: 9999,
+                            border: "1px solid rgba(212,168,85,0.4)",
+                            background: "rgba(212,168,85,0.08)",
+                            color: "#d4a855",
+                            fontSize: 14,
+                            cursor: isTogglingPublic ? "default" : "pointer",
+                            flexShrink: 0,
+                            fontFamily: "'Noto Sans TC', sans-serif",
+                          }}
+                        >
+                          {isTogglingPublic
+                            ? t("開啟中…", "Enabling…")
+                            : t("🔓 開啟分享連結", "🔓 Enable share link")}
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "10px 12px",
+                            background: "rgba(10,10,26,0.6)",
+                            border: "1px solid rgba(212,168,85,0.25)",
+                            borderRadius: 10,
+                            marginBottom: 10,
+                          }}
+                        >
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              color: "#fde68a",
+                              fontSize: 13,
+                              fontFamily: "monospace",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {typeof window !== "undefined"
+                              ? `${window.location.origin}/r/${divinationId}`
+                              : `/r/${divinationId}`}
+                          </span>
+                          <button
+                            onClick={handleCopyLink}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                copyStatus === "copied"
+                                  ? "rgba(74,222,128,0.3)"
+                                  : "rgba(212,168,85,0.25)",
+                              color: copyStatus === "copied" ? "#86efac" : "#fde68a",
+                              fontSize: 12,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {copyStatus === "copied"
+                              ? t("已複製 ✓", "Copied ✓")
+                              : t("複製", "Copy")}
+                          </button>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 11 }}>
+                            {t(
+                              "✨ 貼到 Line / Twitter / FB 會自動展開預覽卡",
+                              "✨ Unfurls into a preview card on Line / Twitter / FB"
+                            )}
+                          </span>
+                          <button
+                            onClick={handleTogglePublic}
+                            disabled={isTogglingPublic}
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 9999,
+                              border: "1px solid rgba(192,192,208,0.2)",
+                              background: "transparent",
+                              color: "rgba(192,192,208,0.6)",
+                              fontSize: 11,
+                              cursor: isTogglingPublic ? "default" : "pointer",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isTogglingPublic
+                              ? t("關閉中…", "Disabling…")
+                              : t("🔒 關閉公開", "🔒 Make private")}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {shareMessage && (
                     <div style={{ marginTop: 10, fontSize: 13, color: "#fde68a" }}>
                       {shareMessage}
