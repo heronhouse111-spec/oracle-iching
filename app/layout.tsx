@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Oracle 神諭 | 易經 × 塔羅 · AI 占卜",
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className="bg-stars" style={{ minHeight: "100vh" }}>
         <LanguageProvider>
           {children}
+          <Footer />
         </LanguageProvider>
       </body>
     </html>

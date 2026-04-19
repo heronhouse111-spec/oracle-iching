@@ -409,6 +409,24 @@ export default async function PublicDivinationPage({
           >
             {d.ai_reading}
           </div>
+
+          {/* 免責聲明 小字 */}
+          <p
+            style={{
+              marginTop: 14,
+              paddingTop: 10,
+              borderTop: "1px dashed rgba(212,168,85,0.15)",
+              color: "rgba(192,192,208,0.5)",
+              fontSize: 11,
+              lineHeight: 1.7,
+              fontStyle: "italic",
+            }}
+          >
+            {t(
+              "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+              "※ For reference only. Not investment, medical, legal, or major life decision advice."
+            )}
+          </p>
         </div>
 
         {/* CTA — 引導訪客自己占卜 */}

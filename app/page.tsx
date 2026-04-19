@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
@@ -650,9 +651,36 @@ export default function Home() {
                   </button>
                   <button onClick={handleQuestionSubmit} disabled={!userQuestion.trim()}
                     className="btn-gold" style={{ flex: 1, fontSize: 16 }}>
-                    {t("開始搖卦", "Begin Divination")}
+                    {t("開始占卜", "Begin Divination")}
                   </button>
                 </div>
+
+                {/* 免責聲明 */}
+                <p
+                  style={{
+                    marginTop: 16,
+                    color: "rgba(192,192,208,0.5)",
+                    fontSize: 11,
+                    lineHeight: 1.7,
+                    textAlign: "center",
+                  }}
+                >
+                  {t(
+                    "占卜結果僅供娛樂與自我參考,請勿作為投資、醫療、法律或重大人生決策之依據。",
+                    "Readings are for entertainment and self-reflection only. Not a basis for investment, medical, legal, or major life decisions."
+                  )}
+                  <br />
+                  <Link
+                    href="/terms"
+                    style={{
+                      color: "rgba(212,168,85,0.7)",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 2,
+                    }}
+                  >
+                    {t("詳閱服務條款與免責聲明", "Read full terms & disclaimer")}
+                  </Link>
+                </p>
               </div>
             </motion.div>
           )}
@@ -1224,6 +1252,26 @@ export default function Home() {
                     )}
                   </div>
                 )}
+
+                {/* 免責聲明 小字 */}
+                {!isLoadingAI && aiReading && (
+                  <p
+                    style={{
+                      marginTop: 14,
+                      paddingTop: 10,
+                      borderTop: "1px dashed rgba(212,168,85,0.15)",
+                      color: "rgba(192,192,208,0.5)",
+                      fontSize: 11,
+                      lineHeight: 1.7,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {t(
+                      "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                      "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Share card download + public link */}
@@ -1422,6 +1470,25 @@ export default function Home() {
                               style={{ display: "inline-block", width: 6, height: 14, background: "#d4a855", marginLeft: 2, verticalAlign: "middle" }}
                             />
                           )}
+                          {msg.role === "assistant" &&
+                            !(isChatLoading && i === chatMessages.length - 1) && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  paddingTop: 6,
+                                  borderTop: "1px dashed rgba(212,168,85,0.15)",
+                                  color: "rgba(192,192,208,0.45)",
+                                  fontSize: 10,
+                                  lineHeight: 1.6,
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                {t(
+                                  "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                                  "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                     ))}
@@ -1624,6 +1691,26 @@ export default function Home() {
                     )}
                   </div>
                 )}
+
+                {/* 免責聲明 小字 */}
+                {!isLoadingAI && aiReading && (
+                  <p
+                    style={{
+                      marginTop: 14,
+                      paddingTop: 10,
+                      borderTop: "1px dashed rgba(212,168,85,0.15)",
+                      color: "rgba(192,192,208,0.5)",
+                      fontSize: 11,
+                      lineHeight: 1.7,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {t(
+                      "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                      "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Chat with Master(塔羅版) */}
@@ -1662,6 +1749,25 @@ export default function Home() {
                               style={{ display: "inline-block", width: 6, height: 14, background: "#d4a855", marginLeft: 2, verticalAlign: "middle" }}
                             />
                           )}
+                          {msg.role === "assistant" &&
+                            !(isChatLoading && i === chatMessages.length - 1) && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  paddingTop: 6,
+                                  borderTop: "1px dashed rgba(212,168,85,0.15)",
+                                  color: "rgba(192,192,208,0.45)",
+                                  fontSize: 10,
+                                  lineHeight: 1.6,
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                {t(
+                                  "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                                  "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                     ))}
