@@ -10,30 +10,67 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { messages, hexagramContext, locale } = body;
+    const {
+      messages,
+      hexagramContext,
+      readingContext,
+      divineType,
+      locale,
+    }: {
+      messages: { role: "user" | "assistant"; content: string }[];
+      hexagramContext?: string;
+      readingContext?: string;
+      divineType?: "iching" | "tarot";
+      locale: "zh" | "en";
+    } = body;
+
+    // 新版欄位 readingContext 優先,舊版 hexagramContext 保留相容
+    const context = readingContext ?? hexagramContext ?? "";
+    const type: "iching" | "tarot" = divineType === "tarot" ? "tarot" : "iching";
 
     const isZh = locale === "zh";
 
     const systemPrompt = isZh
-      ? `你是一位親切的易經算命老師，正在為客人做諮詢。以下是剛才的占卜結果作為背景：
-${hexagramContext}
+      ? (type === "tarot"
+          ? `你是一位親切的塔羅牌占卜師,正在為客人做諮詢。以下是剛才的三張牌占卜結果作為背景:
+${context}
+
+規則:
+- 每次回覆控制在200個字以內,簡短精要
+- 語氣溫暖親切,像面對面聊天一樣
+- 用繁體中文,口語化但帶有智慧感
+- 根據三張牌(過去/現在/未來)的訊息回答客人的追問
+- 適時給予鼓勵和正面引導
+- 不要用列點或編號,用自然對話的方式`
+          : `你是一位親切的易經算命老師，正在為客人做諮詢。以下是剛才的占卜結果作為背景：
+${context}
 
 規則：
-- 每次回覆控制在100個字左右，簡短精要
+- 每次回覆控制在200個字以內，簡短精要
 - 語氣溫暖親切，像面對面聊天一樣
 - 用繁體中文，口語化但帶有智慧感
 - 根據卦象回答客人的追問
 - 適時給予鼓勵和正面引導
-- 不要用列點或編號，用自然對話的方式`
-      : `You are a warm, wise I Ching fortune-telling master giving a consultation. Here is the reading context:
-${hexagramContext}
+- 不要用列點或編號，用自然對話的方式`)
+      : (type === "tarot"
+          ? `You are a warm, wise tarot reader giving a consultation. Here is the three-card reading context:
+${context}
 
 Rules:
-- Keep each reply around 50 words, concise and insightful
+- Keep each reply around 100 words, concise and insightful
+- Be warm and conversational, like a face-to-face chat
+- Answer follow-up questions based on the past/present/future cards
+- Offer encouragement and positive guidance
+- Use natural flowing sentences, no bullet points`
+          : `You are a warm, wise I Ching fortune-telling master giving a consultation. Here is the reading context:
+${context}
+
+Rules:
+- Keep each reply around 100 words, concise and insightful
 - Be warm and conversational, like a face-to-face chat
 - Answer follow-up questions based on the hexagram
 - Offer encouragement and positive guidance
-- Use natural flowing sentences, no bullet points`;
+- Use natural flowing sentences, no bullet points`);
 
     const apiMessages = [
       { role: "system", content: systemPrompt },
@@ -49,7 +86,7 @@ Rules:
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: apiMessages,
-        max_tokens: 200,
+        max_tokens: 400,
         stream: true,
       }),
     });

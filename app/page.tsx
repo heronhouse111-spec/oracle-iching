@@ -458,7 +458,13 @@ export default function Home() {
   }, [step, revealedCount, drawnCards]);
 
   const sendChatMessage = async () => {
-    if (!chatInput.trim() || isChatLoading || !hexagram) return;
+    if (!chatInput.trim() || isChatLoading) return;
+    // 易經必須有 hexagram;塔羅必須有三張牌
+    if (divineType === "tarot") {
+      if (drawnCards.length !== 3) return;
+    } else {
+      if (!hexagram) return;
+    }
 
     const userMsg = chatInput.trim();
     setChatInput("");
@@ -466,10 +472,28 @@ export default function Home() {
     setChatMessages(newMessages);
     setIsChatLoading(true);
 
-    // Build hexagram context for the AI
-    const hexContext = locale === "zh"
-      ? `本卦：第${hexagram.number}卦 ${hexagram.nameZh}\n卦辭：${hexagram.judgmentZh}\n象辭：${hexagram.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
-      : `Hexagram ${hexagram.number}: ${hexagram.nameEn}\nJudgment: ${hexagram.judgmentEn}\nImage: ${hexagram.imageEn}\nQuestion: ${userQuestion}\nReading: ${aiReading}`;
+    // Build reading context for the AI — 易經 / 塔羅 不同組合
+    let readingContext: string;
+    if (divineType === "tarot") {
+      const lines = drawnCards.map((d, i) => {
+        const pos = THREE_CARD_POSITIONS[i];
+        const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
+        const meaning = d.isReversed
+          ? (locale === "zh" ? d.card.reversedMeaningZh : d.card.reversedMeaningEn)
+          : (locale === "zh" ? d.card.uprightMeaningZh : d.card.uprightMeaningEn);
+        if (locale === "zh") {
+          return `【${pos.labelZh}】${cardName}(${d.isReversed ? "逆位" : "正位"}):${meaning}`;
+        }
+        return `[${pos.labelEn}] ${cardName} (${d.isReversed ? "Reversed" : "Upright"}): ${meaning}`;
+      }).join("\n");
+      readingContext = locale === "zh"
+        ? `問題:${userQuestion}\n\n三張牌:\n${lines}\n\n老師解盤:${aiReading}`
+        : `Question: ${userQuestion}\n\nThree cards:\n${lines}\n\nReading: ${aiReading}`;
+    } else {
+      readingContext = locale === "zh"
+        ? `本卦：第${hexagram!.number}卦 ${hexagram!.nameZh}\n卦辭：${hexagram!.judgmentZh}\n象辭：${hexagram!.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
+        : `Hexagram ${hexagram!.number}: ${hexagram!.nameEn}\nJudgment: ${hexagram!.judgmentEn}\nImage: ${hexagram!.imageEn}\nQuestion: ${userQuestion}\nReading: ${aiReading}`;
+    }
 
     if (chatAbortRef.current) chatAbortRef.current.abort();
     const controller = new AbortController();
@@ -481,7 +505,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages,
-          hexagramContext: hexContext,
+          readingContext,
+          divineType: divineType ?? "iching",
           locale,
         }),
         signal: controller.signal,
@@ -1592,6 +1617,81 @@ export default function Home() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Chat with Master(塔羅版) */}
+              <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
+                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
+                  {t("繼續請教老師", "Ask the Master")}
+                </h3>
+
+                {chatMessages.length > 0 && (
+                  <div style={{ maxHeight: 320, overflowY: "auto", marginBottom: 12 }}>
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} style={{
+                        display: "flex",
+                        justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                        marginBottom: 10,
+                      }}>
+                        <div style={{
+                          maxWidth: "85%",
+                          padding: "8px 12px",
+                          borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                          background: msg.role === "user" ? "rgba(212,168,85,0.2)" : "rgba(30,30,60,0.8)",
+                          border: msg.role === "user" ? "1px solid rgba(212,168,85,0.3)" : "1px solid rgba(192,192,208,0.15)",
+                          color: msg.role === "user" ? "#e8e0d0" : "rgba(192,192,208,0.9)",
+                          fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap",
+                        }}>
+                          {msg.role === "assistant" && (
+                            <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
+                              {t("老師", "Master")}
+                            </span>
+                          )}
+                          {msg.content}
+                          {isChatLoading && i === chatMessages.length - 1 && msg.role === "assistant" && (
+                            <motion.span
+                              animate={{ opacity: [1, 0] }}
+                              transition={{ duration: 0.8, repeat: Infinity }}
+                              style={{ display: "inline-block", width: 6, height: 14, background: "#d4a855", marginLeft: 2, verticalAlign: "middle" }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 6, width: "100%", boxSizing: "border-box" }}>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
+                    placeholder={t("想問老師什麼呢...", "Ask the master...")}
+                    disabled={isChatLoading || isLoadingAI}
+                    style={{
+                      flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10,
+                      background: "rgba(10,10,26,0.5)", border: "1px solid rgba(212,168,85,0.2)",
+                      color: "white", fontSize: 14, outline: "none",
+                      fontFamily: "'Noto Sans TC', sans-serif",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    onClick={sendChatMessage}
+                    disabled={!chatInput.trim() || isChatLoading || isLoadingAI}
+                    style={{
+                      flexShrink: 0, padding: "10px 14px", borderRadius: 10,
+                      background: chatInput.trim() && !isChatLoading ? "linear-gradient(135deg, #d4a855, #b8860b)" : "rgba(212,168,85,0.2)",
+                      border: "none", color: chatInput.trim() && !isChatLoading ? "#1a1a2e" : "rgba(192,192,208,0.4)",
+                      fontSize: 14, fontWeight: 600, cursor: chatInput.trim() && !isChatLoading ? "pointer" : "default",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {t("送出", "Send")}
+                  </button>
+                </div>
               </div>
 
               {/* Actions */}
