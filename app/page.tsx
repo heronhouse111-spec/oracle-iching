@@ -9,16 +9,22 @@ import HexagramDisplay from "@/components/HexagramDisplay";
 import CoinAnimation from "@/components/CoinAnimation";
 import ShareCard from "@/components/ShareCard";
 import { performDivination, questionCategories, type DivinationResult, type CoinThrow } from "@/lib/divination";
-import { findHexagram, type Hexagram } from "@/data/hexagrams";
+import { findHexagram, getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
 import { saveDivination } from "@/lib/saveDivination";
 import {
   drawThreeCards,
+  getCardById,
   THREE_CARD_POSITIONS,
   SUIT_NAMES_ZH,
   SUIT_NAMES_EN,
   CARD_BACK_IMAGE,
   type DrawnCard,
 } from "@/data/tarot";
+import {
+  savePendingDivination,
+  loadPendingDivination,
+  clearPendingDivination,
+} from "@/lib/pendingDivination";
 
 type Step =
   | "category"
@@ -126,6 +132,177 @@ export default function Home() {
       cancelled = true;
     };
   }, [step]);
+
+  // ── 訪客登入前的結果快照(sessionStorage) ─────────────
+  // 訪客占卜完按「登入」→ OAuth 把整頁清光,回來 mount 時讀這份 snapshot 把
+  // 結果頁整包復原,並在使用者已登入時補存 Supabase 讓分享連結可用。
+  useEffect(() => {
+    if (step !== "result") return;
+    if (isLoadingAI) return; // 串流中不寫,避免存到半截
+    if (!aiReading) return;
+
+    if (divineType === "tarot") {
+      if (drawnCards.length !== 3) return;
+      savePendingDivination({
+        v: 1,
+        timestamp: Date.now(),
+        divineType: "tarot",
+        selectedCategory,
+        userQuestion,
+        aiReading,
+        locale,
+        iching: null,
+        tarot: drawnCards.map((d) => ({
+          cardId: d.card.id,
+          isReversed: d.isReversed,
+        })),
+      });
+    } else if (divineType === "iching") {
+      if (!hexagram || !divinationResult) return;
+      savePendingDivination({
+        v: 1,
+        timestamp: Date.now(),
+        divineType: "iching",
+        selectedCategory,
+        userQuestion,
+        aiReading,
+        locale,
+        iching: {
+          hexagramNumber: hexagram.number,
+          primaryLines: divinationResult.primaryLines,
+          changingLines: divinationResult.changingLines,
+          relatingLines: divinationResult.relatingLines,
+          relatingHexagramNumber: relatingHexagram?.number ?? null,
+        },
+        tarot: null,
+      });
+    }
+  }, [
+    step,
+    isLoadingAI,
+    aiReading,
+    divineType,
+    drawnCards,
+    hexagram,
+    relatingHexagram,
+    divinationResult,
+    selectedCategory,
+    userQuestion,
+    locale,
+  ]);
+
+  // mount 時:若有暫存占卜就復原;若現在已登入,順便補存 Supabase 拿 id
+  useEffect(() => {
+    const snap = loadPendingDivination();
+    if (!snap) return;
+    // 先清掉 key,避免 re-render / HMR 重複觸發
+    clearPendingDivination();
+
+    setSelectedCategory(snap.selectedCategory);
+    setUserQuestion(snap.userQuestion);
+    setAiReading(snap.aiReading);
+    setDivineType(snap.divineType);
+
+    if (snap.divineType === "iching" && snap.iching) {
+      const hex = getHexagramByNumber(snap.iching.hexagramNumber) ?? null;
+      const relHex =
+        snap.iching.relatingHexagramNumber !== null
+          ? getHexagramByNumber(snap.iching.relatingHexagramNumber) ?? null
+          : null;
+      setHexagram(hex);
+      setRelatingHexagram(relHex);
+      setDivinationResult({
+        // throws 在結果頁不再渲染,給空陣列即可
+        throws: [],
+        primaryLines: snap.iching.primaryLines,
+        changingLines: snap.iching.changingLines,
+        relatingLines: snap.iching.relatingLines,
+      });
+    } else if (snap.divineType === "tarot" && snap.tarot) {
+      const cards: DrawnCard[] = snap.tarot
+        .map((tc) => {
+          const card = getCardById(tc.cardId);
+          return card ? { card, isReversed: tc.isReversed } : null;
+        })
+        .filter((x): x is DrawnCard => x !== null);
+      if (cards.length === 3) {
+        setDrawnCards(cards);
+        setRevealedCount(3);
+      }
+    }
+
+    setStep("result");
+
+    // 若使用者現在已登入,補存 Supabase 以便開分享連結
+    if (!isSupabaseConfigured) return;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return; // 還沒登入就算了,使用者可以再按一次「登入」
+
+        const saved =
+          snap.divineType === "tarot" && snap.tarot
+            ? await saveDivination({
+                divineType: "tarot",
+                question: snap.userQuestion,
+                category: snap.selectedCategory,
+                tarotCards: snap.tarot.map((tc, i) => ({
+                  cardId: tc.cardId,
+                  // 快照裡沒存 position(drawnCards 順序就是 past-present-future)
+                  position: THREE_CARD_POSITIONS[i].key as
+                    | "past"
+                    | "present"
+                    | "future",
+                  isReversed: tc.isReversed,
+                })),
+                aiReading: snap.aiReading,
+                locale: snap.locale,
+              })
+            : snap.divineType === "iching" && snap.iching
+            ? await saveDivination({
+                divineType: "iching",
+                question: snap.userQuestion,
+                category: snap.selectedCategory,
+                hexagramNumber: snap.iching.hexagramNumber,
+                primaryLines: snap.iching.primaryLines,
+                changingLines: snap.iching.changingLines,
+                relatingHexagramNumber: snap.iching.relatingHexagramNumber,
+                aiReading: snap.aiReading,
+                locale: snap.locale,
+              })
+            : null;
+        if (saved?.id) setDivinationId(saved.id);
+      } catch (e) {
+        console.error("登入後補存占卜失敗:", e);
+      }
+    })();
+    // 只在 mount 跑一次;其餘 dependencies 無關(snapshot 是過去的 state)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 訪客從結果頁直接按「登入」→ snapshot 已經被上面的 effect 寫入 sessionStorage,
+  // 這邊只負責發 OAuth,redirectTo 就是當前網域(callback 預設回 "/"),mount 會撿 snapshot 復原。
+  const handleLoginForShare = async () => {
+    if (!isSupabaseConfigured) return;
+    try {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
+    } catch (e) {
+      console.error("登入流程啟動失敗:", e);
+      setShareMessage(t("登入失敗,請稍候再試", "Login failed, please retry"));
+      setTimeout(() => setShareMessage(null), 3000);
+    }
+  };
 
   const handleTogglePublic = async () => {
     if (!divinationId || !isSignedIn || isTogglingPublic) return;
@@ -1337,12 +1514,21 @@ export default function Home() {
                     }}
                   >
                     {!divinationId || !isSignedIn ? (
-                      <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
-                        🔗 {t(
-                          "登入會員即可產生公開分享連結（貼到 Line/Twitter 會自動展開預覽）",
-                          "Sign in to generate a public share link (unfurls automatically on Line/Twitter)"
-                        )}
-                      </p>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                          🔗 {t(
+                            "登入會員即可產生公開分享連結（這筆占卜會幫你保留）",
+                            "Sign in to generate a public share link (this reading will be kept)"
+                          )}
+                        </p>
+                        <button
+                          onClick={handleLoginForShare}
+                          className="btn-gold"
+                          style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
+                        >
+                          {t("登入", "Sign in")}
+                        </button>
+                      </div>
                     ) : !isPublic ? (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                         <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
@@ -1776,12 +1962,21 @@ export default function Home() {
                     }}
                   >
                     {!divinationId || !isSignedIn ? (
-                      <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
-                        🔗 {t(
-                          "登入會員即可產生公開分享連結(貼到 Line/Twitter 會自動展開預覽)",
-                          "Sign in to generate a public share link (unfurls automatically on Line/Twitter)"
-                        )}
-                      </p>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                          🔗 {t(
+                            "登入會員即可產生公開分享連結(這筆占卜會幫你保留)",
+                            "Sign in to generate a public share link (this reading will be kept)"
+                          )}
+                        </p>
+                        <button
+                          onClick={handleLoginForShare}
+                          className="btn-gold"
+                          style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
+                        >
+                          {t("登入", "Sign in")}
+                        </button>
+                      </div>
                     ) : !isPublic ? (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                         <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
