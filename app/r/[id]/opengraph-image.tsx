@@ -44,23 +44,28 @@ async function loadPublic(id: string): Promise<D | null> {
 }
 
 // 靜態卦線 for OG image ── Satori 要求每個 div 要有 display 屬性
+// size="big" 左邊主視覺用(取代沒字型可 render 的卦象字元),"small" 右邊對比用
 function HexLines({
   lines,
   changingLines = [],
+  size = "small",
 }: {
   lines: number[];
   changingLines?: number[];
+  size?: "big" | "small";
 }) {
   const display = [...lines].reverse();
   const changingDisplay = changingLines.map((i) => 5 - i);
-  const W = 160;
-  const H = 14;
+  const W = size === "big" ? 360 : 160;
+  const H = size === "big" ? 32 : 14;
+  const gap = size === "big" ? 24 : 14;
+  const split = size === "big" ? 40 : 18;
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap,
         alignItems: "center",
       }}
     >
@@ -75,16 +80,16 @@ function HexLines({
                 display: "flex",
                 width: W,
                 height: H,
-                borderRadius: 2,
+                borderRadius: size === "big" ? 4 : 2,
                 background: bg,
               }}
             />
           );
         }
         return (
-          <div key={idx} style={{ display: "flex", gap: 18, width: W }}>
-            <div style={{ display: "flex", flex: 1, height: H, borderRadius: 2, background: bg }} />
-            <div style={{ display: "flex", flex: 1, height: H, borderRadius: 2, background: bg }} />
+          <div key={idx} style={{ display: "flex", gap: split, width: W }}>
+            <div style={{ display: "flex", flex: 1, height: H, borderRadius: size === "big" ? 4 : 2, background: bg }} />
+            <div style={{ display: "flex", flex: 1, height: H, borderRadius: size === "big" ? 4 : 2, background: bg }} />
           </div>
         );
       })}
@@ -178,7 +183,18 @@ export default async function Image({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={{ fontSize: 48, color: "#d4a855" }}>☯</span>
+              {/* CSS-drawn circular logo mark (字型無關,不會變成 tofu)*/}
+              <div
+                style={{
+                  display: "flex",
+                  width: 36,
+                  height: 36,
+                  borderRadius: 9999,
+                  border: "3px solid #d4a855",
+                  background:
+                    "linear-gradient(135deg, rgba(212,168,85,0.3) 0%, rgba(139,92,246,0.2) 100%)",
+                }}
+              />
               <span
                 style={{
                   fontSize: 28,
@@ -206,26 +222,39 @@ export default async function Image({
               marginTop: 24,
             }}
           >
-            {/* 左:大卦象字元 */}
+            {/* 左:大卦線(取代沒字型可 render 的 U+4DC0-U+4DFF 卦象字元)*/}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
+                padding: "32px 48px",
+                borderRadius: 24,
+                border: "2px solid rgba(212,168,85,0.35)",
+                background:
+                  "linear-gradient(180deg, rgba(212,168,85,0.08) 0%, rgba(139,92,246,0.08) 100%)",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  fontSize: 260,
-                  color: "#d4a855",
-                  lineHeight: 1,
-                  textShadow:
-                    "0 0 40px rgba(212,168,85,0.5), 0 0 80px rgba(212,168,85,0.3)",
-                }}
-              >
-                {hex ? hex.character : "☯"}
-              </div>
+              {d ? (
+                <HexLines
+                  lines={d.primary_lines}
+                  changingLines={d.changing_lines}
+                  size="big"
+                />
+              ) : (
+                /* 沒資料 fallback — 用 CSS 畫個大金色圓圈當 brand mark */
+                <div
+                  style={{
+                    display: "flex",
+                    width: 200,
+                    height: 200,
+                    borderRadius: 9999,
+                    border: "6px solid #d4a855",
+                    background:
+                      "linear-gradient(135deg, rgba(212,168,85,0.3) 0%, rgba(139,92,246,0.2) 100%)",
+                  }}
+                />
+              )}
             </div>
 
             {/* 右:卦名 + 卦線 */}
@@ -260,33 +289,36 @@ export default async function Image({
                   >
                     {hex.nameEn.split(" (")[0]}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 28,
-                      marginTop: 8,
-                    }}
-                  >
-                    <HexLines
-                      lines={d!.primary_lines}
-                      changingLines={d!.changing_lines}
-                    />
-                    {relHex && relatingLines && (
-                      <>
-                        <div
-                          style={{
-                            display: "flex",
-                            color: "rgba(212,168,85,0.5)",
-                            fontSize: 36,
-                          }}
-                        >
-                          →
-                        </div>
-                        <HexLines lines={relatingLines} />
-                      </>
-                    )}
-                  </div>
+                  {relHex && relatingLines && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 20,
+                        marginTop: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          fontSize: 22,
+                          color: "rgba(192,192,208,0.6)",
+                        }}
+                      >
+                        Becoming
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          color: "rgba(212,168,85,0.6)",
+                          fontSize: 28,
+                        }}
+                      >
+                        →
+                      </div>
+                      <HexLines lines={relatingLines} />
+                    </div>
+                  )}
                 </>
               ) : (
                 <div
@@ -314,7 +346,7 @@ export default async function Image({
             }}
           >
             <span style={{ fontSize: 22, color: "rgba(192,192,208,0.75)" }}>
-              ✦ Ancient wisdom meets AI divination
+              Ancient wisdom meets AI divination
             </span>
             <span
               style={{
