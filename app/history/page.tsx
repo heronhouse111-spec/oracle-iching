@@ -2,22 +2,34 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import HexagramDisplay from "@/components/HexagramDisplay";
 import { getHexagramByNumber } from "@/data/hexagrams";
+import { getCardById, THREE_CARD_POSITIONS } from "@/data/tarot";
 import { questionCategories } from "@/lib/divination";
+
+interface TarotCardSlot {
+  cardId: string;
+  position: "past" | "present" | "future";
+  isReversed: boolean;
+}
 
 interface Record {
   id: string;
   created_at: string;
   question: string;
   category: string;
-  hexagram_number: number;
-  changing_lines: number[];
   ai_reading: string;
-  primary_lines: number[];
+  divine_type: "iching" | "tarot";
+  // iching-only
+  hexagram_number: number | null;
+  primary_lines: number[] | null;
+  changing_lines: number[] | null;
+  // tarot-only
+  tarot_cards: TarotCardSlot[] | null;
 }
 
 type Source = "supabase" | "local" | null;
@@ -42,7 +54,23 @@ export default function HistoryPage() {
     const loadFromLocal = () => {
       try {
         const stored = localStorage.getItem("divination_history");
-        if (stored) setRecords(JSON.parse(stored));
+        if (stored) {
+          // 同時收易經 + 塔羅;但擋掉資料不齊的 row 避免 render crash
+          const parsed = JSON.parse(stored) as Record[];
+          const clean = parsed.filter((r) => {
+            if (!r || !r.id) return false;
+            // 舊紀錄可能沒 divine_type,預設為 iching
+            const dt = r.divine_type ?? "iching";
+            if (dt === "iching") {
+              return typeof r.hexagram_number === "number" && Array.isArray(r.primary_lines);
+            }
+            if (dt === "tarot") {
+              return Array.isArray(r.tarot_cards) && r.tarot_cards.length > 0;
+            }
+            return false;
+          });
+          setRecords(clean);
+        }
       } catch (e) {
         console.error("localStorage read failed:", e);
       }
@@ -76,15 +104,13 @@ export default function HistoryPage() {
             .select("is_active")
             .eq("user_id", user.id)
             .maybeSingle(),
-          // 歷史頁目前只顯示易經紀錄;塔羅 history UI 之後再補。
-          // 沒這個 filter 的話,塔羅紀錄 hexagram_number=null 會讓 getHexagramByNumber 炸掉。
+          // 易經 + 塔羅一起撈;UI 依 divine_type 分渲染
           supabase
             .from("divinations")
             .select(
-              "id, created_at, question, category, hexagram_number, primary_lines, changing_lines, ai_reading"
+              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, ai_reading"
             )
             .eq("user_id", user.id)
-            .eq("divine_type", "iching")
             .order("created_at", { ascending: false }),
         ]);
 
@@ -106,6 +132,16 @@ export default function HistoryPage() {
 
     load();
   }, []);
+
+  const handleGuestLogin = async () => {
+    if (!isSupabaseConfigured) return;
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+    });
+  };
 
   // Subscription gating (only applies when signed into Supabase)
   const gatingApplies = source === "supabase" && !isActive;
@@ -146,6 +182,132 @@ export default function HistoryPage() {
           </p>
         )}
 
+        {/* 未登入訪客引導卡:登入同步 + 升級解鎖 */}
+        {!isLoading && source === "local" && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 20,
+              marginBottom: 20,
+              border: "1px solid rgba(212,168,85,0.35)",
+              background:
+                "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(212,168,85,0.02))",
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>☁</div>
+              <h2
+                style={{
+                  color: "#d4a855",
+                  fontFamily: "'Noto Serif TC', serif",
+                  fontSize: 17,
+                  margin: 0,
+                  marginBottom: 6,
+                }}
+              >
+                {t("登入以解鎖完整體驗", "Sign in to unlock full features")}
+              </h2>
+              <p
+                style={{
+                  color: "rgba(192,192,208,0.7)",
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  margin: 0,
+                  maxWidth: 360,
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                }}
+              >
+                {t(
+                  "目前紀錄僅存於本機,換裝置或清瀏覽器就會消失。",
+                  "Records are currently stored only on this device and will disappear if you switch devices or clear your browser."
+                )}
+              </p>
+            </div>
+
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: "0 auto 18px",
+                maxWidth: 320,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                color: "rgba(192,192,208,0.85)",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+              }}
+            >
+              <li style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: "#d4a855" }}>✦</span>
+                <span>
+                  {t(
+                    "跨裝置雲端同步,手機 / 電腦都看得到",
+                    "Cloud sync across all your devices"
+                  )}
+                </span>
+              </li>
+              <li style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: "#d4a855" }}>✦</span>
+                <span>
+                  {t(
+                    "產生公開分享連結,傳給朋友也能看到你的卦象",
+                    "Generate shareable links so friends can view your reading"
+                  )}
+                </span>
+              </li>
+              <li style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: "#d4a855" }}>✦</span>
+                <span>
+                  {t(
+                    "訂閱解鎖完整歷史、無浮水印輸出",
+                    "Subscribe to unlock full history and watermark-free output"
+                  )}
+                </span>
+              </li>
+            </ul>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              {isSupabaseConfigured && (
+                <button
+                  onClick={handleGuestLogin}
+                  className="btn-gold"
+                  style={{
+                    padding: "10px 22px",
+                    fontSize: 13,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("使用 Google 登入", "Sign in with Google")}
+                </button>
+              )}
+              <Link
+                href="/account"
+                style={{
+                  padding: "10px 22px",
+                  fontSize: 13,
+                  color: "#d4a855",
+                  border: "1px solid rgba(212,168,85,0.3)",
+                  borderRadius: 9999,
+                  textDecoration: "none",
+                  background: "rgba(212,168,85,0.04)",
+                }}
+              >
+                {t("了解訂閱方案 →", "View subscription plans →")}
+              </Link>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div style={{ textAlign: "center", padding: 48, color: "rgba(192,192,208,0.6)" }}>
             {t("載入中...", "Loading...")}
@@ -161,9 +323,19 @@ export default function HistoryPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {visibleRecords.map((record) => {
-              const hex = getHexagramByNumber(record.hexagram_number);
+              const divineType = record.divine_type ?? "iching";
               const cat = questionCategories.find((c) => c.id === record.category);
               const isExpanded = expandedId === record.id;
+              const hex =
+                divineType === "iching" && record.hexagram_number != null
+                  ? getHexagramByNumber(record.hexagram_number)
+                  : null;
+              const tarotLabel =
+                divineType === "tarot"
+                  ? t("塔羅三牌占卜", "Three-Card Tarot")
+                  : locale === "zh"
+                  ? hex?.nameZh
+                  : hex?.nameEn;
 
               return (
                 <motion.div key={record.id} layout className="mystic-card" style={{ overflow: "hidden" }}>
@@ -172,12 +344,14 @@ export default function HistoryPage() {
                       width: "100%", padding: 16, display: "flex", alignItems: "center", gap: 16,
                       textAlign: "left", background: "none", border: "none", cursor: "pointer", color: "white",
                     }}>
-                    <div style={{ fontSize: 28 }}>{hex?.character}</div>
+                    <div style={{ fontSize: 28, minWidth: 36, textAlign: "center" }}>
+                      {divineType === "tarot" ? "🃏" : hex?.character}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span>{cat?.icon}</span>
                         <span style={{ color: "#d4a855", fontFamily: "'Noto Serif TC', serif", fontSize: 14 }}>
-                          {locale === "zh" ? hex?.nameZh : hex?.nameEn}
+                          {tarotLabel}
                         </span>
                       </div>
                       <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 4 }}>
@@ -193,7 +367,52 @@ export default function HistoryPage() {
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                       style={{ borderTop: "1px solid rgba(212,168,85,0.1)", padding: 16, position: "relative", overflow: "hidden" }}>
                       <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, position: "relative", zIndex: 1 }}>
-                        <HexagramDisplay lines={record.primary_lines} changingLines={record.changing_lines} size="sm" animate={false} />
+                        {divineType === "iching" && record.primary_lines ? (
+                          <HexagramDisplay
+                            lines={record.primary_lines}
+                            changingLines={record.changing_lines ?? []}
+                            size="sm"
+                            animate={false}
+                          />
+                        ) : divineType === "tarot" && record.tarot_cards ? (
+                          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                            {record.tarot_cards.map((tc) => {
+                              const card = getCardById(tc.cardId);
+                              const pos = THREE_CARD_POSITIONS.find((p) => p.key === tc.position);
+                              if (!card) return null;
+                              return (
+                                <div key={tc.position} style={{ textAlign: "center", width: 72 }}>
+                                  <div style={{ fontSize: 10, color: "#d4a855", marginBottom: 4 }}>
+                                    {locale === "zh" ? pos?.labelZh : pos?.labelEn}
+                                  </div>
+                                  <div
+                                    style={{
+                                      width: 72,
+                                      height: 120,
+                                      borderRadius: 4,
+                                      overflow: "hidden",
+                                      position: "relative",
+                                      border: "1px solid rgba(212,168,85,0.25)",
+                                      transform: tc.isReversed ? "rotate(180deg)" : undefined,
+                                    }}
+                                  >
+                                    <Image
+                                      src={card.imagePath}
+                                      alt={locale === "zh" ? card.nameZh : card.nameEn}
+                                      fill
+                                      sizes="72px"
+                                      style={{ objectFit: "cover" }}
+                                    />
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "rgba(192,192,208,0.7)", marginTop: 4, lineHeight: 1.3 }}>
+                                    {locale === "zh" ? card.nameZh : card.nameEn}
+                                    {tc.isReversed ? t("・逆", " (rev)") : ""}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", position: "relative", zIndex: 1 }}>
                         {record.ai_reading}
@@ -352,6 +571,22 @@ export default function HistoryPage() {
                 </div>
               </div>
             )}
+
+            {/* 列表尾端:繼續新的占卜(有紀錄時才顯示,空狀態已有自己的 CTA) */}
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+              <a
+                href="/"
+                className="btn-gold"
+                style={{
+                  display: "inline-block",
+                  textDecoration: "none",
+                  padding: "12px 28px",
+                  fontSize: 14,
+                }}
+              >
+                {t("繼續新的占卜 →", "Start a new divination →")}
+              </a>
+            </div>
           </div>
         )}
       </main>

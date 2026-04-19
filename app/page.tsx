@@ -136,7 +136,20 @@ export default function Home() {
   // ── 訪客登入前的結果快照(sessionStorage) ─────────────
   // 訪客占卜完按「登入」→ OAuth 把整頁清光,回來 mount 時讀這份 snapshot 把
   // 結果頁整包復原,並在使用者已登入時補存 Supabase 讓分享連結可用。
+  //
+  // skipSnapshotSaveRef:mount 復原時會 setStep("result"),緊接著這個 effect 會
+  // 被觸發 → 把剛復原的 state 再寫回 sessionStorage → 下次進首頁又撈到舊 snapshot,
+  // 使用者永遠跳不回占卜選單。用這個 ref 吞掉復原後的第一次寫入。
+  const skipSnapshotSaveRef = useRef(false);
+
   useEffect(() => {
+    if (skipSnapshotSaveRef.current) {
+      skipSnapshotSaveRef.current = false;
+      return;
+    }
+    // 已登入的人紀錄直接進 Supabase,不需要 snapshot;而且如果繼續寫,
+    // 後面導回 "/" 又會被 mount effect 撿到,變成永遠顯示上一筆占卜。
+    if (isSignedIn) return;
     if (step !== "result") return;
     if (isLoadingAI) return; // 串流中不寫,避免存到半截
     if (!aiReading) return;
@@ -189,6 +202,7 @@ export default function Home() {
     selectedCategory,
     userQuestion,
     locale,
+    isSignedIn,
   ]);
 
   // mount 時:若有暫存占卜就復原;若現在已登入,順便補存 Supabase 拿 id
@@ -232,6 +246,9 @@ export default function Home() {
     }
 
     setStep("result");
+    // 緊接著 save-snapshot effect 會被 step="result" 觸發;但我們剛從 snapshot
+    // 復原,沒必要再寫回去(且若登入狀態還沒載完,isSignedIn 仍是 false 會穿透防護)。
+    skipSnapshotSaveRef.current = true;
 
     // 若使用者現在已登入,補存 Supabase 以便開分享連結
     if (!isSupabaseConfigured) return;
