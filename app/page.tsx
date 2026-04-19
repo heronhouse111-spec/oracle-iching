@@ -813,8 +813,8 @@ export default function Home() {
                 </h1>
                 <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 14, maxWidth: 400, margin: "10px auto 0", lineHeight: 1.6 }}>
                   {t(
-                    "東方易經 · 西方塔羅 · AI 即時解盤",
-                    "Eastern I Ching · Western Tarot · Real-time AI readings"
+                    "東方易經 · 西方塔羅",
+                    "Eastern I Ching · Western Tarot"
                   )}
                 </p>
               </div>
