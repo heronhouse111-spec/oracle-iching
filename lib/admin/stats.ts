@@ -151,9 +151,11 @@ export async function loadAdminStats(): Promise<AdminStats> {
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .gte("created_at", sevenDaysAgo.toISOString()),
+    // Admin 目前的趨勢/分類/卦象分析只針對易經紀錄;塔羅統計後續再補(需另外聚合)
     supabase
       .from("divinations")
       .select("id,user_id,category,hexagram_number,locale,created_at")
+      .eq("divine_type", "iching")
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(5000),
@@ -162,6 +164,7 @@ export async function loadAdminStats(): Promise<AdminStats> {
       .select(
         "id,user_id,question,category,hexagram_number,relating_hexagram_number,locale,created_at"
       )
+      .eq("divine_type", "iching")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase

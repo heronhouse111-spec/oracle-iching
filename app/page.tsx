@@ -169,7 +169,13 @@ export default function Home() {
   };
 
   const handleShare = async () => {
-    if (!hexagram || !divinationResult || isSharing) return;
+    if (isSharing) return;
+    // 易經需 hexagram + divinationResult;塔羅需三張牌
+    if (divineType === "tarot") {
+      if (drawnCards.length !== 3) return;
+    } else {
+      if (!hexagram || !divinationResult) return;
+    }
     setIsSharing(true);
     setShareMessage(null);
     try {
@@ -187,7 +193,11 @@ export default function Home() {
       const link = document.createElement("a");
       link.href = dataUrl;
       const ts = new Date().toISOString().slice(0, 10);
-      link.download = `oracle-iching-${hexagram.number}-${ts}.png`;
+      const filePrefix =
+        divineType === "tarot"
+          ? `oracle-tarot-${ts}`
+          : `oracle-iching-${hexagram?.number ?? "x"}-${ts}`;
+      link.download = `${filePrefix}.png`;
       link.click();
       setShareMessage(t("分享圖已下載 ✨", "Share image downloaded ✨"));
     } catch (e) {
@@ -359,6 +369,7 @@ export default function Home() {
 
       if (!controller.signal.aborted) {
         const saved = await saveDivination({
+          divineType: "iching",
           question: userQuestion,
           category: selectedCategory,
           hexagramNumber: hex.number,
@@ -430,6 +441,23 @@ export default function Home() {
           fullText += chunk;
           setAiReading(fullText);
         }
+      }
+
+      // 存進 Supabase(Phase B)— 塔羅版本,讓分享 / 公開連結可用
+      if (!controller.signal.aborted) {
+        const saved = await saveDivination({
+          divineType: "tarot",
+          question: userQuestion,
+          category: selectedCategory,
+          tarotCards: cards.map((d, i) => ({
+            cardId: d.card.id,
+            position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
+            isReversed: d.isReversed,
+          })),
+          aiReading: fullText,
+          locale,
+        });
+        if (saved?.id) setDivinationId(saved.id);
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -1713,6 +1741,165 @@ export default function Home() {
                 )}
               </div>
 
+              {/* Share card download + public link(塔羅版) */}
+              {!isLoadingAI && aiReading && (
+                <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
+                  <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                    📤 {t("分享這次占卜", "Share this divination")}
+                  </h3>
+
+                  {/* v1: 下載分享圖 */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                      {isActive
+                        ? t("📥 下載無浮水印分享圖(付費會員專屬)", "📥 Clean share image (premium member perk)")
+                        : t("📥 下載分享圖(免費版含浮水印,升級即可移除)", "📥 Download share image (free version has watermark)")}
+                    </p>
+                    <button
+                      onClick={handleShare}
+                      disabled={isSharing}
+                      className="btn-gold"
+                      style={{ fontSize: 14, padding: "10px 20px", flexShrink: 0 }}
+                    >
+                      {isSharing
+                        ? t("產生中…", "Generating…")
+                        : t("下載分享圖", "Download")}
+                    </button>
+                  </div>
+
+                  {/* v2: 公開分享連結 */}
+                  <div
+                    style={{
+                      marginTop: 16,
+                      paddingTop: 16,
+                      borderTop: "1px dashed rgba(212,168,85,0.2)",
+                    }}
+                  >
+                    {!divinationId || !isSignedIn ? (
+                      <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                        🔗 {t(
+                          "登入會員即可產生公開分享連結(貼到 Line/Twitter 會自動展開預覽)",
+                          "Sign in to generate a public share link (unfurls automatically on Line/Twitter)"
+                        )}
+                      </p>
+                    ) : !isPublic ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
+                          🔗 {t(
+                            "產生公開分享連結(匿名公開,不露出你的帳號資訊)",
+                            "Generate public share link (anonymous, no account info revealed)"
+                          )}
+                        </p>
+                        <button
+                          onClick={handleTogglePublic}
+                          disabled={isTogglingPublic}
+                          style={{
+                            padding: "10px 20px",
+                            borderRadius: 9999,
+                            border: "1px solid rgba(212,168,85,0.4)",
+                            background: "rgba(212,168,85,0.08)",
+                            color: "#d4a855",
+                            fontSize: 14,
+                            cursor: isTogglingPublic ? "default" : "pointer",
+                            flexShrink: 0,
+                            fontFamily: "'Noto Sans TC', sans-serif",
+                          }}
+                        >
+                          {isTogglingPublic
+                            ? t("開啟中…", "Enabling…")
+                            : t("🔓 開啟分享連結", "🔓 Enable share link")}
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            padding: "10px 12px",
+                            background: "rgba(10,10,26,0.6)",
+                            border: "1px solid rgba(212,168,85,0.25)",
+                            borderRadius: 10,
+                            marginBottom: 10,
+                          }}
+                        >
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              color: "#fde68a",
+                              fontSize: 13,
+                              fontFamily: "monospace",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {typeof window !== "undefined"
+                              ? `${window.location.origin}/r/${divinationId}`
+                              : `/r/${divinationId}`}
+                          </span>
+                          <button
+                            onClick={handleCopyLink}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              border: "none",
+                              background:
+                                copyStatus === "copied"
+                                  ? "rgba(74,222,128,0.3)"
+                                  : "rgba(212,168,85,0.25)",
+                              color: copyStatus === "copied" ? "#86efac" : "#fde68a",
+                              fontSize: 12,
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {copyStatus === "copied"
+                              ? t("已複製 ✓", "Copied ✓")
+                              : t("複製", "Copy")}
+                          </button>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 11 }}>
+                            {t(
+                              "✨ 貼到 Line / Twitter / FB 會自動展開預覽卡",
+                              "✨ Unfurls into a preview card on Line / Twitter / FB"
+                            )}
+                          </span>
+                          <button
+                            onClick={handleTogglePublic}
+                            disabled={isTogglingPublic}
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: 9999,
+                              border: "1px solid rgba(192,192,208,0.2)",
+                              background: "transparent",
+                              color: "rgba(192,192,208,0.6)",
+                              fontSize: 11,
+                              cursor: isTogglingPublic ? "default" : "pointer",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isTogglingPublic
+                              ? t("關閉中…", "Disabling…")
+                              : t("🔒 關閉公開", "🔒 Make private")}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {shareMessage && (
+                    <div style={{ marginTop: 10, fontSize: 13, color: "#fde68a" }}>
+                      {shareMessage}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Chat with Master(塔羅版) */}
               <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
@@ -1819,37 +2006,75 @@ export default function Home() {
       </main>
 
       {/* Hidden off-screen ShareCard — 只在 result step 渲染 */}
-      {step === "result" && hexagram && divinationResult && (() => {
-        const cat = questionCategories.find((c) => c.id === selectedCategory);
-        return (
-          <div
-            aria-hidden
-            style={{
-              position: "fixed",
-              left: -99999,
-              top: 0,
-              pointerEvents: "none",
-              opacity: 1,
-            }}
-          >
-            <ShareCard
-              ref={shareCardRef}
-              hexagram={hexagram}
-              relatingHexagram={relatingHexagram}
-              primaryLines={divinationResult.primaryLines}
-              relatingLines={divinationResult.relatingLines}
-              changingLines={divinationResult.changingLines}
-              question={userQuestion}
-              categoryIcon={cat?.icon ?? "🔮"}
-              categoryNameZh={cat?.nameZh ?? "綜合"}
-              categoryNameEn={cat?.nameEn ?? "General"}
-              aiReading={aiReading}
-              locale={locale}
-              showWatermark={!isActive}
-            />
-          </div>
-        );
-      })()}
+      {step === "result" &&
+        divineType !== "tarot" &&
+        hexagram &&
+        divinationResult &&
+        (() => {
+          const cat = questionCategories.find((c) => c.id === selectedCategory);
+          return (
+            <div
+              aria-hidden
+              style={{
+                position: "fixed",
+                left: -99999,
+                top: 0,
+                pointerEvents: "none",
+                opacity: 1,
+              }}
+            >
+              <ShareCard
+                ref={shareCardRef}
+                divineType="iching"
+                hexagram={hexagram}
+                relatingHexagram={relatingHexagram}
+                primaryLines={divinationResult.primaryLines}
+                relatingLines={divinationResult.relatingLines}
+                changingLines={divinationResult.changingLines}
+                question={userQuestion}
+                categoryIcon={cat?.icon ?? "🔮"}
+                categoryNameZh={cat?.nameZh ?? "綜合"}
+                categoryNameEn={cat?.nameEn ?? "General"}
+                aiReading={aiReading}
+                locale={locale}
+                showWatermark={!isActive}
+              />
+            </div>
+          );
+        })()}
+
+      {/* Hidden off-screen ShareCard (塔羅版) */}
+      {step === "result" &&
+        divineType === "tarot" &&
+        drawnCards.length === 3 &&
+        (() => {
+          const cat = questionCategories.find((c) => c.id === selectedCategory);
+          return (
+            <div
+              aria-hidden
+              style={{
+                position: "fixed",
+                left: -99999,
+                top: 0,
+                pointerEvents: "none",
+                opacity: 1,
+              }}
+            >
+              <ShareCard
+                ref={shareCardRef}
+                divineType="tarot"
+                drawnCards={drawnCards}
+                question={userQuestion}
+                categoryIcon={cat?.icon ?? "🔮"}
+                categoryNameZh={cat?.nameZh ?? "綜合"}
+                categoryNameEn={cat?.nameEn ?? "General"}
+                aiReading={aiReading}
+                locale={locale}
+                showWatermark={!isActive}
+              />
+            </div>
+          );
+        })()}
 
       {/* Background decoration */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: -1 }}>

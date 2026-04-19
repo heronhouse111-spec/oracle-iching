@@ -76,12 +76,15 @@ export default function HistoryPage() {
             .select("is_active")
             .eq("user_id", user.id)
             .maybeSingle(),
+          // 歷史頁目前只顯示易經紀錄;塔羅 history UI 之後再補。
+          // 沒這個 filter 的話,塔羅紀錄 hexagram_number=null 會讓 getHexagramByNumber 炸掉。
           supabase
             .from("divinations")
             .select(
               "id, created_at, question, category, hexagram_number, primary_lines, changing_lines, ai_reading"
             )
             .eq("user_id", user.id)
+            .eq("divine_type", "iching")
             .order("created_at", { ascending: false }),
         ]);
 
