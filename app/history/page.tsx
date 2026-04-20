@@ -17,6 +17,29 @@ interface TarotCardSlot {
   isReversed: boolean;
 }
 
+// follow_ups 陣列內單元 — schema 見 supabase/phase4_followups.sql
+interface FollowUpItem {
+  id: string;
+  question: string;
+  createdAt: string;
+  divineType: "iching" | "tarot";
+  aiReading: string;
+  // iching
+  hexagramNumber?: number | null;
+  primaryLines?: number[] | null;
+  changingLines?: number[] | null;
+  relatingHexagramNumber?: number | null;
+  // tarot
+  tarotCards?: TarotCardSlot[] | null;
+}
+
+// chat_messages 陣列內單元 — schema 見 supabase/phase6_chat_persistence.sql
+interface ChatMessageItem {
+  role: "user" | "assistant";
+  content: string;
+  createdAt?: string;
+}
+
 interface Record {
   id: string;
   created_at: string;
@@ -30,11 +53,16 @@ interface Record {
   changing_lines: number[] | null;
   // tarot-only
   tarot_cards: TarotCardSlot[] | null;
+  // 訂閱者在展開時可看到的延伸鏈 + 聊天紀錄(localStorage 紀錄不會有)
+  follow_ups?: FollowUpItem[] | null;
+  chat_messages?: ChatMessageItem[] | null;
 }
 
 type Source = "supabase" | "local" | null;
 
 const FREE_VISIBLE_LIMIT = 3;
+// 歷史顯示的時間窗 —— 12 個月內,避免長期用戶 UI 爆掉
+const HISTORY_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -97,6 +125,9 @@ export default function HistoryPage() {
 
         setUserEmail(user.email ?? null);
 
+        // 只撈最近 12 個月 — 避免訂閱者幾年後畫面炸掉(需要更早紀錄可之後加分頁)
+        const sinceIso = new Date(Date.now() - HISTORY_WINDOW_MS).toISOString();
+
         // Fetch subscription status + divinations in parallel
         const [subRes, divRes] = await Promise.all([
           supabase
@@ -104,13 +135,14 @@ export default function HistoryPage() {
             .select("is_active")
             .eq("user_id", user.id)
             .maybeSingle(),
-          // 易經 + 塔羅一起撈;UI 依 divine_type 分渲染
+          // 易經 + 塔羅一起撈;訂閱者會用到 follow_ups / chat_messages,未訂閱的多撈也無害
           supabase
             .from("divinations")
             .select(
-              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, ai_reading"
+              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, ai_reading, follow_ups, chat_messages"
             )
             .eq("user_id", user.id)
+            .gte("created_at", sinceIso)
             .order("created_at", { ascending: false }),
         ]);
 
@@ -417,6 +449,258 @@ export default function HistoryPage() {
                       <div style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", position: "relative", zIndex: 1 }}>
                         {record.ai_reading}
                       </div>
+
+                      {/* 訂閱者:延伸占卜鏈 */}
+                      {isActive && Array.isArray(record.follow_ups) && record.follow_ups.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 20,
+                            paddingTop: 16,
+                            borderTop: "1px dashed rgba(212,168,85,0.25)",
+                            position: "relative",
+                            zIndex: 1,
+                          }}
+                        >
+                          <h4
+                            style={{
+                              fontSize: 14,
+                              fontFamily: "'Noto Serif TC', serif",
+                              color: "#d4a855",
+                              marginBottom: 12,
+                            }}
+                          >
+                            🌿 {t("延伸占卜", "Follow-up Readings")}
+                            <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
+                              ({record.follow_ups.length})
+                            </span>
+                          </h4>
+                          {record.follow_ups.map((f, fi) => {
+                            const isIching = f.divineType === "iching";
+                            const fHex =
+                              isIching && typeof f.hexagramNumber === "number"
+                                ? getHexagramByNumber(f.hexagramNumber)
+                                : null;
+                            return (
+                              <div
+                                key={f.id ?? fi}
+                                style={{
+                                  marginBottom: 14,
+                                  padding: 12,
+                                  borderRadius: 8,
+                                  background: "rgba(212,168,85,0.04)",
+                                  border: "1px solid rgba(212,168,85,0.15)",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginBottom: 8,
+                                    gap: 8,
+                                  }}
+                                >
+                                  <span style={{ color: "#d4a855", fontSize: 12, fontFamily: "'Noto Serif TC', serif" }}>
+                                    {isIching
+                                      ? `${t("第", "#")}${fHex?.number ?? "?"} ${locale === "zh" ? fHex?.nameZh ?? "" : fHex?.nameEn ?? ""}`
+                                      : t("塔羅三牌", "Three-Card Tarot")}
+                                  </span>
+                                  <span style={{ color: "rgba(192,192,208,0.4)", fontSize: 10 }}>
+                                    {f.createdAt ? new Date(f.createdAt).toLocaleDateString(locale === "zh" ? "zh-TW" : "en-US") : ""}
+                                  </span>
+                                </div>
+                                <p
+                                  style={{
+                                    color: "rgba(192,192,208,0.6)",
+                                    fontSize: 12,
+                                    marginBottom: 8,
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  Q: {f.question}
+                                </p>
+                                {isIching && Array.isArray(f.primaryLines) ? (
+                                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+                                    <HexagramDisplay
+                                      lines={f.primaryLines}
+                                      changingLines={f.changingLines ?? []}
+                                      size="sm"
+                                      animate={false}
+                                    />
+                                  </div>
+                                ) : !isIching && Array.isArray(f.tarotCards) ? (
+                                  <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 10 }}>
+                                    {f.tarotCards.map((tc) => {
+                                      const card = getCardById(tc.cardId);
+                                      const pos = THREE_CARD_POSITIONS.find((p) => p.key === tc.position);
+                                      if (!card) return null;
+                                      return (
+                                        <div key={tc.position} style={{ textAlign: "center", width: 56 }}>
+                                          <div style={{ fontSize: 9, color: "#d4a855", marginBottom: 3 }}>
+                                            {locale === "zh" ? pos?.labelZh : pos?.labelEn}
+                                          </div>
+                                          <div
+                                            style={{
+                                              width: 56,
+                                              height: 94,
+                                              borderRadius: 3,
+                                              overflow: "hidden",
+                                              position: "relative",
+                                              border: "1px solid rgba(212,168,85,0.25)",
+                                              transform: tc.isReversed ? "rotate(180deg)" : undefined,
+                                            }}
+                                          >
+                                            <Image
+                                              src={card.imagePath}
+                                              alt={locale === "zh" ? card.nameZh : card.nameEn}
+                                              fill
+                                              sizes="56px"
+                                              style={{ objectFit: "cover" }}
+                                            />
+                                          </div>
+                                          <div style={{ fontSize: 9, color: "rgba(192,192,208,0.7)", marginTop: 2, lineHeight: 1.3 }}>
+                                            {locale === "zh" ? card.nameZh : card.nameEn}
+                                            {tc.isReversed ? t("・逆", " (r)") : ""}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : null}
+                                <div
+                                  style={{
+                                    color: "rgba(192,192,208,0.8)",
+                                    fontSize: 13,
+                                    lineHeight: 1.75,
+                                    whiteSpace: "pre-wrap",
+                                  }}
+                                >
+                                  {f.aiReading}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* 訂閱者:跟老師的聊天紀錄 */}
+                      {isActive && Array.isArray(record.chat_messages) && record.chat_messages.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 20,
+                            paddingTop: 16,
+                            borderTop: "1px dashed rgba(212,168,85,0.25)",
+                            position: "relative",
+                            zIndex: 1,
+                          }}
+                        >
+                          <h4
+                            style={{
+                              fontSize: 14,
+                              fontFamily: "'Noto Serif TC', serif",
+                              color: "#d4a855",
+                              marginBottom: 12,
+                            }}
+                          >
+                            💬 {t("跟老師的對話", "Chat with the Master")}
+                            <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
+                              ({record.chat_messages.length})
+                            </span>
+                          </h4>
+                          <div>
+                            {record.chat_messages.map((msg, mi) => (
+                              <div
+                                key={mi}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    maxWidth: "85%",
+                                    padding: "8px 12px",
+                                    borderRadius:
+                                      msg.role === "user"
+                                        ? "14px 14px 4px 14px"
+                                        : "14px 14px 14px 4px",
+                                    background:
+                                      msg.role === "user"
+                                        ? "rgba(212,168,85,0.15)"
+                                        : "rgba(30,30,60,0.6)",
+                                    border:
+                                      msg.role === "user"
+                                        ? "1px solid rgba(212,168,85,0.25)"
+                                        : "1px solid rgba(192,192,208,0.1)",
+                                    color:
+                                      msg.role === "user"
+                                        ? "#e8e0d0"
+                                        : "rgba(192,192,208,0.85)",
+                                    fontSize: 13,
+                                    lineHeight: 1.7,
+                                    whiteSpace: "pre-wrap",
+                                  }}
+                                >
+                                  {msg.role === "assistant" && (
+                                    <span
+                                      style={{
+                                        color: "#d4a855",
+                                        fontSize: 11,
+                                        display: "block",
+                                        marginBottom: 2,
+                                      }}
+                                    >
+                                      {t("老師", "Master")}
+                                    </span>
+                                  )}
+                                  {msg.content}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 訂閱者:從這筆繼續對話 / 衍伸占卜 */}
+                      {isActive && (
+                        <div
+                          style={{
+                            marginTop: 18,
+                            paddingTop: 14,
+                            borderTop: "1px dashed rgba(212,168,85,0.25)",
+                            textAlign: "center",
+                            position: "relative",
+                            zIndex: 1,
+                          }}
+                        >
+                          <Link
+                            href={`/?resume=${record.id}`}
+                            className="btn-gold"
+                            style={{
+                              display: "inline-block",
+                              textDecoration: "none",
+                              padding: "10px 22px",
+                              fontSize: 13,
+                            }}
+                          >
+                            {t("繼續對話 / 衍伸占卜 →", "Continue chat / follow-up →")}
+                          </Link>
+                          <p
+                            style={{
+                              color: "rgba(192,192,208,0.45)",
+                              fontSize: 11,
+                              marginTop: 8,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {t(
+                              "回到首頁並帶入此筆占卜的完整脈絡",
+                              "Returns to home with this reading's full context"
+                            )}
+                          </p>
+                        </div>
+                      )}
 
                       {/* Translucent watermark to deter unauthorized screenshot sharing */}
                       {watermarkText && (

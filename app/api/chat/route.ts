@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   spendCredits,
   refundCredits,
@@ -23,12 +24,14 @@ export async function POST(request: NextRequest) {
       readingContext,
       divineType,
       locale,
+      divinationId,
     }: {
       messages: { role: "user" | "assistant"; content: string }[];
       hexagramContext?: string;
       readingContext?: string;
       divineType?: "iching" | "tarot";
       locale: "zh" | "en";
+      divinationId?: string; // 有此欄位 + 已登入 → 聊完會把這輪 user+assistant 訊息 append 到這筆占卜的 chat_messages
     } = body;
 
     // 新版欄位 readingContext 優先,舊版 hexagramContext 保留相容
@@ -154,6 +157,13 @@ Rules:
     const decoder = new TextDecoder();
     const reader = response.body!.getReader();
 
+    // 收集完整 assistant 回覆,stream 結束後若有 divinationId + user → 附加到 DB
+    // 注意:client 送來的 messages[] 裡最後一則是「本輪新 user 訊息」,
+    //      前面的是已經持久化過的歷史,所以只 append 最後一則 user + 本輪 assistant 回覆,
+    //      避免重複寫入。
+    const lastUserMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    let assistantFullText = "";
+
     const readable = new ReadableStream({
       async start(controller) {
         let buffer = "";
@@ -176,6 +186,7 @@ Rules:
                 const json = JSON.parse(data);
                 const content = json.choices?.[0]?.delta?.content;
                 if (content) {
+                  assistantFullText += content;
                   controller.enqueue(encoder.encode(content));
                 }
               } catch {
@@ -187,6 +198,44 @@ Rules:
           console.error("Chat stream error:", e);
         } finally {
           controller.close();
+
+          // stream 成功結束 → 持久化本輪聊天(user + assistant 兩則),讓 /history 讀得到。
+          // 只有「已登入 + 有 divinationId + lastUserMessage 是 user」的情境才寫,
+          // 其他(訪客、被 abort 半途而廢、沒給 id)全部 skip。
+          if (
+            user &&
+            divinationId &&
+            lastUserMessage?.role === "user" &&
+            lastUserMessage.content &&
+            assistantFullText
+          ) {
+            try {
+              const admin = createAdminClient();
+              const now = new Date().toISOString();
+              const { data: row, error: readErr } = await admin
+                .from("divinations")
+                .select("chat_messages, user_id")
+                .eq("id", divinationId)
+                .maybeSingle();
+
+              // RLS 防線:就算 client 傳錯 id 也不能寫到別人的 row
+              if (!readErr && row && row.user_id === user.id) {
+                const existing = Array.isArray(row.chat_messages) ? row.chat_messages : [];
+                const next = [
+                  ...existing,
+                  { role: "user", content: lastUserMessage.content, createdAt: now },
+                  { role: "assistant", content: assistantFullText, createdAt: now },
+                ];
+                await admin
+                  .from("divinations")
+                  .update({ chat_messages: next })
+                  .eq("id", divinationId);
+              }
+            } catch (e) {
+              console.error("[chat] persist chat_messages failed:", e);
+              // 失敗不影響回應(訊息已經串給 client 了),就 log
+            }
+          }
         }
       },
     });

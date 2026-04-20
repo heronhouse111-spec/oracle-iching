@@ -151,9 +151,9 @@ export default function Home() {
     let cancelled = false;
     let attempts = 0;
 
-    // 重試機制:每幀確認目標元素已經 layout 好(有高度),才計算絕對 Y 座標去捲
-    // 用 window.scrollTo(top: Y) 取代 scrollIntoView —— scrollIntoView 會在動畫開始時
-    // 鎖定目標位置,如果元素後續再被推下去,動畫不會跟著修正;window.scrollTo 可以重算
+    // 重試機制:每幀確認目標元素已經 layout 好(有高度),才算絕對 Y 去捲
+    // 用 window.scrollTo(top) 而非 scrollIntoView —— 後者動畫開始時就鎖死目標位置,
+    // 元素被後來的 layout shift 推下去時動畫不會修正;scrollTo 可以每次重算
     const tryScroll = () => {
       if (cancelled) return;
       attempts++;
@@ -161,21 +161,20 @@ export default function Home() {
         `[data-followup-index="${targetIdx}"]`
       );
       if (!el) {
-        if (attempts < 20) requestAnimationFrame(tryScroll);
+        if (attempts < 30) requestAnimationFrame(tryScroll);
         return;
       }
       const rect = el.getBoundingClientRect();
-      // 元素還沒 layout 完(高度 0 / 座標明顯偏上)→ 再等一幀
-      if (rect.height < 10 && attempts < 20) {
+      if (rect.height < 10 && attempts < 30) {
         requestAnimationFrame(tryScroll);
         return;
       }
-      const targetY = rect.top + window.scrollY - 72; // 72 ≈ fixed header 64 + 一點呼吸
+      const targetY = rect.top + window.scrollY - 72; // 72 ≈ fixed header 64 + 呼吸
       window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
       setPendingScrollIdx(null);
     };
 
-    // 初始 400ms 緩衝 —— 等 root refill 的 aiReading 文字 block 都排版好再開始找元素
+    // 400ms 初始緩衝 —— 等 root refill 的 aiReading 文字 block 都排版好
     const timer = window.setTimeout(() => {
       if (!cancelled) tryScroll();
     }, 400);
@@ -413,6 +412,209 @@ export default function Home() {
       }
     })();
     // 只在 mount 跑一次;其餘 dependencies 無關(snapshot 是過去的 state)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Resume from history: /?resume=<divinationId> ─────────────────
+  // /history 按「繼續對話/衍伸 →」帶使用者回首頁並帶 resume=<id> 參數,
+  // 這個 effect 負責:撈出該筆占卜(含 follow_ups + chat_messages),整頁 hydrate
+  // 成結果頁,再捲到聊天框讓訂閱者可以從過去任一筆繼續對話或衍伸占卜。
+  //
+  // 跟 pending-divination snapshot(訪客登入前佔卜)不一樣:這個走 Supabase 撈,
+  // 訪客不會有;而且必須是 owner 才能 hydrate(RLS 也會擋,但多一層 TS 防護)。
+  // 若同時有 pending snapshot(登入剛回來)則那個 effect 優先,這邊跳過。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const resumeId = params.get("resume");
+    if (!resumeId) return;
+    if (!isSupabaseConfigured) return;
+    // 有 pending snapshot(訪客登入流程)→ 讓上面那個 effect 處理,不跟它打架
+    try {
+      if (window.sessionStorage.getItem("oracle:pending-divination")) return;
+    } catch {
+      // sessionStorage 被擋也沒關係,繼續跑
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (cancelled) return;
+        if (!user) return; // 未登入就不 resume(history 按鈕也只會對訂閱者顯示)
+
+        const { data: row, error } = await supabase
+          .from("divinations")
+          .select(
+            "id, question, category, divine_type, hexagram_number, primary_lines, changing_lines, relating_hexagram_number, tarot_cards, ai_reading, follow_ups, chat_messages, user_id"
+          )
+          .eq("id", resumeId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          console.error("resume: fetch failed", error);
+          return;
+        }
+        if (!row) return;
+        // 保險絲:RLS 會擋別人的 row,但多一層 TS 檢查
+        if (row.user_id !== user.id) return;
+
+        const dt: DivineType = row.divine_type === "tarot" ? "tarot" : "iching";
+
+        setDivineType(dt);
+        setSelectedCategory(row.category ?? "");
+        setUserQuestion(row.question ?? "");
+        setAiReading(row.ai_reading ?? "");
+        setDivinationId(row.id);
+        setIsSignedIn(true);
+
+        if (dt === "iching" && typeof row.hexagram_number === "number") {
+          const hex = getHexagramByNumber(row.hexagram_number) ?? null;
+          const primaryLines: number[] = Array.isArray(row.primary_lines)
+            ? (row.primary_lines as number[])
+            : [];
+          const changingLines: number[] = Array.isArray(row.changing_lines)
+            ? (row.changing_lines as number[])
+            : [];
+          // relatingLines 從 primary + changing 反算(DB 只存了 relating_hexagram_number)
+          const relatingLines =
+            changingLines.length > 0
+              ? primaryLines.map((line, i) =>
+                  changingLines.includes(i) ? (line === 1 ? 0 : 1) : line
+                )
+              : null;
+          const relHex =
+            typeof row.relating_hexagram_number === "number"
+              ? getHexagramByNumber(row.relating_hexagram_number) ?? null
+              : relatingLines
+              ? findHexagram(relatingLines) ?? null
+              : null;
+          setHexagram(hex);
+          setRelatingHexagram(relHex);
+          setDivinationResult({
+            throws: [],
+            primaryLines,
+            changingLines,
+            relatingLines,
+          });
+        } else if (dt === "tarot" && Array.isArray(row.tarot_cards)) {
+          type RawTarotCard = { cardId: string; isReversed: boolean };
+          const cards: DrawnCard[] = (row.tarot_cards as RawTarotCard[])
+            .map((tc) => {
+              const card = getCardById(tc.cardId);
+              return card ? { card, isReversed: tc.isReversed } : null;
+            })
+            .filter((x): x is DrawnCard => x !== null);
+          if (cards.length === 3) {
+            setDrawnCards(cards);
+            setRevealedCount(3);
+          }
+        }
+
+        // follow_ups: DB 存 hexagramNumber / tarotCards,前端 state 要 Hexagram / DrawnCard
+        type RawFollowUp = {
+          id: string;
+          question: string;
+          createdAt: string;
+          divineType: "iching" | "tarot";
+          aiReading: string;
+          hexagramNumber?: number | null;
+          primaryLines?: number[] | null;
+          changingLines?: number[] | null;
+          relatingHexagramNumber?: number | null;
+          tarotCards?: { cardId: string; isReversed: boolean }[] | null;
+        };
+        const rawFollowUps: RawFollowUp[] = Array.isArray(row.follow_ups)
+          ? (row.follow_ups as RawFollowUp[])
+          : [];
+        const hydratedFollowUps = rawFollowUps
+          .map((f) => {
+            if (f.divineType === "iching" && typeof f.hexagramNumber === "number") {
+              const hx = getHexagramByNumber(f.hexagramNumber) ?? null;
+              const relHx =
+                typeof f.relatingHexagramNumber === "number"
+                  ? getHexagramByNumber(f.relatingHexagramNumber) ?? null
+                  : null;
+              return {
+                id: f.id,
+                question: f.question,
+                createdAt: f.createdAt,
+                divineType: "iching" as const,
+                aiReading: f.aiReading,
+                hexagram: hx,
+                relatingHexagram: relHx,
+                primaryLines: f.primaryLines ?? null,
+                changingLines: f.changingLines ?? null,
+              };
+            }
+            if (f.divineType === "tarot" && Array.isArray(f.tarotCards)) {
+              const cards: DrawnCard[] = f.tarotCards
+                .map((tc) => {
+                  const card = getCardById(tc.cardId);
+                  return card ? { card, isReversed: tc.isReversed } : null;
+                })
+                .filter((x): x is DrawnCard => x !== null);
+              return {
+                id: f.id,
+                question: f.question,
+                createdAt: f.createdAt,
+                divineType: "tarot" as const,
+                aiReading: f.aiReading,
+                drawnCards: cards,
+              };
+            }
+            return null;
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+        setFollowUps(hydratedFollowUps);
+
+        // chat_messages hydrate(擋掉格式不合的,避免 render 爆掉)
+        type RawChatMsg = { role?: string; content?: string };
+        const rawChat: RawChatMsg[] = Array.isArray(row.chat_messages)
+          ? (row.chat_messages as RawChatMsg[])
+          : [];
+        const hydratedChat = rawChat
+          .filter(
+            (m): m is { role: "user" | "assistant"; content: string } =>
+              (m.role === "user" || m.role === "assistant") &&
+              typeof m.content === "string"
+          )
+          .map((m) => ({ role: m.role, content: m.content }));
+        setChatMessages(hydratedChat);
+
+        setStep("result");
+        // 結果頁的 save-snapshot effect 會觸發,但我們剛從 DB hydrate,
+        // 不需要再寫 sessionStorage(訪客流程才需要)。用這個 ref 吞掉第一次寫入。
+        skipSnapshotSaveRef.current = true;
+
+        // URL 清掉 resume 參數,refresh 不再重複撈
+        const url = new URL(window.location.href);
+        url.searchParams.delete("resume");
+        window.history.replaceState({}, "", url.pathname + (url.search || ""));
+
+        // 稍等 DOM 排版完再捲到聊天框 — 類似 pendingScrollIdx 的做法
+        window.setTimeout(() => {
+          if (cancelled) return;
+          const el = document.querySelector<HTMLElement>("[data-chat-box]");
+          if (!el) return;
+          const rect = el.getBoundingClientRect();
+          const targetY = rect.top + window.scrollY - 72;
+          window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+        }, 500);
+      } catch (e) {
+        console.error("resume: unexpected error", e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // 只在 mount 跑一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1096,6 +1298,7 @@ export default function Home() {
           readingContext,
           divineType: divineType ?? "iching",
           locale,
+          divinationId, // 帶上讓後端 append chat_messages 到這筆 divination
         }),
         signal: controller.signal,
       });
@@ -2316,7 +2519,11 @@ export default function Home() {
               {renderFollowUpChain()}
 
               {/* Chat with Master */}
-              <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
+              <div
+                data-chat-box
+                className="mystic-card"
+                style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
+              >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
                   {t("繼續請教老師", "Ask the Master")}
                 </h3>
@@ -2770,7 +2977,11 @@ export default function Home() {
               {renderFollowUpChain()}
 
               {/* Chat with Master(塔羅版) */}
-              <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
+              <div
+                data-chat-box
+                className="mystic-card"
+                style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
+              >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
                   {t("繼續請教老師", "Ask the Master")}
                 </h3>
