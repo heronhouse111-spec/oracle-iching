@@ -147,24 +147,41 @@ export default function Home() {
     if (isLoadingAI) return;   // 還在串流
     if (isFollowUpMode) return; // 還沒 refill 完 root
 
-    // 雙層 rAF → 等兩次 paint,再給 200ms 緩衝確保 layout shift 都落定
-    let raf1 = 0, raf2 = 0, timer = 0;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        timer = window.setTimeout(() => {
-          const el = document.querySelector<HTMLElement>(
-            `[data-followup-index="${pendingScrollIdx}"]`
-          );
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-          setPendingScrollIdx(null);
-        }, 200);
-      });
-    });
+    const targetIdx = pendingScrollIdx;
+    let cancelled = false;
+    let attempts = 0;
+
+    // 重試機制:每幀確認目標元素已經 layout 好(有高度),才計算絕對 Y 座標去捲
+    // 用 window.scrollTo(top: Y) 取代 scrollIntoView —— scrollIntoView 會在動畫開始時
+    // 鎖定目標位置,如果元素後續再被推下去,動畫不會跟著修正;window.scrollTo 可以重算
+    const tryScroll = () => {
+      if (cancelled) return;
+      attempts++;
+      const el = document.querySelector<HTMLElement>(
+        `[data-followup-index="${targetIdx}"]`
+      );
+      if (!el) {
+        if (attempts < 20) requestAnimationFrame(tryScroll);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      // 元素還沒 layout 完(高度 0 / 座標明顯偏上)→ 再等一幀
+      if (rect.height < 10 && attempts < 20) {
+        requestAnimationFrame(tryScroll);
+        return;
+      }
+      const targetY = rect.top + window.scrollY - 72; // 72 ≈ fixed header 64 + 一點呼吸
+      window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+      setPendingScrollIdx(null);
+    };
+
+    // 初始 400ms 緩衝 —— 等 root refill 的 aiReading 文字 block 都排版好再開始找元素
+    const timer = window.setTimeout(() => {
+      if (!cancelled) tryScroll();
+    }, 400);
+
     return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      cancelled = true;
       window.clearTimeout(timer);
     };
   }, [pendingScrollIdx, isLoadingAI, isFollowUpMode]);
