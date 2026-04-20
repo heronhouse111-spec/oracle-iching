@@ -137,17 +137,21 @@ export default function Home() {
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
 
-  // 最新一筆衍伸結果的 DOM ref —— 衍伸占卜完成後自動捲到這裡,
-  // 讓使用者回到根占卜頁面時視角停留在最新的延伸解說上,不用從頭滑
-  const latestFollowUpRef = useRef<HTMLDivElement | null>(null);
-  // 每次 followUps 陣列長度變化(= 新增一筆衍伸)就觸發一次捲動
+  // 衍伸占卜完成後自動捲到「這一次」新加的那筆
+  //   第 1 次衍伸完 → 捲到 index 0
+  //   第 2 次衍伸完 → 捲到 index 1
+  //   ……以此類推,永遠跟著最後一筆走
+  // 用 data-followup-index 查 DOM 而非單一 ref,避免快速連按時 ref 指向舊元素
   useEffect(() => {
     if (followUps.length === 0) return;
-    if (isLoadingAI) return; // AI 還在串流解說時先不要跳,等完整內容 render 出來
-    // 等 DOM 穩定再跳(rootSnapshot 回填 + 鏈結渲染都要時間)
+    if (isLoadingAI) return; // AI 串流還沒結束先不要跳
+    const targetIdx = followUps.length - 1;
     const id = window.setTimeout(() => {
-      latestFollowUpRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+      const el = document.querySelector<HTMLElement>(
+        `[data-followup-index="${targetIdx}"]`
+      );
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followUps.length, isLoadingAI]);
@@ -1156,12 +1160,12 @@ export default function Home() {
           return (
             <div
               key={f.id}
-              ref={isLast ? latestFollowUpRef : null}
+              data-followup-index={i}
               style={{
                 marginBottom: isLast ? 0 : 14,
                 paddingBottom: isLast ? 0 : 14,
                 borderBottom: isLast ? "none" : "1px dashed rgba(212,168,85,0.18)",
-                scrollMarginTop: 80, // 留給 fixed header 的空間,避免捲過去時最新衍伸被擋住
+                scrollMarginTop: 80, // 留給 fixed header 的空間,避免捲過去時被擋住
               }}
             >
               <div style={{ color: "#d4a855", fontSize: 12, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
