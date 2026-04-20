@@ -137,24 +137,37 @@ export default function Home() {
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
 
-  // 衍伸占卜完成後自動捲到「這一次」新加的那筆
-  //   第 1 次衍伸完 → 捲到 index 0
-  //   第 2 次衍伸完 → 捲到 index 1
-  //   ……以此類推,永遠跟著最後一筆走
-  // 用 data-followup-index 查 DOM 而非單一 ref,避免快速連按時 ref 指向舊元素
+  // 衍伸占卜完成後自動捲到新加的那筆 (第 N 次 → index N-1)。
+  // 流程:success block 設 pendingScrollIdx → useEffect 等 AI/follow-up mode 都結束、
+  // rootSnapshot refill、DOM 穩定後再捲。避免跟 state refill 互相競速。
+  const [pendingScrollIdx, setPendingScrollIdx] = useState<number | null>(null);
+
   useEffect(() => {
-    if (followUps.length === 0) return;
-    if (isLoadingAI) return; // AI 串流還沒結束先不要跳
-    const targetIdx = followUps.length - 1;
-    const id = window.setTimeout(() => {
-      const el = document.querySelector<HTMLElement>(
-        `[data-followup-index="${targetIdx}"]`
-      );
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-    return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [followUps.length, isLoadingAI]);
+    if (pendingScrollIdx === null) return;
+    if (isLoadingAI) return;   // 還在串流
+    if (isFollowUpMode) return; // 還沒 refill 完 root
+
+    // 雙層 rAF → 等兩次 paint,再給 200ms 緩衝確保 layout shift 都落定
+    let raf1 = 0, raf2 = 0, timer = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        timer = window.setTimeout(() => {
+          const el = document.querySelector<HTMLElement>(
+            `[data-followup-index="${pendingScrollIdx}"]`
+          );
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+          setPendingScrollIdx(null);
+        }, 200);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(timer);
+    };
+  }, [pendingScrollIdx, isLoadingAI, isFollowUpMode]);
 
   // mount 時讀 localStorage 拿上次選的 mode,給 mode-select 畫面做「上次選了 X」提示
   useEffect(() => {
@@ -784,6 +797,8 @@ export default function Home() {
           });
 
           // UI state:把這筆衍伸結果 append 進 followUps[],然後把主 state 回填 root
+          // 先算出新 index(= 目前長度,因為還沒 append),等下用來設 scroll target
+          const newIdx = followUps.length;
           setFollowUps((prev) => [
             ...prev,
             {
@@ -811,6 +826,7 @@ export default function Home() {
             setDrawnCards(rootSnapshot.drawnCards);
           }
           setIsFollowUpMode(false);
+          setPendingScrollIdx(newIdx); // 觸發自動捲到這筆新加的衍伸
         } else {
           const saved = await saveDivination({
             divineType: "iching",
@@ -918,6 +934,7 @@ export default function Home() {
             aiReading: fullText,
           });
 
+          const newIdx = followUps.length; // 新 index = 還沒 append 時的長度
           setFollowUps((prev) => [
             ...prev,
             {
@@ -942,6 +959,7 @@ export default function Home() {
             setDrawnCards(rootSnapshot.drawnCards);
           }
           setIsFollowUpMode(false);
+          setPendingScrollIdx(newIdx); // 觸發自動捲到這筆新加的衍伸
         } else {
           // 存進 Supabase(Phase B)— 塔羅版本,讓分享 / 公開連結可用
           const saved = await saveDivination({
