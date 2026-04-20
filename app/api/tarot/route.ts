@@ -24,11 +24,16 @@ export async function POST(request: NextRequest) {
       question,
       category,
       locale,
+      // 衍伸問題繼續占卜(跟 /api/divine 同樣的機制)
+      previousContext,
+      chatHistory,
     }: {
       cards: DrawnCardRequest[];
       question: string;
       category: string;
       locale: "zh" | "en";
+      previousContext?: string | null;
+      chatHistory?: { role: "user" | "assistant"; content: string }[] | null;
     } = body;
 
     if (!Array.isArray(cards) || cards.length !== 3) {
@@ -55,10 +60,31 @@ export async function POST(request: NextRequest) {
     }
 
     const isZh = locale === "zh";
+    const isFollowUp = Boolean(previousContext && previousContext.trim().length > 0);
 
     const systemPrompt = isZh
-      ? `你是一位深諳塔羅的占卜師。使用者用三張牌陣(過去-現在-未來)針對一個問題占卜。每張牌的牌義(正位/逆位)已由系統提供,你**不需要重複牌義**,而是要把三張牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。語氣溫暖、貼近生活。約 300 字,用段落書寫,不要列點。使用繁體中文。`
-      : `You are a skilled tarot reader. The querent drew three cards in a past-present-future spread for a specific question. The card meanings (upright/reversed) are provided by the system — do NOT simply repeat them. Instead, weave the three cards into a coherent narrative about the querent's actual question and give practical, concrete advice. Warm tone, around 150 words, flowing paragraphs (no bullets).`;
+      ? (isFollowUp
+        ? `你是一位深諳塔羅的占卜師。這是問事者就同一件事所做的「衍伸占卜」——你已經幫他做過前一輪(易經或塔羅)的解盤,也跟他在聊天框裡對話過。現在他針對同件事提出更深入的問題,又抽了三張牌(過去-現在-未來)。請把「前一輪結果 + 先前對話 + 新三張牌」串成連貫的延伸解說,直接呼應前面講過的脈絡(例如「承接剛才我們談到的...」、「相較先前那卦/那次抽牌,這三張牌...」),約300字。每張牌的牌義系統已提供,不要逐張複述。使用繁體中文,用段落書寫,不要列點。`
+        : `你是一位深諳塔羅的占卜師。使用者用三張牌陣(過去-現在-未來)針對一個問題占卜。每張牌的牌義(正位/逆位)已由系統提供,你**不需要重複牌義**,而是要把三張牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。語氣溫暖、貼近生活。約 300 字,用段落書寫,不要列點。使用繁體中文。`)
+      : (isFollowUp
+        ? `You are a skilled tarot reader. This is a FOLLOW-UP reading on the same matter — you've already read a prior reading for this querent (I Ching or tarot) and chatted with them. They're asking a deeper question on the same topic and drew three new cards (past-present-future). Weave "prior result + earlier conversation + new three cards" into a coherent continuation, explicitly referencing the prior context ("Building on what we discussed...", "Compared to the earlier reading, these three cards..."). Around 150 words. Card meanings are already provided — don't restate each one. Warm flowing paragraphs, no bullets.`
+        : `You are a skilled tarot reader. The querent drew three cards in a past-present-future spread for a specific question. The card meanings (upright/reversed) are provided by the system — do NOT simply repeat them. Instead, weave the three cards into a coherent narrative about the querent's actual question and give practical, concrete advice. Warm tone, around 150 words, flowing paragraphs (no bullets).`);
+
+    const chatExcerpt = (chatHistory ?? [])
+      .slice(-6)
+      .map((m) => {
+        const who = isZh
+          ? (m.role === "user" ? "問事者" : "老師")
+          : (m.role === "user" ? "Querent" : "Master");
+        return `${who}: ${m.content}`;
+      })
+      .join("\n");
+
+    const contextBlock = isFollowUp
+      ? (isZh
+        ? `【前情提要 — 同一件事的先前占卜與對話】\n${previousContext}\n${chatExcerpt ? `\n【先前聊天紀錄(節錄)】\n${chatExcerpt}\n` : ""}\n`
+        : `[PRIOR CONTEXT — earlier reading & chat on the same matter]\n${previousContext}\n${chatExcerpt ? `\n[EARLIER CHAT (excerpt)]\n${chatExcerpt}\n` : ""}\n`)
+      : "";
 
     // 組裝 user message — 含問題 + 三張牌各自位置/名稱/正逆位/牌義
     const cardDescriptions = enriched
@@ -79,9 +105,13 @@ export async function POST(request: NextRequest) {
       })
       .join("\n\n");
 
+    const newQuestionLine = isZh
+      ? (isFollowUp ? `新問題(${category}):${question}` : `問題(${category}):${question}`)
+      : (isFollowUp ? `New question (${category}): ${question}` : `Question (${category}): ${question}`);
+
     const userMessage = isZh
-      ? `問題(${category}):${question}\n\n占卜結果:\n\n${cardDescriptions}\n\n請把這三張牌串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,約 300 字。`
-      : `Question (${category}): ${question}\n\nTarot reading:\n\n${cardDescriptions}\n\nWeave these three cards into a coherent narrative addressing my specific question, with practical advice. Around 150 words.`;
+      ? `${contextBlock}${newQuestionLine}\n\n這次抽到的三張牌:\n\n${cardDescriptions}\n\n${isFollowUp ? "請承接前面的脈絡,針對我這次的新問題與這三張新牌,給出連貫的延伸解說,約 300 字。" : "請把這三張牌串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,約 300 字。"}`
+      : `${contextBlock}${newQuestionLine}\n\nThree cards drawn this round:\n\n${cardDescriptions}\n\n${isFollowUp ? "Continue from the prior context; weave a coherent follow-up reading from these three new cards for my new question. Around 150 words." : "Weave these three cards into a coherent narrative addressing my specific question, with practical advice. Around 150 words."}`;
 
     // DeepSeek API is OpenAI-compatible
     const response = await fetch("https://api.deepseek.com/chat/completions", {

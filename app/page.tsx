@@ -10,7 +10,7 @@ import CoinAnimation from "@/components/CoinAnimation";
 import ShareCard from "@/components/ShareCard";
 import { performDivination, questionCategories, type DivinationResult, type CoinThrow } from "@/lib/divination";
 import { findHexagram, getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
-import { saveDivination } from "@/lib/saveDivination";
+import { saveDivination, appendFollowUp } from "@/lib/saveDivination";
 import {
   drawThreeCards,
   getCardById,
@@ -89,6 +89,41 @@ export default function Home() {
   // 塔羅 state:抽到的三張牌 + 已翻開幾張
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
   const [revealedCount, setRevealedCount] = useState(0);
+
+  // ── 衍伸問題繼續占卜(follow-up chain) ───────────────────
+  // 使用者在結果頁按「相關衍伸問題繼續占卜」→ 填新問題 → 重選易經/塔羅 → 再占一次,
+  // 結束後把結果塞進 followUps[] 串起來,AI 解盤時知道「先前卦象 + 對話 + 新卦象」。
+  //
+  // rootSnapshot:第一次按衍伸按鈕時,把當下的 root reading 整包凍存,
+  //   讓衍伸占卜結束時能把「主結果」state 回填,畫面看起來永遠是「根占卜 + 延伸鏈 + 聊天」。
+  // followUps:已完成的衍伸鏈(最新的在陣列尾端)。
+  const [rootSnapshot, setRootSnapshot] = useState<{
+    divineType: DivineType;
+    question: string;
+    category: string;
+    aiReading: string;
+    hexagram: Hexagram | null;
+    relatingHexagram: Hexagram | null;
+    divinationResult: DivinationResult | null;
+    drawnCards: DrawnCard[];
+  } | null>(null);
+  const [followUps, setFollowUps] = useState<Array<{
+    id: string;
+    question: string;
+    createdAt: string;
+    divineType: DivineType;
+    aiReading: string;
+    // iching
+    hexagram?: Hexagram | null;
+    relatingHexagram?: Hexagram | null;
+    primaryLines?: number[] | null;
+    changingLines?: number[] | null;
+    // tarot
+    drawnCards?: DrawnCard[] | null;
+  }>>([]);
+  const [isFollowUpMode, setIsFollowUpMode] = useState(false);
+  const [showFollowUpForm, setShowFollowUpForm] = useState(false);
+  const [followUpQuestion, setFollowUpQuestion] = useState("");
 
   // mount 時讀 localStorage 拿上次選的 mode,給 mode-select 畫面做「上次選了 X」提示
   useEffect(() => {
@@ -405,6 +440,113 @@ export default function Home() {
     }
   };
 
+  // ── 衍伸占卜:把目前的 root reading 整包凍存,清空 transient state,進入選擇占卜工具畫面
+  // 前置條件:必須已登入且 divinationId 存在(未登入的按鈕會走 handleLoginForShare)。
+  const handleStartFollowUp = () => {
+    if (!isSignedIn || !divinationId) return;
+    const q = followUpQuestion.trim();
+    if (!q) return;
+    if (isLoadingAI || isChatLoading) return;
+
+    // 第一次發起衍伸時才凍存 root;後續衍伸時 rootSnapshot 已經在了,不要蓋掉
+    if (!rootSnapshot) {
+      if (!divineType) return; // 防禦
+      setRootSnapshot({
+        divineType,
+        question: userQuestion,
+        category: selectedCategory,
+        aiReading,
+        hexagram,
+        relatingHexagram,
+        divinationResult,
+        drawnCards: [...drawnCards],
+      });
+    }
+
+    // 切換到「這一輪衍伸」的 transient state:新問題會成為下次 fetchAIReading/
+    // fetchTarotReading 用的 userQuestion,清空易經/塔羅的占卜暫存。
+    setUserQuestion(q);
+    setAiReading("");
+    setHexagram(null);
+    setRelatingHexagram(null);
+    setDivinationResult(null);
+    setDrawnCards([]);
+    setRevealedCount(0);
+    setThrows([]);
+    setCurrentThrow(0);
+    setCurrentCoins(null);
+    setDivineType(null);
+    // 注意:chatMessages 故意保留 — 衍伸占卜 AI 要看到先前對話
+
+    setIsFollowUpMode(true);
+    setShowFollowUpForm(false);
+    setFollowUpQuestion("");
+    setStep("divine-type");
+  };
+
+  const handleCancelFollowUpForm = () => {
+    setShowFollowUpForm(false);
+    setFollowUpQuestion("");
+  };
+
+  // 組 previousContext:給衍伸占卜 AI 的「先前情境」— root + 已完成的所有衍伸
+  // 讓 AI 知道「我們之前是看什麼卦、抽什麼牌、聊過什麼」,新占卜才能做連貫銜接。
+  const buildPreviousContext = useCallback((): string => {
+    if (!rootSnapshot) return "";
+    const isZh = locale === "zh";
+
+    const describeIching = (
+      label: string,
+      hex: Hexagram | null,
+      relHex: Hexagram | null,
+      changing: number[] | null | undefined,
+      reading: string
+    ) => {
+      if (!hex) return "";
+      const name = isZh ? hex.nameZh : hex.nameEn;
+      const judgment = isZh ? hex.judgmentZh : hex.judgmentEn;
+      const rel = relHex ? `${isZh ? "之卦" : "Relating"}: ${relHex.number} ${isZh ? relHex.nameZh : relHex.nameEn}` : "";
+      const cl = changing && changing.length > 0
+        ? `${isZh ? "變爻" : "Changing lines"}: ${changing.map((l) => l + 1).join(isZh ? "、" : ", ")}`
+        : (isZh ? "無變爻" : "No changing lines");
+      return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${hex.number} ${name} | ${judgment} | ${cl}${rel ? " | " + rel : ""}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
+    };
+
+    const describeTarot = (label: string, cards: DrawnCard[], reading: string) => {
+      if (!cards || cards.length !== 3) return "";
+      const parts = cards.map((d, i) => {
+        const pos = THREE_CARD_POSITIONS[i];
+        const nm = isZh ? d.card.nameZh : d.card.nameEn;
+        const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
+        return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
+      }).join(isZh ? " / " : " / ");
+      return `【${label}】${isZh ? "塔羅三牌" : "Tarot 3-card"} | ${parts}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
+    };
+
+    const rootLabel = isZh ? "原始占卜" : "Original reading";
+    const rootQ = `${isZh ? "原始問題" : "Original question"}: ${rootSnapshot.question}`;
+    const rootBlock = rootSnapshot.divineType === "iching"
+      ? describeIching(
+          rootLabel,
+          rootSnapshot.hexagram,
+          rootSnapshot.relatingHexagram,
+          rootSnapshot.divinationResult?.changingLines,
+          rootSnapshot.aiReading
+        )
+      : describeTarot(rootLabel, rootSnapshot.drawnCards, rootSnapshot.aiReading);
+
+    const followBlocks = followUps.map((f, i) => {
+      const label = isZh ? `延伸第${i + 1}回合` : `Follow-up #${i + 1}`;
+      const q = `${isZh ? "當時問題" : "Question"}: ${f.question}`;
+      const body = f.divineType === "iching"
+        ? describeIching(label, f.hexagram ?? null, f.relatingHexagram ?? null, f.changingLines, f.aiReading)
+        : describeTarot(label, f.drawnCards ?? [], f.aiReading);
+      return `${q}\n${body}`;
+    });
+
+    return [rootQ, rootBlock, ...followBlocks].filter(Boolean).join("\n\n");
+  }, [rootSnapshot, followUps, locale]);
+
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
     setStep("question");
@@ -525,6 +667,10 @@ export default function Home() {
     setIsLoadingAI(true);
     setAiReading("");
 
+    // 衍伸占卜:附上「先前情境」+「先前對話」讓 AI 做連貫銜接(不是重頭敘述一卦)
+    const followUpCtx = isFollowUpMode ? buildPreviousContext() : null;
+    const followUpChat = isFollowUpMode ? chatMessages : null;
+
     try {
       const category = questionCategories.find((c) => c.id === selectedCategory);
       const relHex = result.relatingLines ? findHexagram(result.relatingLines) : null;
@@ -540,6 +686,8 @@ export default function Home() {
           question: userQuestion,
           category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
           locale,
+          previousContext: followUpCtx,
+          chatHistory: followUpChat,
         }),
         signal: controller.signal,
       });
@@ -562,18 +710,60 @@ export default function Home() {
       }
 
       if (!controller.signal.aborted) {
-        const saved = await saveDivination({
-          divineType: "iching",
-          question: userQuestion,
-          category: selectedCategory,
-          hexagramNumber: hex.number,
-          primaryLines: result.primaryLines,
-          changingLines: result.changingLines,
-          relatingHexagramNumber: relHex?.number ?? null,
-          aiReading: fullText,
-          locale,
-        });
-        if (saved?.id) setDivinationId(saved.id);
+        if (isFollowUpMode && divinationId) {
+          // 衍伸占卜:不新開 divination row,改把這筆塞進根 divination 的 follow_ups 陣列
+          await appendFollowUp(divinationId, {
+            divineType: "iching",
+            question: userQuestion,
+            hexagramNumber: hex.number,
+            primaryLines: result.primaryLines,
+            changingLines: result.changingLines,
+            relatingHexagramNumber: relHex?.number ?? null,
+            aiReading: fullText,
+          });
+
+          // UI state:把這筆衍伸結果 append 進 followUps[],然後把主 state 回填 root
+          setFollowUps((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              question: userQuestion,
+              createdAt: new Date().toISOString(),
+              divineType: "iching",
+              aiReading: fullText,
+              hexagram: hex,
+              relatingHexagram: relHex ?? null,
+              primaryLines: result.primaryLines,
+              changingLines: result.changingLines,
+            },
+          ]);
+
+          // 回填 root:讓結果頁永遠呈現「根占卜 + 延伸鏈 + 聊天」的樣子
+          if (rootSnapshot) {
+            setDivineType(rootSnapshot.divineType);
+            setUserQuestion(rootSnapshot.question);
+            setSelectedCategory(rootSnapshot.category);
+            setAiReading(rootSnapshot.aiReading);
+            setHexagram(rootSnapshot.hexagram);
+            setRelatingHexagram(rootSnapshot.relatingHexagram);
+            setDivinationResult(rootSnapshot.divinationResult);
+            setDrawnCards(rootSnapshot.drawnCards);
+          }
+          setIsFollowUpMode(false);
+        } else {
+          const saved = await saveDivination({
+            divineType: "iching",
+            question: userQuestion,
+            category: selectedCategory,
+            hexagramNumber: hex.number,
+            primaryLines: result.primaryLines,
+            changingLines: result.changingLines,
+            relatingHexagramNumber: relHex?.number ?? null,
+            aiReading: fullText,
+            locale,
+          });
+          if (saved?.id) setDivinationId(saved.id);
+        }
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -600,6 +790,10 @@ export default function Home() {
     setIsLoadingAI(true);
     setAiReading("");
 
+    // 衍伸占卜(同一套機制)
+    const followUpCtx = isFollowUpMode ? buildPreviousContext() : null;
+    const followUpChat = isFollowUpMode ? chatMessages : null;
+
     try {
       const category = questionCategories.find((c) => c.id === selectedCategory);
       const payload = {
@@ -611,6 +805,8 @@ export default function Home() {
         question: userQuestion,
         category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
         locale,
+        previousContext: followUpCtx,
+        chatHistory: followUpChat,
       };
 
       const response = await fetch("/api/tarot", {
@@ -637,21 +833,59 @@ export default function Home() {
         }
       }
 
-      // 存進 Supabase(Phase B)— 塔羅版本,讓分享 / 公開連結可用
       if (!controller.signal.aborted) {
-        const saved = await saveDivination({
-          divineType: "tarot",
-          question: userQuestion,
-          category: selectedCategory,
-          tarotCards: cards.map((d, i) => ({
-            cardId: d.card.id,
-            position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
-            isReversed: d.isReversed,
-          })),
-          aiReading: fullText,
-          locale,
-        });
-        if (saved?.id) setDivinationId(saved.id);
+        if (isFollowUpMode && divinationId) {
+          await appendFollowUp(divinationId, {
+            divineType: "tarot",
+            question: userQuestion,
+            tarotCards: cards.map((d, i) => ({
+              cardId: d.card.id,
+              position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
+              isReversed: d.isReversed,
+            })),
+            aiReading: fullText,
+          });
+
+          setFollowUps((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              question: userQuestion,
+              createdAt: new Date().toISOString(),
+              divineType: "tarot",
+              aiReading: fullText,
+              drawnCards: cards,
+            },
+          ]);
+
+          // 回填 root
+          if (rootSnapshot) {
+            setDivineType(rootSnapshot.divineType);
+            setUserQuestion(rootSnapshot.question);
+            setSelectedCategory(rootSnapshot.category);
+            setAiReading(rootSnapshot.aiReading);
+            setHexagram(rootSnapshot.hexagram);
+            setRelatingHexagram(rootSnapshot.relatingHexagram);
+            setDivinationResult(rootSnapshot.divinationResult);
+            setDrawnCards(rootSnapshot.drawnCards);
+          }
+          setIsFollowUpMode(false);
+        } else {
+          // 存進 Supabase(Phase B)— 塔羅版本,讓分享 / 公開連結可用
+          const saved = await saveDivination({
+            divineType: "tarot",
+            question: userQuestion,
+            category: selectedCategory,
+            tarotCards: cards.map((d, i) => ({
+              cardId: d.card.id,
+              position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
+              isReversed: d.isReversed,
+            })),
+            aiReading: fullText,
+            locale,
+          });
+          if (saved?.id) setDivinationId(saved.id);
+        }
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
@@ -716,6 +950,30 @@ export default function Home() {
       readingContext = locale === "zh"
         ? `本卦：第${hexagram!.number}卦 ${hexagram!.nameZh}\n卦辭：${hexagram!.judgmentZh}\n象辭：${hexagram!.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
         : `Hexagram ${hexagram!.number}: ${hexagram!.nameEn}\nJudgment: ${hexagram!.judgmentEn}\nImage: ${hexagram!.imageEn}\nQuestion: ${userQuestion}\nReading: ${aiReading}`;
+    }
+
+    // 若這個 session 已經做過衍伸占卜,把衍伸鏈也接到 readingContext,
+    // 這樣聊天 AI 會知道「根占卜 + 延伸占卜 X 次」的完整脈絡。
+    if (followUps.length > 0) {
+      const isZh = locale === "zh";
+      const followBlocks = followUps.map((f, i) => {
+        const label = isZh ? `延伸第${i + 1}回合` : `Follow-up #${i + 1}`;
+        if (f.divineType === "iching" && f.hexagram) {
+          const nm = isZh ? f.hexagram.nameZh : f.hexagram.nameEn;
+          return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${f.hexagram.number} ${nm}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
+        }
+        if (f.divineType === "tarot" && f.drawnCards && f.drawnCards.length === 3) {
+          const parts = f.drawnCards.map((d, idx) => {
+            const pos = THREE_CARD_POSITIONS[idx];
+            const nm = isZh ? d.card.nameZh : d.card.nameEn;
+            const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
+            return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
+          }).join(isZh ? " / " : " / ");
+          return `【${label}】${isZh ? "塔羅三牌" : "Tarot"} | ${parts}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
+        }
+        return "";
+      }).filter(Boolean).join("\n\n");
+      readingContext = `${readingContext}\n\n${isZh ? "── 之後的延伸占卜 ──" : "── Subsequent follow-ups ──"}\n${followBlocks}`;
     }
 
     if (chatAbortRef.current) chatAbortRef.current.abort();
@@ -789,6 +1047,267 @@ export default function Home() {
     setDivineType(null);
     setDrawnCards([]);
     setRevealedCount(0);
+    // 衍伸占卜 state
+    setRootSnapshot(null);
+    setFollowUps([]);
+    setIsFollowUpMode(false);
+    setShowFollowUpForm(false);
+    setFollowUpQuestion("");
+  };
+
+  // ── 衍伸占卜鏈渲染 ─────────────────────────────────────
+  // 結果頁上「根占卜」和「聊天框」中間插進來:把所有已完成的衍伸占卜
+  // 以時間順序列出,每一筆含當時的問題、卦象/牌、AI 的延伸解說。
+  const renderFollowUpChain = () => {
+    if (followUps.length === 0) return null;
+    return (
+      <div className="mystic-card" style={{ padding: 16, marginTop: 16 }}>
+        <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+          🌿 {t("延伸占卜", "Follow-up Readings")}
+          <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
+            ({followUps.length})
+          </span>
+        </h3>
+        {followUps.map((f, i) => {
+          const isIching = f.divineType === "iching";
+          const hexName = f.hexagram ? (locale === "zh" ? f.hexagram.nameZh : f.hexagram.nameEn) : "";
+          return (
+            <div
+              key={f.id}
+              style={{
+                marginBottom: i === followUps.length - 1 ? 0 : 14,
+                paddingBottom: i === followUps.length - 1 ? 0 : 14,
+                borderBottom: i === followUps.length - 1 ? "none" : "1px dashed rgba(212,168,85,0.18)",
+              }}
+            >
+              <div style={{ color: "#d4a855", fontSize: 12, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
+                {t(`延伸第 ${i + 1} 回合`, `Follow-up #${i + 1}`)}
+                <span style={{ color: "rgba(192,192,208,0.5)", marginLeft: 8 }}>
+                  {isIching
+                    ? `· ☯ ${t("易經", "I Ching")} · ${hexName}`
+                    : `· 🎴 ${t("塔羅三牌", "Tarot 3-card")}`}
+                </span>
+              </div>
+              <div style={{ color: "#e8e0d0", fontSize: 14, marginBottom: 6, lineHeight: 1.55 }}>
+                <span style={{ color: "rgba(192,192,208,0.6)", marginRight: 6 }}>Q:</span>
+                {f.question}
+              </div>
+              {isIching && f.hexagram && f.primaryLines && (
+                <div style={{ marginTop: 6, marginBottom: 8, display: "flex", justifyContent: "center" }}>
+                  <HexagramDisplay
+                    lines={f.primaryLines}
+                    changingLines={f.changingLines ?? []}
+                    size="sm"
+                    animate={false}
+                  />
+                </div>
+              )}
+              {!isIching && f.drawnCards && f.drawnCards.length === 3 && (
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 6,
+                  marginTop: 6,
+                  marginBottom: 8,
+                }}>
+                  {f.drawnCards.map((d, idx) => {
+                    const pos = THREE_CARD_POSITIONS[idx];
+                    const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
+                    return (
+                      <div key={idx} style={{ textAlign: "center" }}>
+                        <div style={{
+                          color: "#d4a855",
+                          fontSize: 10,
+                          marginBottom: 3,
+                          fontFamily: "'Noto Serif TC', serif",
+                        }}>
+                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                        </div>
+                        <div style={{
+                          width: "100%",
+                          aspectRatio: "2 / 3.5",
+                          borderRadius: 6,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.3)",
+                          background: "rgba(13,13,43,0.9)",
+                        }}>
+                          <img
+                            src={d.card.imagePath}
+                            alt={cardName}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              display: "block",
+                              transform: d.isReversed ? "rotate(180deg)" : "none",
+                            }}
+                          />
+                        </div>
+                        <div style={{
+                          color: "#e8e8f0",
+                          fontSize: 10,
+                          marginTop: 3,
+                          lineHeight: 1.2,
+                        }}>
+                          {cardName}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{
+                background: "rgba(10,10,26,0.55)",
+                border: "1px solid rgba(212,168,85,0.15)",
+                borderRadius: 10,
+                padding: "10px 12px",
+                color: "rgba(192,192,208,0.9)",
+                fontSize: 13,
+                lineHeight: 1.7,
+                whiteSpace: "pre-wrap",
+              }}>
+                <div style={{ color: "#d4a855", fontSize: 11, marginBottom: 4 }}>
+                  {t("老師延伸解說", "Master's continuation")}
+                </div>
+                {f.aiReading}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // 「衍伸問題繼續占卜」按鈕 + inline 問題輸入框。放在聊天框上方/內部的延伸入口。
+  const renderFollowUpCTA = () => {
+    // AI 還在串流 root 解盤 → 先不要顯示按鈕,避免使用者按到半截
+    if (isLoadingAI) return null;
+    // 正在做衍伸占卜時(從 divine-type 跑到 result 的過程)— 結果頁此刻暫時沒在顯示,
+    // 但保險起見,isFollowUpMode 時也不給再按(會被 handleStartFollowUp 擋但 UI 也別露)
+    if (isFollowUpMode) return null;
+
+    const locked = !isSignedIn || !divinationId;
+
+    if (locked) {
+      return (
+        <div style={{
+          marginTop: 12,
+          padding: 12,
+          borderRadius: 10,
+          border: "1px dashed rgba(212,168,85,0.3)",
+          background: "rgba(10,10,26,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          flexWrap: "wrap",
+        }}>
+          <span style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, flex: "1 1 200px" }}>
+            🔒 {t(
+              "相關衍伸問題繼續占卜(登入會員可延續對話+再抽一卦)",
+              "Follow up with a deeper question (sign in to continue)"
+            )}
+          </span>
+          <button
+            onClick={handleLoginForShare}
+            className="btn-gold"
+            style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
+          >
+            {t("登入後解鎖", "Sign in to unlock")}
+          </button>
+        </div>
+      );
+    }
+
+    if (showFollowUpForm) {
+      return (
+        <div style={{
+          marginTop: 12,
+          padding: 12,
+          borderRadius: 10,
+          border: "1px solid rgba(212,168,85,0.3)",
+          background: "rgba(10,10,26,0.5)",
+        }}>
+          <div style={{ color: "#d4a855", fontSize: 13, marginBottom: 8, fontFamily: "'Noto Serif TC', serif" }}>
+            ✦ {t("提出延伸問題,再抽一卦", "Ask a deeper question, draw again")}
+          </div>
+          <textarea
+            value={followUpQuestion}
+            onChange={(e) => setFollowUpQuestion(e.target.value)}
+            placeholder={t(
+              "例如:那如果我真的轉職,下半年會順利嗎?",
+              "e.g., If I actually make that move, will the second half go well?"
+            )}
+            style={{
+              width: "100%",
+              minHeight: 72,
+              background: "rgba(13,13,43,0.7)",
+              border: "1px solid rgba(212,168,85,0.2)",
+              borderRadius: 10,
+              padding: 10,
+              color: "white",
+              resize: "vertical",
+              fontSize: 13,
+              outline: "none",
+              fontFamily: "'Noto Sans TC', sans-serif",
+              lineHeight: 1.6,
+              boxSizing: "border-box",
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button
+              onClick={handleCancelFollowUpForm}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 9999,
+                border: "1px solid rgba(192,192,208,0.2)",
+                background: "transparent",
+                color: "rgba(192,192,208,0.7)",
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              {t("取消", "Cancel")}
+            </button>
+            <button
+              onClick={handleStartFollowUp}
+              disabled={!followUpQuestion.trim()}
+              className="btn-gold"
+              style={{ flex: 1, fontSize: 14, padding: "8px 16px" }}
+            >
+              {t("進入占卜工具 →", "Choose oracle →")}
+            </button>
+          </div>
+          <p style={{ marginTop: 8, color: "rgba(192,192,208,0.5)", fontSize: 11, lineHeight: 1.5, margin: "8px 0 0" }}>
+            {t(
+              "老師會記得剛剛的占卜與我們的對話,用這次新抽到的卦/牌給你約 300 字的延伸解說。",
+              "The master will remember this reading and our chat, then give ~150 words of continuation based on your new draw."
+            )}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => setShowFollowUpForm(true)}
+        style={{
+          marginTop: 12,
+          width: "100%",
+          padding: "10px 16px",
+          borderRadius: 10,
+          border: "1px solid rgba(212,168,85,0.4)",
+          background: "rgba(212,168,85,0.08)",
+          color: "#d4a855",
+          fontSize: 13,
+          fontFamily: "'Noto Sans TC', sans-serif",
+          cursor: "pointer",
+          lineHeight: 1.5,
+        }}
+      >
+        ✦ {t("相關衍伸問題繼續占卜", "Follow up with another reading")}
+      </button>
+    );
   };
 
   return (
@@ -1664,6 +2183,9 @@ export default function Home() {
                 </div>
               )}
 
+              {/* 已完成的衍伸占卜鏈 */}
+              {renderFollowUpChain()}
+
               {/* Chat with Master */}
               <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
@@ -1758,6 +2280,9 @@ export default function Home() {
                     {t("送出", "Send")}
                   </button>
                 </div>
+
+                {/* 衍伸問題繼續占卜 CTA(在聊天框內,與聊天功能並列) */}
+                {renderFollowUpCTA()}
               </div>
 
               {/* Actions */}
@@ -2112,6 +2637,9 @@ export default function Home() {
                 </div>
               )}
 
+              {/* 已完成的衍伸占卜鏈 */}
+              {renderFollowUpChain()}
+
               {/* Chat with Master(塔羅版) */}
               <div className="mystic-card" style={{ padding: 16, marginTop: 16, overflow: "hidden" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
@@ -2204,6 +2732,9 @@ export default function Home() {
                     {t("送出", "Send")}
                   </button>
                 </div>
+
+                {/* 衍伸問題繼續占卜 CTA(塔羅結果頁) */}
+                {renderFollowUpCTA()}
               </div>
 
               {/* Actions */}

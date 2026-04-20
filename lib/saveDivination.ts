@@ -109,3 +109,115 @@ function saveToLocalStorage(record: Record<string, unknown>) {
     console.error("localStorage save failed:", e);
   }
 }
+
+/**
+ * 「相關衍伸問題繼續占卜」— 把新占卜塞進原始 divination 的 follow_ups 陣列尾端。
+ *
+ * schema 參見 supabase/phase4_followups.sql。只會在「已登入 + Supabase 有設定」
+ * 時動作 — 未登入的訪客在 UI 會被擋,根本不會進到這條路徑。
+ *
+ * 使用 JSONB || operator 做 atomic append(避免多 tab 同時操作時互蓋),
+ * 改用 RPC 會更穩,但目前流程單用戶單連線足夠。
+ */
+export interface FollowUpIchingPayload {
+  divineType: "iching";
+  question: string;
+  hexagramNumber: number;
+  primaryLines: number[];
+  changingLines: number[];
+  relatingHexagramNumber: number | null;
+  aiReading: string;
+}
+
+export interface FollowUpTarotPayload {
+  divineType: "tarot";
+  question: string;
+  tarotCards: SavedTarotCard[];
+  aiReading: string;
+}
+
+export type FollowUpPayload = FollowUpIchingPayload | FollowUpTarotPayload;
+
+export interface SavedFollowUp {
+  id: string;
+  question: string;
+  createdAt: string;
+  divineType: "iching" | "tarot";
+  aiReading: string;
+  hexagramNumber?: number | null;
+  primaryLines?: number[] | null;
+  changingLines?: number[] | null;
+  relatingHexagramNumber?: number | null;
+  tarotCards?: SavedTarotCard[] | null;
+}
+
+export async function appendFollowUp(
+  parentId: string,
+  payload: FollowUpPayload
+): Promise<SavedFollowUp | null> {
+  const entry: SavedFollowUp =
+    payload.divineType === "tarot"
+      ? {
+          id: crypto.randomUUID(),
+          question: payload.question,
+          createdAt: new Date().toISOString(),
+          divineType: "tarot",
+          aiReading: payload.aiReading,
+          tarotCards: payload.tarotCards,
+          hexagramNumber: null,
+          primaryLines: null,
+          changingLines: null,
+          relatingHexagramNumber: null,
+        }
+      : {
+          id: crypto.randomUUID(),
+          question: payload.question,
+          createdAt: new Date().toISOString(),
+          divineType: "iching",
+          aiReading: payload.aiReading,
+          hexagramNumber: payload.hexagramNumber,
+          primaryLines: payload.primaryLines,
+          changingLines: payload.changingLines,
+          relatingHexagramNumber: payload.relatingHexagramNumber,
+          tarotCards: null,
+        };
+
+  if (!isSupabaseConfigured) return entry;
+
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return entry;
+
+    // 先讀回現有 follow_ups,append 一筆再寫回 — 單用戶 single-tab 情境夠用
+    const { data: row, error: readErr } = await supabase
+      .from("divinations")
+      .select("follow_ups")
+      .eq("id", parentId)
+      .maybeSingle();
+
+    if (readErr) {
+      console.error("appendFollowUp: read failed", readErr);
+      return entry;
+    }
+
+    const existing: SavedFollowUp[] = Array.isArray(row?.follow_ups)
+      ? (row!.follow_ups as SavedFollowUp[])
+      : [];
+    const next = [...existing, entry];
+
+    const { error: writeErr } = await supabase
+      .from("divinations")
+      .update({ follow_ups: next })
+      .eq("id", parentId);
+
+    if (writeErr) {
+      console.error("appendFollowUp: write failed", writeErr);
+    }
+  } catch (e) {
+    console.error("appendFollowUp error:", e);
+  }
+
+  return entry;
+}
