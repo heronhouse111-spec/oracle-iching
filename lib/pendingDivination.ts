@@ -26,6 +26,11 @@ export interface PendingTarotSlot {
   isReversed: boolean;
 }
 
+export interface PendingChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface PendingDivinationSnapshot {
   v: 1;
   timestamp: number;
@@ -36,6 +41,9 @@ export interface PendingDivinationSnapshot {
   locale: string;
   iching: PendingIchingSnapshot | null;
   tarot: PendingTarotSlot[] | null;
+  // 訪客在結果頁跟老師的對話(可選 — 舊 snapshot 無此欄位也不會炸)。
+  // 登入後一併帶回來,讓使用者看到的畫面跟按下登入前一致。
+  chatMessages?: PendingChatMessage[];
 }
 
 export function savePendingDivination(snap: PendingDivinationSnapshot): void {

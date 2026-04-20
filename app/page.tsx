@@ -24,6 +24,7 @@ import {
   savePendingDivination,
   loadPendingDivination,
   clearPendingDivination,
+  type PendingChatMessage,
 } from "@/lib/pendingDivination";
 
 type Step =
@@ -187,7 +188,15 @@ export default function Home() {
     if (isSignedIn) return;
     if (step !== "result") return;
     if (isLoadingAI) return; // 串流中不寫,避免存到半截
+    if (isChatLoading) return; // chat 串流中也不寫,等串流結束 isChatLoading 變 false 時再寫完整版
     if (!aiReading) return;
+
+    // 把訪客跟老師的對話一併寫進 snapshot — 登入後要一起復原,
+    // 不然使用者會覺得剛剛那段對話「登入後就消失了」。
+    const chatForSnap: PendingChatMessage[] = chatMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
     if (divineType === "tarot") {
       if (drawnCards.length !== 3) return;
@@ -204,6 +213,7 @@ export default function Home() {
           cardId: d.card.id,
           isReversed: d.isReversed,
         })),
+        chatMessages: chatForSnap,
       });
     } else if (divineType === "iching") {
       if (!hexagram || !divinationResult) return;
@@ -223,11 +233,13 @@ export default function Home() {
           relatingHexagramNumber: relatingHexagram?.number ?? null,
         },
         tarot: null,
+        chatMessages: chatForSnap,
       });
     }
   }, [
     step,
     isLoadingAI,
+    isChatLoading,
     aiReading,
     divineType,
     drawnCards,
@@ -238,6 +250,7 @@ export default function Home() {
     userQuestion,
     locale,
     isSignedIn,
+    chatMessages,
   ]);
 
   // mount 時:若有暫存占卜就復原;若現在已登入,順便補存 Supabase 拿 id
@@ -251,6 +264,13 @@ export default function Home() {
     setUserQuestion(snap.userQuestion);
     setAiReading(snap.aiReading);
     setDivineType(snap.divineType);
+
+    // 訪客登入前跟老師的對話一併還原(沒有就當空白)
+    if (snap.chatMessages && snap.chatMessages.length > 0) {
+      setChatMessages(
+        snap.chatMessages.map((m) => ({ role: m.role, content: m.content }))
+      );
+    }
 
     if (snap.divineType === "iching" && snap.iching) {
       const hex = getHexagramByNumber(snap.iching.hexagramNumber) ?? null;
