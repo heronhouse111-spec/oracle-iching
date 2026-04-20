@@ -19,12 +19,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // ──────────────────────────────────────────
 export const CREDIT_COSTS = {
   /** 一次完整的易經占卜(含 AI 解說) */
-  DIVINE: 1,
+  DIVINE: 5,
   /** 一次三張牌塔羅占卜(含 AI 解說) */
-  TAROT: 1,
+  TAROT: 5,
   /** 接續前一次占卜的衍伸占卜 — 成本較高(要讀前文脈絡 + 給更長回覆) */
-  DIVINE_FOLLOWUP: 2,
-  TAROT_FOLLOWUP: 2,
+  DIVINE_FOLLOWUP: 10,
+  TAROT_FOLLOWUP: 10,
   /** 跟老師的一則追問對話 */
   CHAT: 1,
 } as const;
