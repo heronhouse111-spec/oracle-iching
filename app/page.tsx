@@ -137,6 +137,21 @@ export default function Home() {
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
 
+  // 最新一筆衍伸結果的 DOM ref —— 衍伸占卜完成後自動捲到這裡,
+  // 讓使用者回到根占卜頁面時視角停留在最新的延伸解說上,不用從頭滑
+  const latestFollowUpRef = useRef<HTMLDivElement | null>(null);
+  // 每次 followUps 陣列長度變化(= 新增一筆衍伸)就觸發一次捲動
+  useEffect(() => {
+    if (followUps.length === 0) return;
+    if (isLoadingAI) return; // AI 還在串流解說時先不要跳,等完整內容 render 出來
+    // 等 DOM 穩定再跳(rootSnapshot 回填 + 鏈結渲染都要時間)
+    const id = window.setTimeout(() => {
+      latestFollowUpRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followUps.length, isLoadingAI]);
+
   // mount 時讀 localStorage 拿上次選的 mode,給 mode-select 畫面做「上次選了 X」提示
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1137,13 +1152,16 @@ export default function Home() {
         {followUps.map((f, i) => {
           const isIching = f.divineType === "iching";
           const hexName = f.hexagram ? (locale === "zh" ? f.hexagram.nameZh : f.hexagram.nameEn) : "";
+          const isLast = i === followUps.length - 1;
           return (
             <div
               key={f.id}
+              ref={isLast ? latestFollowUpRef : null}
               style={{
-                marginBottom: i === followUps.length - 1 ? 0 : 14,
-                paddingBottom: i === followUps.length - 1 ? 0 : 14,
-                borderBottom: i === followUps.length - 1 ? "none" : "1px dashed rgba(212,168,85,0.18)",
+                marginBottom: isLast ? 0 : 14,
+                paddingBottom: isLast ? 0 : 14,
+                borderBottom: isLast ? "none" : "1px dashed rgba(212,168,85,0.18)",
+                scrollMarginTop: 80, // 留給 fixed header 的空間,避免捲過去時最新衍伸被擋住
               }}
             >
               <div style={{ color: "#d4a855", fontSize: 12, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
