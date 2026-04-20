@@ -1,4 +1,11 @@
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import {
+  spendCredits,
+  refundCredits,
+  InsufficientCreditsError,
+  CREDIT_COSTS,
+} from "@/lib/credits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,6 +36,43 @@ export async function POST(request: NextRequest) {
     const type: "iching" | "tarot" = divineType === "tarot" ? "tarot" : "iching";
 
     const isZh = locale === "zh";
+
+    // ──────────────────────────────────────────
+    // 點數扣款(每一則聊天訊息 = 1 點;訪客目前仍允許免費聊,
+    //          未來若要擋訪客聊天,把下面 else 的早 return 打開即可)
+    // ──────────────────────────────────────────
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const cost = CREDIT_COSTS.CHAT;
+
+    if (user) {
+      try {
+        await spendCredits({
+          userId: user.id,
+          amount: cost,
+          reason: "spend_chat",
+          metadata: { divineType: type, locale },
+        });
+      } catch (err) {
+        if (err instanceof InsufficientCreditsError) {
+          return new Response(
+            JSON.stringify({
+              error: "INSUFFICIENT_CREDITS",
+              required: cost,
+              message: isZh ? "點數不足" : "Insufficient credits",
+            }),
+            { status: 402, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        console.error("[chat] spendCredits failed:", err);
+        return new Response(JSON.stringify({ error: "Failed to deduct credits" }), {
+          status: 500, headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const systemPrompt = isZh
       ? (type === "tarot"
@@ -94,6 +138,13 @@ Rules:
     if (!response.ok) {
       const err = await response.text();
       console.error("DeepSeek chat API error:", response.status, err);
+      if (user) {
+        await refundCredits({
+          userId: user.id,
+          amount: cost,
+          errorMessage: `chat deepseek ${response.status}: ${err.slice(0, 200)}`,
+        });
+      }
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500, headers: { "Content-Type": "application/json" },
       });

@@ -1,5 +1,12 @@
 import { NextRequest } from "next/server";
 import { getCardById, THREE_CARD_POSITIONS, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import { createClient } from "@/lib/supabase/server";
+import {
+  spendCredits,
+  refundCredits,
+  InsufficientCreditsError,
+  CREDIT_COSTS,
+} from "@/lib/credits";
 
 // 客戶端送來的「抽牌結果」
 interface DrawnCardRequest {
@@ -61,6 +68,53 @@ export async function POST(request: NextRequest) {
 
     const isZh = locale === "zh";
     const isFollowUp = Boolean(previousContext && previousContext.trim().length > 0);
+
+    // ──────────────────────────────────────────
+    // 點數扣款(登入者才扣,訪客維持 1 次免費占卜的漏斗)
+    // ──────────────────────────────────────────
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const cost = isFollowUp ? CREDIT_COSTS.TAROT_FOLLOWUP : CREDIT_COSTS.TAROT;
+    const reason = isFollowUp ? "spend_tarot_followup" : "spend_tarot";
+
+    if (user) {
+      try {
+        await spendCredits({
+          userId: user.id,
+          amount: cost,
+          reason,
+          metadata: {
+            category,
+            isFollowUp,
+            locale,
+            cards: cards.map((c) => ({ id: c.cardId, pos: c.position, rev: c.isReversed })),
+          },
+        });
+      } catch (err) {
+        if (err instanceof InsufficientCreditsError) {
+          return new Response(
+            JSON.stringify({
+              error: "INSUFFICIENT_CREDITS",
+              required: cost,
+              message: isZh ? "點數不足" : "Insufficient credits",
+            }),
+            { status: 402, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        console.error("[tarot] spendCredits failed:", err);
+        return new Response(JSON.stringify({ error: "Failed to deduct credits" }), {
+          status: 500, headers: { "Content-Type": "application/json" },
+        });
+      }
+    } else if (isFollowUp) {
+      return new Response(
+        JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in to continue" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     const systemPrompt = isZh
       ? (isFollowUp
@@ -134,6 +188,13 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error("DeepSeek API error (tarot):", response.status, err);
+      if (user) {
+        await refundCredits({
+          userId: user.id,
+          amount: cost,
+          errorMessage: `tarot deepseek ${response.status}: ${err.slice(0, 200)}`,
+        });
+      }
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },

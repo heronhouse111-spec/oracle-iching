@@ -1,5 +1,12 @@
 import { NextRequest } from "next/server";
 import { getHexagramByNumber } from "@/data/hexagrams";
+import { createClient } from "@/lib/supabase/server";
+import {
+  spendCredits,
+  refundCredits,
+  InsufficientCreditsError,
+  CREDIT_COSTS,
+} from "@/lib/credits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +46,56 @@ export async function POST(request: NextRequest) {
     const relatingHex = relatingHexagramNumber ? getHexagramByNumber(relatingHexagramNumber) : null;
     const isZh = locale === "zh";
     const isFollowUp = Boolean(previousContext && previousContext.trim().length > 0);
+
+    // ──────────────────────────────────────────
+    // 點數扣款 — 登入使用者才扣,訪客(未登入)保留現有 1 次免費占卜的漏斗
+    // ──────────────────────────────────────────
+    // 衍伸占卜只允許登入者(前端有擋,這裡後端再保險)
+    // 扣點失敗 → 402;DeepSeek 之後掛掉會在下面 refund 回來
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const cost = isFollowUp ? CREDIT_COSTS.DIVINE_FOLLOWUP : CREDIT_COSTS.DIVINE;
+    const reason = isFollowUp ? "spend_divine_followup" : "spend_divine";
+
+    if (user) {
+      try {
+        await spendCredits({
+          userId: user.id,
+          amount: cost,
+          reason,
+          metadata: {
+            hexagram: hexagramNumber,
+            category,
+            isFollowUp,
+            locale,
+          },
+        });
+      } catch (err) {
+        if (err instanceof InsufficientCreditsError) {
+          return new Response(
+            JSON.stringify({
+              error: "INSUFFICIENT_CREDITS",
+              required: cost,
+              message: isZh ? "點數不足" : "Insufficient credits",
+            }),
+            { status: 402, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        console.error("[divine] spendCredits failed:", err);
+        return new Response(JSON.stringify({ error: "Failed to deduct credits" }), {
+          status: 500, headers: { "Content-Type": "application/json" },
+        });
+      }
+    } else if (isFollowUp) {
+      // 訪客不允許衍伸占卜(需要 chain 資料)
+      return new Response(
+        JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in to continue" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     const systemPrompt = isZh
       ? (isFollowUp
@@ -95,6 +152,14 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error("DeepSeek API error:", response.status, err);
+      // 呼叫失敗 → 退點
+      if (user) {
+        await refundCredits({
+          userId: user.id,
+          amount: cost,
+          errorMessage: `divine deepseek ${response.status}: ${err.slice(0, 200)}`,
+        });
+      }
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500, headers: { "Content-Type": "application/json" },
       });
