@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
@@ -1653,12 +1654,43 @@ export default function Home() {
           {step === "category" && (
             <motion.div key="cat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 32 }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 16 }}>
-                  <motion.div animate={{ rotate: [0, 360] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    style={{ fontSize: 56, display: "inline-block", lineHeight: 1 }}>☯</motion.div>
-                  <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    style={{ fontSize: 52, display: "inline-block", lineHeight: 1 }}>🎴</motion.div>
-                </div>
+                <motion.div
+                  // Delphic Oracle 主 logo:呼吸式光暈 + 微幅上下浮動,不搶下方字
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ display: "inline-block", position: "relative" }}
+                >
+                  {/* 背後呼吸光暈(pulse) */}
+                  <motion.div
+                    aria-hidden
+                    animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.95, 1.05, 0.95] }}
+                    transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+                    style={{
+                      position: "absolute",
+                      inset: -24,
+                      borderRadius: "50%",
+                      background:
+                        "radial-gradient(circle, rgba(212,168,85,0.55) 0%, rgba(212,168,85,0) 70%)",
+                      filter: "blur(18px)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <Image
+                    src="/logo-256.png"
+                    alt={t("Oracle 神諭", "Oracle")}
+                    width={140}
+                    height={140}
+                    priority
+                    style={{
+                      width: 140,
+                      height: 140,
+                      borderRadius: "50%",
+                      display: "block",
+                      position: "relative",
+                      boxShadow: "0 0 36px rgba(212,168,85,0.45)",
+                    }}
+                  />
+                </motion.div>
                 <h1 className="text-gold-gradient" style={{ fontSize: 32, fontFamily: "'Noto Serif TC', serif", fontWeight: 700, marginTop: 16, letterSpacing: 2 }}>
                   {t("Oracle 神諭", "Oracle")}
                 </h1>
