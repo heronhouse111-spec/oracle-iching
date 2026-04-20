@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# secrets — 絕對不能進 repo
+api key appbackend.txt
+*.key
+*.secret
+
+# brand source assets(8MB+ 原檔,不進 git,改存本機/雲端硬碟)
+logo-source.png

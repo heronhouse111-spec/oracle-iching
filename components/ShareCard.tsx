@@ -147,7 +147,9 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
     props.relatingLines &&
     props.relatingLines.length === 6;
 
-  const brandIcon = isTarot ? "🎴" : "☯";
+  // 品牌 icon 改用 Delphic Oracle 圓形徽章(整個 app logo 統一)
+  // 注意:ShareCard 被 html-to-image 截圖,外部圖若跨網域未有 CORS header 會直接拒絕。
+  // 把 logo 放在 public/ 下用相對 URL 確保永遠同源可載。
   const brandText = isTarot
     ? t("塔羅占卜", "Oracle Tarot")
     : t("易經占卜", "Oracle I Ching");
@@ -235,8 +237,21 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
             marginBottom: 32,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 36 }}>{brandIcon}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-128.png"
+              alt="Oracle"
+              width={56}
+              height={56}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                display: "block",
+                boxShadow: "0 0 16px rgba(212,168,85,0.4)",
+              }}
+            />
             <span
               style={{
                 fontSize: 24,

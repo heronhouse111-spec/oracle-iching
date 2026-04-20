@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { createClient } from "@/lib/supabase/server";
 import { getHexagramByNumber } from "@/data/hexagrams";
 import { getCardById } from "@/data/tarot";
@@ -173,6 +175,18 @@ export default async function Image({
           .filter((x): x is NonNullable<typeof x> => x !== null)
       : [];
 
+  // Logo(Delphic Oracle 圓形徽章)── 從 public/ 讀檔轉 data URI,
+  // 不靠 baseUrl + fetch 以避開 deployment-time 域名不可達問題。
+  let logoDataUri: string | null = null;
+  try {
+    const logoBuf = await readFile(
+      join(process.cwd(), "public", "logo-128.png")
+    );
+    logoDataUri = `data:image/png;base64,${logoBuf.toString("base64")}`;
+  } catch {
+    // 讀不到就 fallback 回 CSS 圓圈(下面有 fallback UI)
+  }
+
   // ⚠️ Satori 的 <img src> 若 fetch 失敗會整張 OG 圖 500。
   // 為了不讓 Line / 社群 unfurl 抓不到縮圖,先 server-side 把圖抓下來轉 data URI,
   // 失敗的圖 fallback 成 null,UI 只顯示卡牌文字,保證 endpoint 永遠回 200 + 一張圖。
@@ -258,19 +272,35 @@ export default async function Image({
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {/* CSS-drawn circular logo mark (字型無關,不會變成 tofu)*/}
-              <div
-                style={{
-                  display: "flex",
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9999,
-                  border: "3px solid #d4a855",
-                  background:
-                    "linear-gradient(135deg, rgba(212,168,85,0.3) 0%, rgba(139,92,246,0.2) 100%)",
-                }}
-              />
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              {logoDataUri ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={logoDataUri}
+                  alt="Oracle"
+                  width={56}
+                  height={56}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 9999,
+                    display: "block",
+                  }}
+                />
+              ) : (
+                // 讀檔失敗 → fallback 回原本的 CSS 圓圈
+                <div
+                  style={{
+                    display: "flex",
+                    width: 56,
+                    height: 56,
+                    borderRadius: 9999,
+                    border: "3px solid #d4a855",
+                    background:
+                      "linear-gradient(135deg, rgba(212,168,85,0.3) 0%, rgba(139,92,246,0.2) 100%)",
+                  }}
+                />
+              )}
               <span
                 style={{
                   fontSize: 28,
