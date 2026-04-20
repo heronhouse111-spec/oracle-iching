@@ -3,6 +3,7 @@
 import { useLanguage } from "@/i18n/LanguageContext";
 import Link from "next/link";
 import AuthButton from "./AuthButton";
+import CreditsBadge from "./CreditsBadge";
 
 export default function Header() {
   const { locale, setLocale, t } = useLanguage();
@@ -24,7 +25,8 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <nav style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <CreditsBadge />
           <Link href="/history" style={{ color: "#c0c0d0", fontSize: 14, textDecoration: "none" }}>
             {t("占卜紀錄", "History")}
           </Link>

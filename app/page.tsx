@@ -26,6 +26,11 @@ import {
   clearPendingDivination,
   type PendingChatMessage,
 } from "@/lib/pendingDivination";
+import {
+  notifyCreditsChanged,
+  parseInsufficientCredits,
+} from "@/lib/clientCredits";
+import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 
 type Step =
   | "category"
@@ -59,6 +64,12 @@ export default function Home() {
   const [aiReading, setAiReading] = useState("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 點數不足 modal(402 時觸發)
+  const [creditsModal, setCreditsModal] = useState<{ open: boolean; required: number }>({
+    open: false,
+    required: 0,
+  });
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -712,7 +723,18 @@ export default function Home() {
         signal: controller.signal,
       });
 
+      // 402 點數不足 → 彈升級 modal,中止後續 streaming
+      const creditsErr = await parseInsufficientCredits(response);
+      if (creditsErr) {
+        setCreditsModal({ open: true, required: creditsErr.required });
+        setAiReading("");
+        return;
+      }
+
       if (!response.ok) throw new Error("API error");
+
+      // 扣點已經發生 —— 通知 Badge 更新
+      notifyCreditsChanged();
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -836,7 +858,18 @@ export default function Home() {
         signal: controller.signal,
       });
 
+      // 402 點數不足 → 彈升級 modal,中止後續 streaming
+      const creditsErr = await parseInsufficientCredits(response);
+      if (creditsErr) {
+        setCreditsModal({ open: true, required: creditsErr.required });
+        setAiReading("");
+        return;
+      }
+
       if (!response.ok) throw new Error("API error");
+
+      // 扣點已經發生 —— 通知 Badge 更新
+      notifyCreditsChanged();
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -1013,7 +1046,20 @@ export default function Home() {
         signal: controller.signal,
       });
 
+      // 402 點數不足 → 把剛塞進去的使用者訊息拿掉,彈 modal
+      const creditsErr = await parseInsufficientCredits(response);
+      if (creditsErr) {
+        // newMessages 已經 append 了這輪使用者訊息 —— 回退 + 把字還回輸入框
+        setChatMessages((prev) => prev.slice(0, -1));
+        setChatInput(userMsg);
+        setCreditsModal({ open: true, required: creditsErr.required });
+        return;
+      }
+
       if (!response.ok) throw new Error("API error");
+
+      // 扣點已經發生 —— 通知 Badge 更新
+      notifyCreditsChanged();
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -1333,6 +1379,12 @@ export default function Home() {
   return (
     <div style={{ minHeight: "100vh" }}>
       <Header />
+
+      <InsufficientCreditsModal
+        open={creditsModal.open}
+        required={creditsModal.required}
+        onClose={() => setCreditsModal({ open: false, required: 0 })}
+      />
 
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
         <AnimatePresence mode="wait">
