@@ -15,7 +15,7 @@ const siteUrl = (() => {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Oracle 神諭 | 易經 × 塔羅 · AI 占卜",
+  title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
   description:
     "東方易經 · 西方塔羅 · AI 即時解盤。Eastern I Ching meets Western Tarot, with AI-powered interpretations.",
   // Next 16 會自動 pick up app/icon.png + app/apple-icon.png,
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    siteName: "Oracle 神諭",
-    title: "Oracle 神諭 | 易經 × 塔羅 · AI 占卜",
+    siteName: "Oracle 問事",
+    title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
     description:
       "東方易經 · 西方塔羅 · AI 即時解盤。Ancient wisdom meets AI divination.",
     url: siteUrl,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Oracle 神諭 | 易經 × 塔羅 · AI 占卜",
+    title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
     description: "Ancient wisdom meets AI divination.",
   },
 };
