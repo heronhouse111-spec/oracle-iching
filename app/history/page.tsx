@@ -450,6 +450,26 @@ export default function HistoryPage() {
                         {record.ai_reading}
                       </div>
 
+                      {/* 免責聲明 */}
+                      <p
+                        style={{
+                          marginTop: 14,
+                          paddingTop: 10,
+                          borderTop: "1px dashed rgba(212,168,85,0.15)",
+                          color: "rgba(192,192,208,0.5)",
+                          fontSize: 11,
+                          lineHeight: 1.7,
+                          fontStyle: "italic",
+                          position: "relative",
+                          zIndex: 1,
+                        }}
+                      >
+                        {t(
+                          "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                          "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                        )}
+                      </p>
+
                       {/* 訂閱者:延伸占卜鏈 */}
                       {isActive && Array.isArray(record.follow_ups) && record.follow_ups.length > 0 && (
                         <div
@@ -577,6 +597,23 @@ export default function HistoryPage() {
                                 >
                                   {f.aiReading}
                                 </div>
+                                {/* 免責聲明 */}
+                                <div
+                                  style={{
+                                    marginTop: 10,
+                                    paddingTop: 6,
+                                    borderTop: "1px dashed rgba(212,168,85,0.15)",
+                                    color: "rgba(192,192,208,0.45)",
+                                    fontSize: 10,
+                                    lineHeight: 1.6,
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  {t(
+                                    "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                                    "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -655,6 +692,25 @@ export default function HistoryPage() {
                                     </span>
                                   )}
                                   {msg.content}
+                                  {/* 免責聲明(assistant 訊息才顯示) */}
+                                  {msg.role === "assistant" && (
+                                    <div
+                                      style={{
+                                        marginTop: 8,
+                                        paddingTop: 6,
+                                        borderTop: "1px dashed rgba(212,168,85,0.15)",
+                                        color: "rgba(192,192,208,0.45)",
+                                        fontSize: 10,
+                                        lineHeight: 1.6,
+                                        fontStyle: "italic",
+                                      }}
+                                    >
+                                      {t(
+                                        "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                                        "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}

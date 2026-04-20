@@ -533,6 +533,23 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
           >
             {aiSummary || t("(AI 解盤載入中…)", "(AI reading loading…)")}
           </div>
+          {/* 免責聲明 — 法遵必要,分享到社群也必須一起帶 */}
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 10,
+              borderTop: "1px dashed rgba(212,168,85,0.2)",
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: "rgba(192,192,208,0.65)",
+              fontStyle: "italic",
+            }}
+          >
+            {t(
+              "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+              "※ For reference only. Not investment, medical, legal, or major life decision advice."
+            )}
+          </div>
         </div>
 
         {/* 底部 brand */}

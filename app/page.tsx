@@ -1497,6 +1497,23 @@ export default function Home() {
                   {t("老師延伸解說", "Master's continuation")}
                 </div>
                 {f.aiReading}
+                {/* 免責聲明 */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    paddingTop: 6,
+                    borderTop: "1px dashed rgba(212,168,85,0.15)",
+                    color: "rgba(192,192,208,0.45)",
+                    fontSize: 10,
+                    lineHeight: 1.6,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {t(
+                    "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
+                    "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                  )}
+                </div>
               </div>
             </div>
           );
