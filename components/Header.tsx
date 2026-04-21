@@ -8,8 +8,18 @@ import AuthButton from "./AuthButton";
 import CreditsBadge from "./CreditsBadge";
 
 export default function Header() {
-  const { locale, setLocale, t } = useLanguage();
+  const { locale, zhVariant, cycleLocale, t } = useLanguage();
   const pathname = usePathname();
+
+  // 三段循環顯示:繁 → 简 → EN → 繁
+  const localeBadge =
+    locale === "en" ? "EN" : zhVariant === "CN" ? "简" : "繁";
+  const localeTitle =
+    locale === "en"
+      ? "English · click to switch (→ 繁體)"
+      : zhVariant === "CN"
+        ? "简体中文 · 点击切换 (→ English)"
+        : "繁體中文 · 點擊切換 (→ 简体)";
 
   // 已在首頁時點 logo,Link 不會 remount app/page.tsx,
   // 占卜過程的 step / userQuestion 等 state 會留著 → 看起來像沒反應。
@@ -57,13 +67,16 @@ export default function Header() {
             {t("占卜紀錄", "History")}
           </Link>
           <button
-            onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
+            onClick={cycleLocale}
+            title={localeTitle}
+            aria-label={localeTitle}
             style={{
               padding: "6px 12px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.3)",
               color: "#d4a855", fontSize: 12, background: "none", cursor: "pointer",
+              minWidth: 44, textAlign: "center",
             }}
           >
-            {locale === "zh" ? "EN" : "中"}
+            {localeBadge}
           </button>
           <AuthButton />
         </nav>
