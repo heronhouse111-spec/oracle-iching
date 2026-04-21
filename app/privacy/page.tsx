@@ -6,8 +6,8 @@
  * Google Play 2023+ 上架必要(Data Safety 會要求一個 URL),
  * 同時也是 GDPR / 台灣個資法的通用基本盤。內容對應目前實際行為:
  *   - 蒐集項目:email / OAuth 基本資料 / 占卜問題 & 結果 / chat / IP & UA
- *   - 存儲:Supabase (PostgreSQL) + Vercel Edge logs
- *   - 第三方:Google OAuth、DeepSeek(AI 解盤)、Vercel hosting
+ *   - 存儲:第三方雲端資料庫,亞太區(不指名廠商,未來換商更彈性)
+ *   - 第三方(category-level):登入驗證(Google OAuth)、AI 服務商、雲端基礎設施
  *   - 行使權利:/account/delete 即時刪帳號 + 資料
  *
  * 註:版型與 /terms 對齊,isZh 切換兩套 article。
@@ -124,36 +124,37 @@ export default function PrivacyPage() {
             <section style={sectionStyle}>
               <h2 style={sectionHeadingStyle}>三、資料存儲位置</h2>
               <p style={paragraphStyle}>
-                您的帳號資料與占卜紀錄存放於 Supabase(PostgreSQL)雲端資料庫,
-                資料中心位於新加坡或就近區域;網站部署於 Vercel,
-                其 Edge 節點可能暫存您的請求日誌數日。未登入之訪客占卜資料
-                僅存於您的瀏覽器 localStorage,不會上傳至本平台伺服器。
+                您於登入狀態下產生的帳號與占卜資料,由本平台合作之第三方雲端
+                服務(見第四章)託管,伺服器位於亞太地區,因此涉及個人資料
+                之國際傳輸。未登入時產生的占卜資料僅保存於您的瀏覽器本機
+                (localStorage),不會上傳至本平台伺服器。
               </p>
             </section>
 
             <section style={sectionStyle}>
               <h2 style={sectionHeadingStyle}>四、第三方服務</h2>
               <p style={paragraphStyle}>
-                為提供完整服務,本平台會將必要資料傳送至下列第三方:
+                為提供完整服務,本平台會將必要資料傳送至下列類別之第三方:
               </p>
               <ul style={listStyle}>
                 <li>
-                  <strong>Google(OAuth 登入)</strong>:驗證您的身份,
-                  僅取得 email / 顯示名稱 / 頭像。
+                  <strong>登入驗證服務</strong>:您透過 Google OAuth 登入,
+                  我們僅取得 email、顯示名稱與頭像。不會存取您的通訊錄、
+                  雲端硬碟或其他 Google 帳戶資料。
                 </li>
                 <li>
-                  <strong>DeepSeek(AI 解盤引擎)</strong>:您的問題內容、
-                  卦象 / 牌面與衍伸對話會傳送給 DeepSeek 進行生成。
-                  不含您的 email、真實姓名或 IP。
+                  <strong>AI 服務提供商</strong>:您的問題內容、卦象 / 牌面
+                  與衍伸對話會傳送至合作之第三方 AI 服務進行生成,
+                  不含您的 email、真實姓名或 IP 位址。
                 </li>
                 <li>
-                  <strong>Supabase、Vercel</strong>:作為雲端資料庫與託管平台,
-                  依其各自之隱私權政策處理資料。
+                  <strong>雲端基礎設施服務商</strong>:提供資料庫與網站託管
+                  服務,協助儲存您的帳號與占卜資料。
                 </li>
               </ul>
               <p style={paragraphStyle}>
                 上述服務商皆具備國際通用之資安與合規標準,但本平台無法完全
-                控制其內部處理流程,請您於使用前一併參閱其隱私權聲明。
+                控制其內部處理流程。
               </p>
             </section>
 
@@ -175,7 +176,7 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   帳號刪除後:所有占卜紀錄、訂閱資料、auth 身份均於 24 小時內
-                  清除;Vercel / Supabase 之操作日誌則依其政策於 30–90 日內輪替。
+                  清除;第三方服務商之操作日誌則依其各自政策於 30–90 日內輪替。
                 </li>
                 <li>
                   法令要求保留之資料(如發票、金流對帳)
@@ -314,39 +315,44 @@ export default function PrivacyPage() {
             <section style={sectionStyle}>
               <h2 style={sectionHeadingStyle}>3. Where Data Is Stored</h2>
               <p style={paragraphStyle}>
-                Your account and divination history are stored in Supabase
-                (PostgreSQL) cloud infrastructure in Singapore or the nearest
-                region. The site is hosted on Vercel, whose edge nodes may
-                cache request logs for several days. Divination data generated
-                while signed out is stored only in your browser&apos;s
-                localStorage and is never uploaded to our servers.
+                Data generated while signed in is hosted by third-party cloud
+                providers (see Section 4) on servers located in the
+                Asia-Pacific region, which constitutes an international
+                transfer of personal data. Divination data generated while
+                signed out is stored only in your browser&apos;s localStorage
+                and is never uploaded to our servers.
               </p>
             </section>
 
             <section style={sectionStyle}>
               <h2 style={sectionHeadingStyle}>4. Third-Party Services</h2>
               <p style={paragraphStyle}>
-                To provide full functionality, we transmit necessary data to:
+                To provide full functionality, we transmit necessary data to
+                the following categories of third parties:
               </p>
               <ul style={listStyle}>
                 <li>
-                  <strong>Google (OAuth)</strong>: Verifies your identity. We
-                  receive only email, display name, and avatar.
+                  <strong>Authentication provider</strong>: You sign in via
+                  Google OAuth. We receive only email, display name, and
+                  avatar. We do not access your contacts, Drive, or any other
+                  Google account data.
                 </li>
                 <li>
-                  <strong>DeepSeek (AI reading engine)</strong>: Your question,
-                  hexagram/cards, and follow-up chat are forwarded to DeepSeek
-                  for generation. Email, real name, and IP are not included.
+                  <strong>AI service providers</strong>: Your question,
+                  hexagram/cards, and follow-up chat are forwarded to a
+                  third-party AI service for generation. Email, real name, and
+                  IP address are not included.
                 </li>
                 <li>
-                  <strong>Supabase, Vercel</strong>: Cloud database and
-                  hosting, each governed by their own privacy policies.
+                  <strong>Cloud infrastructure providers</strong>: Database
+                  hosting and website hosting for your account and divination
+                  data.
                 </li>
               </ul>
               <p style={paragraphStyle}>
                 These providers follow internationally recognized security
                 standards, but we cannot fully control their internal
-                processes. Please also review their privacy statements.
+                processes.
               </p>
             </section>
 
@@ -369,9 +375,9 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   After deletion: all divination records, subscription data,
-                  and auth identity are purged within 24 hours.
-                  Vercel/Supabase operational logs rotate per their policies
-                  (30–90 days).
+                  and auth identity are purged within 24 hours. Third-party
+                  provider operational logs rotate per their respective
+                  policies (30–90 days).
                 </li>
                 <li>
                   Data legally required to retain (invoices, payment

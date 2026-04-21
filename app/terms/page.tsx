@@ -143,8 +143,8 @@ export default function TermsPage() {
                 將存入本平台之雲端資料庫供您查閱歷史紀錄。
                 您可隨時於會員中心刪除個人帳號及相關資料。
                 本平台不會主動將您的個人資料提供予第三方,
-                但為提供 AI 解盤服務,您的問題內容會傳遞至 AI 服務提供商
-                (DeepSeek)進行處理。
+                但為提供 AI 解盤服務,您的問題內容會傳遞至合作之第三方
+                AI 服務進行處理。詳細個資處理方式請參閱隱私權政策。
               </p>
             </section>
 
@@ -273,8 +273,8 @@ export default function TermsPage() {
                 our cloud database for your personal history. You may delete
                 your account and related data at any time. We do not
                 proactively share personal data with third parties, but
-                questions are transmitted to our AI provider (DeepSeek) for
-                processing.
+                questions are transmitted to a third-party AI service for
+                processing. See the Privacy Policy for details.
               </p>
             </section>
 
