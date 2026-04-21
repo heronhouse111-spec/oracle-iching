@@ -1,10 +1,12 @@
 {
+  "id": "/?source=pwa",
   "name": "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
   "short_name": "Oracle 問事",
   "description": "東方易經 · 西方塔羅 · AI 即時解盤。Ancient wisdom meets AI divination.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "prefer_related_applications": false,
   "orientation": "portrait",
   "lang": "zh-Hant",
   "dir": "ltr",

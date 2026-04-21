@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import Footer from "@/components/Footer";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import InstallPrompt from "@/components/InstallPrompt";
 
 // metadataBase 讓 OG/twitter 圖路徑可以用相對 URL — Next 16 建議要設
 const siteUrl = (() => {
@@ -76,6 +78,9 @@ export default function RootLayout({
         <LanguageProvider>
           {children}
           <Footer />
+          {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
+          <ServiceWorkerRegister />
+          <InstallPrompt />
         </LanguageProvider>
       </body>
     </html>
