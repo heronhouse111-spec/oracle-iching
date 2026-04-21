@@ -96,8 +96,8 @@ export default function CreditsPurchasePage() {
           }}
         >
           {t(
-            "每次 AI 占卜分析扣 10 點、衍伸問卜扣 5 點",
-            "Each AI divination costs 10 credits; follow-up questions cost 5."
+            "每次 AI 占卜分析扣 5 點、衍伸問卜扣 10 點、追問每則 1 點",
+            "Main divination costs 5 credits; follow-up reading 10; each chat message 1."
           )}
         </p>
 

@@ -98,11 +98,6 @@ export const SUBSCRIPTION_BENEFITS_EN: string[] = [
   "30% off on lucky charm purchases",
 ];
 
-/** 年訂閱額外贈品 —— 首年實體開運禮包 */
-export const YEARLY_EXTRA_BENEFIT_ZH = "首次年訂閱加贈實體開運禮包(郵寄)";
-export const YEARLY_EXTRA_BENEFIT_EN =
-  "Physical lucky charm gift box (first-year subscribers only)";
-
 /** Helper:TWD 千分位格式化 */
 export function formatTwd(n: number): string {
   return new Intl.NumberFormat("zh-TW", {

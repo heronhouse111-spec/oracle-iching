@@ -8,8 +8,6 @@ import {
   SUBSCRIPTION_PLANS,
   SUBSCRIPTION_BENEFITS_ZH,
   SUBSCRIPTION_BENEFITS_EN,
-  YEARLY_EXTRA_BENEFIT_ZH,
-  YEARLY_EXTRA_BENEFIT_EN,
   formatTwd,
   type SubscriptionPlanId,
 } from "@/lib/pricing";
@@ -68,8 +66,6 @@ export default function UpgradePage() {
 
   const benefits =
     locale === "zh" ? SUBSCRIPTION_BENEFITS_ZH : SUBSCRIPTION_BENEFITS_EN;
-  const yearlyExtra =
-    locale === "zh" ? YEARLY_EXTRA_BENEFIT_ZH : YEARLY_EXTRA_BENEFIT_EN;
 
   const planLabel = (id: SubscriptionPlanId) => {
     switch (id) {
@@ -312,22 +308,6 @@ export default function UpgradePage() {
                       <span>{benefit}</span>
                     </li>
                   ))}
-                  {plan.id === "yearly" && (
-                    <li
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 8,
-                        marginTop: 8,
-                        paddingTop: 8,
-                        borderTop: "1px solid rgba(212,168,85,0.15)",
-                        color: "#6ee7b7",
-                      }}
-                    >
-                      <span style={{ fontSize: 10, lineHeight: 1.7 }}>🎁</span>
-                      <span>{yearlyExtra}</span>
-                    </li>
-                  )}
                 </ul>
 
                 {isCurrent ? (
