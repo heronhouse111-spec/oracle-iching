@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   signInWithSocial,
@@ -45,6 +46,12 @@ export default function LoginOptionsModal({
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
 
+  // SSR safety: portal 目標只能在 client 取得。mounted 之前不 render。
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // 每次開關重置狀態,避免殘留錯誤/已寄信 flag
   useEffect(() => {
     if (open) {
@@ -75,7 +82,7 @@ export default function LoginOptionsModal({
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const handleSocial = async (provider: SocialProvider) => {
     setError(null);
@@ -108,12 +115,16 @@ export default function LoginOptionsModal({
     }
   };
 
-  return (
+  // 用 React Portal 把 modal 送到 document.body —— 這是關鍵。
+  //
+  // 問題背景:首頁 hero 用 framer-motion,motion.div 會 inline style transform: translateZ(0),
+  // 這會建立新的 stacking context,讓裡面的 position: fixed 只能相對那個 transform 容器定位,
+  // z-index 再高都逃不出去,於是 modal 被 hero 的其他 motion 元素蓋掉。
+  // 把節點 render 到 <body> 下面就徹底脫離這個牢籠。
+  return createPortal(
     <div
       onClick={onClose}
       style={{
-        // 外層:fixed 滿版 + 允許捲動。z-index 9999 直接蓋過任何 page 元素(避免被 motion.div 的 transform 建出的
-        // stacking context 壓在下面;先前 zIndex 100 在某些視窗尺寸會被 framer-motion 的子元素遮住)
         position: "fixed",
         top: 0,
         left: 0,
@@ -429,7 +440,8 @@ export default function LoginOptionsModal({
         </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
