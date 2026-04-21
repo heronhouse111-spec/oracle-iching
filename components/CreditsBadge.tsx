@@ -75,8 +75,8 @@ export default function CreditsBadge() {
 
   return (
     <Link
-      href="/account"
-      title={t("點擊管理會員 / 點數", "Manage account / credits")}
+      href="/account/credits"
+      title={t("點擊購買或管理點數", "Purchase or manage credits")}
       style={{
         display: "inline-flex",
         alignItems: "center",

@@ -402,26 +402,24 @@ export default function AccountPage() {
                 }}
               >
                 {t(
-                  "升級訂閱後可解鎖完整占卜紀錄、多種占卜系統(塔羅…),並支援無浮水印輸出。",
-                  "Upgrade to unlock full history, multiple systems (Tarot…), and watermark-free outputs."
+                  "升級訂閱後每月自動補 600 點,解鎖完整占卜紀錄、塔羅切換、詳細爻辭分析與無浮水印輸出。",
+                  "Subscribe for 600 credits monthly, full history, Tarot, detailed yao analysis, and watermark-free exports."
                 )}
               </p>
-              <button
-                disabled
-                title={t("金流功能準備中", "Payment coming soon")}
+              <Link
+                href="/account/upgrade"
+                className="btn-gold"
                 style={{
+                  display: "block",
                   width: "100%",
                   padding: "10px 16px",
-                  borderRadius: 9999,
-                  border: "1px solid rgba(212,168,85,0.4)",
-                  color: "rgba(212,168,85,0.6)",
                   fontSize: 13,
-                  background: "none",
-                  cursor: "not-allowed",
+                  textAlign: "center",
+                  textDecoration: "none",
                 }}
               >
-                {t("升級訂閱(即將推出)", "Upgrade (Coming Soon)")}
-              </button>
+                {t("查看訂閱方案", "See Subscription Plans")}
+              </Link>
             </div>
           )}
 
@@ -452,6 +450,32 @@ export default function AccountPage() {
 
         {/* --- Quick links --- */}
         <div className="mystic-card" style={{ padding: 12 }}>
+          <Link
+            href="/account/credits"
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              color: "rgba(192,192,208,0.9)",
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            {t("→ 購買點數", "→ Purchase Credits")}
+          </Link>
+          {isActive && (
+            <Link
+              href="/account/upgrade"
+              style={{
+                display: "block",
+                padding: "10px 12px",
+                color: "rgba(192,192,208,0.9)",
+                fontSize: 13,
+                textDecoration: "none",
+              }}
+            >
+              {t("→ 管理訂閱方案", "→ Manage Subscription")}
+            </Link>
+          )}
           <Link
             href="/history"
             style={{

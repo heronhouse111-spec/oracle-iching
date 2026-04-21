@@ -14,8 +14,8 @@ export interface InsufficientCreditsModalProps {
  * 點數不足 modal —— 402 從 /api/divine|tarot|chat 回來時由 page.tsx 觸發顯示。
  *
  * 三個選項:
- *   1. 升級訂閱 —— 連到 /account
- *   2. 購買點數包 —— 連到 /account(目前同頁,之後金流接好會有獨立 tab)
+ *   1. 升級訂閱 —— 連到 /account/upgrade
+ *   2. 購買點數包 —— 連到 /account/credits
  *   3. 看廣告領點 —— 灰掉(Phase D 才接 AdMob,現在只放 placeholder)
  */
 export default function InsufficientCreditsModal({
@@ -105,7 +105,7 @@ export default function InsufficientCreditsModal({
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {/* 升級訂閱 —— 主要 CTA */}
           <Link
-            href="/account"
+            href="/account/upgrade"
             onClick={onClose}
             style={{
               display: "block",
@@ -123,7 +123,7 @@ export default function InsufficientCreditsModal({
 
           {/* 購買點數包 —— 次要 */}
           <Link
-            href="/account"
+            href="/account/credits"
             onClick={onClose}
             style={{
               display: "block",
