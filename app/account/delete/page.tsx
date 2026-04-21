@@ -87,8 +87,8 @@ export default function AccountDeletePage() {
       console.error("[delete] failed:", e);
       setErrorMsg(
         t(
-          "刪除失敗,請稍後再試或寄信至 heronhouse111@gmail.com 協助處理。",
-          "Deletion failed. Please retry later or email heronhouse111@gmail.com for assistance."
+          "刪除失敗,請稍後再試或寄信至 contact@heronhouse.me 協助處理。",
+          "Deletion failed. Please retry later or email contact@heronhouse.me for assistance."
         )
       );
       setIsDeleting(false);

@@ -238,10 +238,10 @@ export default function PrivacyPage() {
                 如對本政策、個人資料處理或權利行使有任何疑問,
                 請寄信至{" "}
                 <a
-                  href="mailto:heronhouse111@gmail.com"
+                  href="mailto:contact@heronhouse.me"
                   style={{ color: "#d4a855", textDecoration: "underline" }}
                 >
-                  heronhouse111@gmail.com
+                  contact@heronhouse.me
                 </a>
                 ,我們將於 7 個工作天內回覆。
               </p>
@@ -443,10 +443,10 @@ export default function PrivacyPage() {
                 For any question about this Policy, personal data handling, or
                 to exercise your rights, email{" "}
                 <a
-                  href="mailto:heronhouse111@gmail.com"
+                  href="mailto:contact@heronhouse.me"
                   style={{ color: "#d4a855", textDecoration: "underline" }}
                 >
-                  heronhouse111@gmail.com
+                  contact@heronhouse.me
                 </a>
                 . We aim to reply within 7 business days.
               </p>
