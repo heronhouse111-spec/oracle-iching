@@ -3,11 +3,23 @@
 import { useLanguage } from "@/i18n/LanguageContext";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import AuthButton from "./AuthButton";
 import CreditsBadge from "./CreditsBadge";
 
 export default function Header() {
   const { locale, setLocale, t } = useLanguage();
+  const pathname = usePathname();
+
+  // 已在首頁時點 logo,Link 不會 remount app/page.tsx,
+  // 占卜過程的 step / userQuestion 等 state 會留著 → 看起來像沒反應。
+  // 改走 hard navigation 強制清空狀態回到 category 起始畫面。
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.location.assign("/");
+    }
+  };
 
   return (
     <header style={{
@@ -19,7 +31,7 @@ export default function Header() {
         maxWidth: 640, margin: "0 auto", padding: "0 16px",
         height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+        <Link href="/" onClick={handleHomeClick} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Image
             src="/logo-64.png"
             alt={t("Oracle 問事", "Oracle")}
