@@ -55,7 +55,17 @@ export default function Footer() {
               textDecoration: "none",
             }}
           >
-            {t("服務條款 / 免責聲明", "Terms & Disclaimer")}
+            {t("服務條款", "Terms")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          <Link
+            href="/privacy"
+            style={{
+              color: "rgba(212,168,85,0.75)",
+              textDecoration: "none",
+            }}
+          >
+            {t("隱私權政策", "Privacy")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <span style={{ color: "rgba(192,192,208,0.4)" }}>

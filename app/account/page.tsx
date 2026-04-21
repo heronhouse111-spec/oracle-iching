@@ -518,6 +518,18 @@ export default function AccountPage() {
           >
             {t("登出", "Sign Out")}
           </button>
+          <Link
+            href="/account/delete"
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              color: "rgba(244,113,133,0.7)",
+              fontSize: 12,
+              textDecoration: "none",
+            }}
+          >
+            {t("→ 刪除帳號與所有資料", "→ Delete account & all data")}
+          </Link>
         </div>
       </main>
     </div>

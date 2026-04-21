@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import Footer from "@/components/Footer";
@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
   description:
     "東方易經 · 西方塔羅 · AI 即時解盤。Eastern I Ching meets Western Tarot, with AI-powered interpretations.",
+  // PWA manifest —— 讓 Chrome / Android 提示「加到主畫面」,同時也是 Bubblewrap TWA 打包前置
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Oracle 問事",
+    statusBarStyle: "black-translucent",
+  },
   // Next 16 會自動 pick up app/icon.png + app/apple-icon.png,
   // 但明確寫出來對 SEO crawler 比較保險
   icons: {
@@ -42,6 +49,14 @@ export const metadata: Metadata = {
     title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
     description: "Ancient wisdom meets AI divination.",
   },
+};
+
+// Next 16:themeColor / viewport 要獨立 export,寫進 metadata 會被警告
+export const viewport: Viewport = {
+  themeColor: "#0a0a1a",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
