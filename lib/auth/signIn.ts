@@ -14,10 +14,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // 對外:能跑 OAuth 的 provider 集合(Line 目前可能沒開,UI 會標示)
-export type SocialProvider = "google" | "apple" | "line";
+export type SocialProvider = "google" | "apple" | "facebook" | "line";
 
 // Supabase 實際吃的字串 —— line 不是 TS 型別內的合法值,用字串傳
-type OAuthProviderString = "google" | "apple" | "line";
+type OAuthProviderString = "google" | "apple" | "facebook" | "line";
 
 export interface SignInOptions {
   /** 登入成功後 callback 再 redirect 的目的地,預設 "/" */
@@ -139,7 +139,13 @@ export async function unlinkIdentity(identityId: string): Promise<void> {
 
 function mapOAuthError(provider: SocialProvider, raw: string): string {
   const p =
-    provider === "google" ? "Google" : provider === "apple" ? "Apple" : "LINE";
+    provider === "google"
+      ? "Google"
+      : provider === "apple"
+        ? "Apple"
+        : provider === "facebook"
+          ? "Facebook"
+          : "LINE";
   // Supabase 常見關鍵字
   if (/unsupported provider|disabled|not enabled/i.test(raw)) {
     return `${p} 登入尚未開通,請稍候或改用其他登入方式`;

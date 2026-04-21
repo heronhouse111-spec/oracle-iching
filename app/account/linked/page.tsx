@@ -45,6 +45,7 @@ const LINE_LOGIN_ENABLED =
 const PROVIDERS: { key: SocialProvider | "email"; label: string; labelEn: string; color: string }[] = [
   { key: "google", label: "Google", labelEn: "Google", color: "#4285F4" },
   { key: "apple", label: "Apple", labelEn: "Apple", color: "#000" },
+  { key: "facebook", label: "Facebook", labelEn: "Facebook", color: "#1877F2" },
   { key: "line", label: "LINE", labelEn: "LINE", color: "#06C755" },
   { key: "email", label: "Email 登入連結", labelEn: "Email Magic Link", color: "#d4a855" },
 ];
@@ -184,8 +185,8 @@ export default function LinkedAccountsPage() {
           }}
         >
           {t(
-            "你可以綁定多種登入方式,未來不論用 Google / Apple / LINE / Email 連結登入,都會進到同一個帳號,點數與占卜紀錄共通。",
-            "Link multiple sign-in methods so that whether you log in with Google / Apple / LINE / Email magic link, you always reach the same account with shared credits and history."
+            "你可以綁定多種登入方式,未來不論用 Google / Apple / Facebook / LINE / Email 連結登入,都會進到同一個帳號,點數與占卜紀錄共通。",
+            "Link multiple sign-in methods so that whether you log in with Google / Apple / Facebook / LINE / Email magic link, you always reach the same account with shared credits and history."
           )}
         </p>
 
@@ -389,6 +390,8 @@ function labelOf(provider: string): string {
       return "Google";
     case "apple":
       return "Apple";
+    case "facebook":
+      return "Facebook";
     case "line":
       return "LINE";
     case "email":
