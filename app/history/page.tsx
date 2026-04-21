@@ -61,6 +61,8 @@ interface Record {
 type Source = "supabase" | "local" | null;
 
 const FREE_VISIBLE_LIMIT = 3;
+// 未登入訪客:列表只顯示 2 筆,展開只顯示一半 AI 回覆(下方加登入 CTA)
+const GUEST_VISIBLE_LIMIT = 2;
 // 歷史顯示的時間窗 —— 12 個月內,避免長期用戶 UI 爆掉
 const HISTORY_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -175,14 +177,23 @@ export default function HistoryPage() {
     });
   };
 
-  // Subscription gating (only applies when signed into Supabase)
+  // Subscription gating:
+  //   guest (local)      → 只能看 2 筆,展開只看一半
+  //   supabase 未訂閱    → 只能看 3 筆
+  //   supabase 訂閱戶    → 無限制
+  const isGuest = source === "local";
   const gatingApplies = source === "supabase" && !isActive;
-  const visibleRecords = gatingApplies
-    ? records.slice(0, FREE_VISIBLE_LIMIT)
-    : records;
-  const lockedCount = gatingApplies
-    ? Math.max(0, records.length - FREE_VISIBLE_LIMIT)
-    : 0;
+  const visibleLimit = isGuest
+    ? GUEST_VISIBLE_LIMIT
+    : gatingApplies
+    ? FREE_VISIBLE_LIMIT
+    : null;
+  const visibleRecords =
+    visibleLimit !== null ? records.slice(0, visibleLimit) : records;
+  const lockedCount =
+    visibleLimit !== null
+      ? Math.max(0, records.length - visibleLimit)
+      : 0;
 
   // Watermark text: email + date (for expanded AI reading)
   const watermarkText = userEmail
@@ -446,9 +457,115 @@ export default function HistoryPage() {
                           </div>
                         ) : null}
                       </div>
-                      <div style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8, whiteSpace: "pre-wrap", position: "relative", zIndex: 1 }}>
-                        {record.ai_reading}
-                      </div>
+                      {(() => {
+                        const fullReading = record.ai_reading ?? "";
+                        const isTruncated = isGuest && fullReading.length > 40;
+                        const shownReading = isTruncated
+                          ? fullReading.slice(0, Math.floor(fullReading.length / 2))
+                          : fullReading;
+                        return (
+                          <>
+                            <div
+                              style={{
+                                color: "rgba(192,192,208,0.8)",
+                                fontSize: 14,
+                                lineHeight: 1.8,
+                                whiteSpace: "pre-wrap",
+                                position: "relative",
+                                zIndex: 1,
+                                // 訪客版下方漸層淡出,暗示還有後半段
+                                maskImage: isTruncated
+                                  ? "linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0.15))"
+                                  : undefined,
+                                WebkitMaskImage: isTruncated
+                                  ? "linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0.15))"
+                                  : undefined,
+                              }}
+                            >
+                              {shownReading}
+                              {isTruncated && "…"}
+                            </div>
+                            {isTruncated && (
+                              <div
+                                style={{
+                                  marginTop: 16,
+                                  padding: 18,
+                                  borderRadius: 12,
+                                  textAlign: "center",
+                                  border: "1px solid rgba(212,168,85,0.35)",
+                                  background:
+                                    "linear-gradient(135deg, rgba(212,168,85,0.1), rgba(212,168,85,0.02))",
+                                  position: "relative",
+                                  zIndex: 1,
+                                }}
+                              >
+                                <div style={{ fontSize: 26, marginBottom: 6 }}>🔐</div>
+                                <h4
+                                  style={{
+                                    color: "#d4a855",
+                                    fontFamily: "'Noto Serif TC', serif",
+                                    fontSize: 15,
+                                    margin: "0 0 6px",
+                                  }}
+                                >
+                                  {t("登入以解鎖完整體驗", "Sign in to unlock full reading")}
+                                </h4>
+                                <p
+                                  style={{
+                                    color: "rgba(192,192,208,0.7)",
+                                    fontSize: 12,
+                                    lineHeight: 1.6,
+                                    margin: "0 auto 14px",
+                                    maxWidth: 320,
+                                  }}
+                                >
+                                  {t(
+                                    "登入後可讀完整 AI 解卦、跨裝置同步、產生分享圖。",
+                                    "Sign in to read the full AI analysis, sync across devices, and create shareable images."
+                                  )}
+                                </p>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: 10,
+                                    justifyContent: "center",
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  {isSupabaseConfigured && (
+                                    <button
+                                      onClick={handleGuestLogin}
+                                      className="btn-gold"
+                                      style={{
+                                        padding: "9px 20px",
+                                        fontSize: 13,
+                                        border: "none",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      {t("使用 Google 登入", "Sign in with Google")}
+                                    </button>
+                                  )}
+                                  <Link
+                                    href="/account/upgrade"
+                                    style={{
+                                      padding: "9px 20px",
+                                      fontSize: 13,
+                                      color: "#d4a855",
+                                      border: "1px solid rgba(212,168,85,0.3)",
+                                      borderRadius: 9999,
+                                      textDecoration: "none",
+                                      background: "rgba(212,168,85,0.04)",
+                                    }}
+                                  >
+                                    {t("了解訂閱方案 →", "View plans →")}
+                                  </Link>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
 
                       {/* 免責聲明 */}
                       <p
@@ -891,23 +1008,43 @@ export default function HistoryPage() {
                       marginRight: "auto",
                     }}
                   >
-                    {t(
-                      "免費會員僅顯示最近 3 筆占卜紀錄。升級訂閱後可解鎖全部歷史,並支援無浮水印輸出。",
-                      "Free members can see the 3 most recent divinations. Upgrade to unlock full history and watermark-free output."
-                    )}
+                    {isGuest
+                      ? t(
+                          "未登入訪客僅顯示最近 2 筆紀錄。登入即可查看全部,並跨裝置同步。",
+                          "Guests see only the 2 most recent records. Sign in to view all and sync across devices."
+                        )
+                      : t(
+                          "免費會員僅顯示最近 3 筆占卜紀錄。升級訂閱後可解鎖全部歷史,並支援無浮水印輸出。",
+                          "Free members can see the 3 most recent divinations. Upgrade to unlock full history and watermark-free output."
+                        )}
                   </p>
-                  <Link
-                    href="/account"
-                    className="btn-gold"
-                    style={{
-                      display: "inline-block",
-                      textDecoration: "none",
-                      padding: "10px 24px",
-                      fontSize: 13,
-                    }}
-                  >
-                    {t("升級解鎖 →", "Upgrade to unlock →")}
-                  </Link>
+                  {isGuest && isSupabaseConfigured ? (
+                    <button
+                      onClick={handleGuestLogin}
+                      className="btn-gold"
+                      style={{
+                        padding: "10px 24px",
+                        fontSize: 13,
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t("使用 Google 登入", "Sign in with Google")}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/account/upgrade"
+                      className="btn-gold"
+                      style={{
+                        display: "inline-block",
+                        textDecoration: "none",
+                        padding: "10px 24px",
+                        fontSize: 13,
+                      }}
+                    >
+                      {t("升級解鎖 →", "Upgrade to unlock →")}
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
