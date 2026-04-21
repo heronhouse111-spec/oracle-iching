@@ -112,36 +112,48 @@ export default function LoginOptionsModal({
     <div
       onClick={onClose}
       style={{
+        // 外層:fixed 滿版 + 允許捲動。z-index 9999 直接蓋過任何 page 元素(避免被 motion.div 的 transform 建出的
+        // stacking context 壓在下面;先前 zIndex 100 在某些視窗尺寸會被 framer-motion 的子元素遮住)
         position: "fixed",
-        inset: 0,
-        zIndex: 100,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
         background: "rgba(5,5,20,0.72)",
         backdropFilter: "blur(6px)",
-        // 若 modal 比 viewport 高,整個 overlay 可捲動,避免 modal 頂部被裁
-        overflowY: "auto",
-        // flex 置中 + safe 關鍵字:內容比 viewport 矮 → 垂直置中;比 viewport 高 → 退回 flex-start 可捲到頂
-        display: "flex",
-        alignItems: "safe center",
-        justifyContent: "center",
-        // 上下預留呼吸,避免 modal 貼到視窗邊緣 / iOS safe-area / Android 狀態列
-        padding:
-          "max(32px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom))",
-        WebkitOverflowScrolling: "touch",
       }}
     >
+      {/*
+        內層 wrapper 永遠「至少」跟視窗一樣高 (minHeight: 100%),讓 flex-center 在內容短時能置中,
+        內容比視窗高時 wrapper 自然撐高,由外層 overflowY 吸收捲動 —— 這比 alignItems: safe center 可靠。
+      */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="mystic-card"
         style={{
-          maxWidth: 380,
-          width: "100%",
-          padding: "28px 24px 22px",
-          textAlign: "center",
-          position: "relative",
-          // flex-item 避免被壓扁:內容不被 align-items 拉伸時自然依 content 高度
-          flexShrink: 0,
+          minHeight: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding:
+            "max(32px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom))",
+          boxSizing: "border-box",
         }}
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mystic-card"
+          style={{
+            maxWidth: 380,
+            width: "100%",
+            padding: "28px 24px 22px",
+            textAlign: "center",
+            position: "relative",
+            // 不要被 flex parent 壓扁
+            flexShrink: 0,
+          }}
+        >
         <button
           onClick={onClose}
           aria-label={t("關閉", "Close")}
@@ -415,6 +427,7 @@ export default function LoginOptionsModal({
             {t("隱私權政策", "Privacy Policy")}
           </a>
         </p>
+        </div>
       </div>
     </div>
   );

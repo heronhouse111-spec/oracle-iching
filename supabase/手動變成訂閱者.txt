@@ -1,0 +1,29 @@
+-- 把 heronhouse111@gmail.com 手動變成訂閱中
+UPDATE public.profiles
+SET subscription_status     = 'active',
+    subscription_plan       = 'lifetime',
+    subscription_started_at = now(),
+    subscription_expires_at = now() + interval '100 years'
+WHERE id = (SELECT id FROM auth.users WHERE email = 'heronhouse111@gmail.com');
+
+
+-- 測完後把自己關回免費
+UPDATE public.profiles
+SET subscription_status     = 'free',
+    subscription_plan       = null,
+    subscription_started_at = null,
+    subscription_expires_at = null
+WHERE id = (SELECT id FROM auth.users WHERE email = 'heronhouse111@gmail.com');
+
+
+充值點數
+
+
+update profiles set credits_balance = 500 where id = (select id from auth.users where email = 'heronhouse111@gmail.com');
+
+看目前的點數
+
+select p.id, u.email, p.display_name, p.credits_balance
+from public.profiles p
+join auth.users u on u.id = p.id
+where u.email = 'heronhouse111@gmail.com';

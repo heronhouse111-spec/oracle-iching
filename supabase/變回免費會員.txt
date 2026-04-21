@@ -1,0 +1,7 @@
+-- 測完後把自己關回免費
+UPDATE public.profiles
+SET subscription_status     = 'free',
+    subscription_plan       = null,
+    subscription_started_at = null,
+    subscription_expires_at = null
+WHERE id = (SELECT id FROM auth.users WHERE email = 'heronhouse111@gmail.com');
