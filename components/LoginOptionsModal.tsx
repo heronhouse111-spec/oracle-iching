@@ -65,6 +65,16 @@ export default function LoginOptionsModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // modal 開啟時鎖背景 scroll,避免手機上點 modal 外面還能捲動主畫面
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const handleSocial = async (provider: SocialProvider) => {
@@ -107,10 +117,16 @@ export default function LoginOptionsModal({
         zIndex: 100,
         background: "rgba(5,5,20,0.72)",
         backdropFilter: "blur(6px)",
+        // 若 modal 比 viewport 高,整個 overlay 可捲動,避免 modal 頂部被裁
+        overflowY: "auto",
+        // flex 置中 + safe 關鍵字:內容比 viewport 矮 → 垂直置中;比 viewport 高 → 退回 flex-start 可捲到頂
         display: "flex",
-        alignItems: "center",
+        alignItems: "safe center",
         justifyContent: "center",
-        padding: 16,
+        // 上下預留呼吸,避免 modal 貼到視窗邊緣 / iOS safe-area / Android 狀態列
+        padding:
+          "max(32px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom))",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <div
@@ -122,6 +138,8 @@ export default function LoginOptionsModal({
           padding: "28px 24px 22px",
           textAlign: "center",
           position: "relative",
+          // flex-item 避免被壓扁:內容不被 align-items 拉伸時自然依 content 高度
+          flexShrink: 0,
         }}
       >
         <button
