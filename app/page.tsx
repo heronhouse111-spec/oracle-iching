@@ -88,6 +88,8 @@ export default function Home() {
   // v2 公開分享 state
   const [divinationId, setDivinationId] = useState<string | null>(null);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  // 未登入訪客限 2 次占卜 — 第 3 次 handleQuestionSubmit 時彈出 modal
+  const [guestGateOpen, setGuestGateOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -197,6 +199,104 @@ export default function Home() {
     } catch {
       // storage disabled / SSR — no-op
     }
+  }, []);
+
+  // Mount 時確認登入狀態(給訪客 2 次占卜 gate 使用),順便把本機 localStorage
+  // 占卜紀錄一次性搬進 Supabase — 訪客登入後所有過去的占卜會自動跟雲端同步。
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (cancelled) return;
+        setIsSignedIn(Boolean(user));
+        if (!user) return;
+
+        // 已登入 → 把本機還留著的歷史紀錄一次性搬到 Supabase
+        let stored: string | null = null;
+        try {
+          stored = localStorage.getItem("divination_history");
+        } catch {
+          return;
+        }
+        if (!stored) return;
+        let records: unknown;
+        try {
+          records = JSON.parse(stored);
+        } catch {
+          return;
+        }
+        if (!Array.isArray(records) || records.length === 0) return;
+
+        // 只留合法欄位,攤平成 divinations 欄位。舊紀錄可能沒 divine_type → 預設 iching。
+        type LocalRecord = {
+          id?: string;
+          question?: string;
+          category?: string;
+          ai_reading?: string;
+          locale?: string;
+          divine_type?: "iching" | "tarot";
+          hexagram_number?: number | null;
+          primary_lines?: number[] | null;
+          changing_lines?: number[] | null;
+          relating_hexagram_number?: number | null;
+          tarot_cards?: unknown;
+          created_at?: string;
+        };
+        const toInsert = (records as LocalRecord[])
+          .filter((r) => r && typeof r.id === "string" && typeof r.question === "string")
+          .map((r) => {
+            const divineType = r.divine_type ?? "iching";
+            return {
+              id: r.id,
+              user_id: user.id,
+              question: r.question,
+              category: r.category ?? "general",
+              ai_reading: r.ai_reading ?? null,
+              locale: r.locale ?? "zh",
+              divine_type: divineType,
+              hexagram_number:
+                divineType === "iching" ? r.hexagram_number ?? null : null,
+              primary_lines:
+                divineType === "iching" ? r.primary_lines ?? null : null,
+              changing_lines:
+                divineType === "iching" ? r.changing_lines ?? null : null,
+              relating_hexagram_number:
+                divineType === "iching"
+                  ? r.relating_hexagram_number ?? null
+                  : null,
+              tarot_cards: divineType === "tarot" ? r.tarot_cards ?? null : null,
+              created_at: r.created_at ?? new Date().toISOString(),
+            };
+          });
+        if (toInsert.length === 0) return;
+
+        const { error } = await supabase
+          .from("divinations")
+          .upsert(toInsert, { onConflict: "id", ignoreDuplicates: true });
+
+        if (!error) {
+          // 搬家成功 → 清本機,後面紀錄都會直接進 Supabase
+          try {
+            localStorage.removeItem("divination_history");
+          } catch {
+            /* localStorage 壞掉就不處理 */
+          }
+        } else {
+          console.error("本機占卜紀錄搬家失敗:", error);
+        }
+      } catch (e) {
+        console.error("登入狀態/搬家流程錯誤:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 拿登入者訂閱狀態 — 只要走進結果頁就跑一次
@@ -836,6 +936,22 @@ export default function Home() {
   };
 
   const handleQuestionSubmit = () => {
+    // 訪客限 2 次占卜 — 第 3 次觸發登入 gate。
+    // localStorage 壞掉就放行,不要因為讀不到 storage 把使用者卡住。
+    if (isSupabaseConfigured && !isSignedIn) {
+      try {
+        const stored = localStorage.getItem("divination_history");
+        if (stored) {
+          const arr = JSON.parse(stored);
+          if (Array.isArray(arr) && arr.length >= 2) {
+            setGuestGateOpen(true);
+            return;
+          }
+        }
+      } catch {
+        /* localStorage 讀取失敗就當作還沒占過,放行 */
+      }
+    }
     setStep("divine-type");
     setCurrentThrow(0);
     setThrows([]);
@@ -1663,6 +1779,108 @@ export default function Home() {
         required={creditsModal.required}
         onClose={() => setCreditsModal({ open: false, required: 0 })}
       />
+
+      {/* ---- 訪客 2 次上限 gate ---- */}
+      {guestGateOpen && (
+        <div
+          onClick={() => setGuestGateOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div
+            className="mystic-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              padding: 32,
+              maxWidth: 400,
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
+            <h3
+              className="text-gold-gradient"
+              style={{
+                fontFamily: "'Noto Serif TC', serif",
+                fontSize: 20,
+                marginBottom: 12,
+              }}
+            >
+              {t("登入以解鎖完整體驗", "Sign in to unlock the full experience")}
+            </h3>
+            <p
+              style={{
+                color: "rgba(192,192,208,0.75)",
+                fontSize: 13,
+                lineHeight: 1.7,
+                marginBottom: 20,
+              }}
+            >
+              {t(
+                "訪客每人限占卜 2 次。登入即贈 30 點,先前的占卜結果會自動保留進您的占卜紀錄。",
+                "Guests are limited to 2 divinations. Sign in for 30 bonus credits — your previous readings will be carried over into your history automatically."
+              )}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                alignItems: "stretch",
+              }}
+            >
+              <button
+                onClick={handleLoginForShare}
+                className="btn-gold"
+                style={{
+                  padding: "10px 20px",
+                  fontSize: 13,
+                  width: "100%",
+                }}
+              >
+                {t("使用 Google 登入", "Sign in with Google")}
+              </button>
+              <Link
+                href="/account/upgrade"
+                style={{
+                  padding: "10px 20px",
+                  fontSize: 13,
+                  textDecoration: "none",
+                  textAlign: "center",
+                  color: "#d4a855",
+                  border: "1px solid rgba(212,168,85,0.4)",
+                  borderRadius: 9999,
+                }}
+              >
+                {t("看訂閱方案 →", "See Subscription Plans →")}
+              </Link>
+              <button
+                onClick={() => setGuestGateOpen(false)}
+                style={{
+                  padding: "8px 18px",
+                  fontSize: 12,
+                  borderRadius: 9999,
+                  border: "none",
+                  background: "none",
+                  color: "rgba(192,192,208,0.55)",
+                  cursor: "pointer",
+                }}
+              >
+                {t("稍後再說", "Not now")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
         <AnimatePresence mode="wait">
