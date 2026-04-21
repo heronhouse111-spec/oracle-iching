@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
+import LoginOptionsModal from "./LoginOptionsModal";
+
+// Line 目前尚未在 Supabase 後台啟用(需 Pro plan 接 Custom OIDC),以 env 開關控制
+const LINE_ENABLED =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 
 // Check if Supabase is configured
 const isSupabaseConfigured =
@@ -14,6 +20,7 @@ export default function AuthButton() {
   const { t } = useLanguage();
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -41,15 +48,6 @@ export default function AuthButton() {
     );
   }
 
-  const handleLogin = async () => {
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-    });
-  };
-
   const handleLogout = async () => {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
@@ -60,12 +58,19 @@ export default function AuthButton() {
 
   if (!user) {
     return (
-      <button onClick={handleLogin} style={{
-        padding: "6px 12px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.3)",
-        color: "#d4a855", fontSize: 12, background: "none", cursor: "pointer",
-      }}>
-        {t("登入", "Sign In")}
-      </button>
+      <>
+        <button onClick={() => setLoginOpen(true)} style={{
+          padding: "6px 12px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.3)",
+          color: "#d4a855", fontSize: 12, background: "none", cursor: "pointer",
+        }}>
+          {t("登入", "Sign In")}
+        </button>
+        <LoginOptionsModal
+          open={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          lineEnabled={LINE_ENABLED}
+        />
+      </>
     );
   }
 

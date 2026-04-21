@@ -489,6 +489,18 @@ export default function AccountPage() {
             {t("→ 占卜紀錄", "→ Divination History")}
           </Link>
           <Link
+            href="/account/linked"
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              color: "rgba(192,192,208,0.9)",
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            {t("→ 登入方式綁定", "→ Linked Sign-in Methods")}
+          </Link>
+          <Link
             href="/"
             style={{
               display: "block",

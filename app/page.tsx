@@ -32,6 +32,12 @@ import {
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import LoginOptionsModal from "@/components/LoginOptionsModal";
+
+// Line 目前尚未在 Supabase 後台啟用(需 Pro plan + Custom OIDC),用 env 開關
+const LINE_LOGIN_ENABLED =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 
 type Step =
   | "category"
@@ -90,6 +96,8 @@ export default function Home() {
   const [isSignedIn, setIsSignedIn] = useState(false);
   // 未登入訪客限 2 次占卜 — 第 3 次 handleQuestionSubmit 時彈出 modal
   const [guestGateOpen, setGuestGateOpen] = useState(false);
+  // 通用登入 modal(handleLoginForShare 等多處觸發)
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
@@ -720,23 +728,10 @@ export default function Home() {
   }, []);
 
   // 訪客從結果頁直接按「登入」→ snapshot 已經被上面的 effect 寫入 sessionStorage,
-  // 這邊只負責發 OAuth,redirectTo 就是當前網域(callback 預設回 "/"),mount 會撿 snapshot 復原。
-  const handleLoginForShare = async () => {
+  // 登入 modal 打開 → 使用者選 provider → OAuth / magic link → callback 回首頁 → mount effect 撿 snapshot 復原。
+  const handleLoginForShare = () => {
     if (!isSupabaseConfigured) return;
-    try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
-        },
-      });
-    } catch (e) {
-      console.error("登入流程啟動失敗:", e);
-      setShareMessage(t("登入失敗,請稍候再試", "Login failed, please retry"));
-      setTimeout(() => setShareMessage(null), 3000);
-    }
+    setLoginModalOpen(true);
   };
 
   const handleTogglePublic = async () => {
@@ -1780,107 +1775,24 @@ export default function Home() {
         onClose={() => setCreditsModal({ open: false, required: 0 })}
       />
 
-      {/* ---- 訪客 2 次上限 gate ---- */}
-      {guestGateOpen && (
-        <div
-          onClick={() => setGuestGateOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: 16,
-          }}
-        >
-          <div
-            className="mystic-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              padding: 32,
-              maxWidth: 400,
-              width: "100%",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-            <h3
-              className="text-gold-gradient"
-              style={{
-                fontFamily: "'Noto Serif TC', serif",
-                fontSize: 20,
-                marginBottom: 12,
-              }}
-            >
-              {t("登入以解鎖完整體驗", "Sign in to unlock the full experience")}
-            </h3>
-            <p
-              style={{
-                color: "rgba(192,192,208,0.75)",
-                fontSize: 13,
-                lineHeight: 1.7,
-                marginBottom: 20,
-              }}
-            >
-              {t(
-                "訪客每人限占卜 2 次。登入即贈 30 點,先前的占卜結果會自動保留進您的占卜紀錄。",
-                "Guests are limited to 2 divinations. Sign in for 30 bonus credits — your previous readings will be carried over into your history automatically."
-              )}
-            </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                alignItems: "stretch",
-              }}
-            >
-              <button
-                onClick={handleLoginForShare}
-                className="btn-gold"
-                style={{
-                  padding: "10px 20px",
-                  fontSize: 13,
-                  width: "100%",
-                }}
-              >
-                {t("使用 Google 登入", "Sign in with Google")}
-              </button>
-              <Link
-                href="/account/upgrade"
-                style={{
-                  padding: "10px 20px",
-                  fontSize: 13,
-                  textDecoration: "none",
-                  textAlign: "center",
-                  color: "#d4a855",
-                  border: "1px solid rgba(212,168,85,0.4)",
-                  borderRadius: 9999,
-                }}
-              >
-                {t("看訂閱方案 →", "See Subscription Plans →")}
-              </Link>
-              <button
-                onClick={() => setGuestGateOpen(false)}
-                style={{
-                  padding: "8px 18px",
-                  fontSize: 12,
-                  borderRadius: 9999,
-                  border: "none",
-                  background: "none",
-                  color: "rgba(192,192,208,0.55)",
-                  cursor: "pointer",
-                }}
-              >
-                {t("稍後再說", "Not now")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ---- 訪客 2 次上限 gate:沿用 LoginOptionsModal,加訪客專屬標題與說明 ---- */}
+      <LoginOptionsModal
+        open={guestGateOpen}
+        onClose={() => setGuestGateOpen(false)}
+        lineEnabled={LINE_LOGIN_ENABLED}
+        title={t("登入以解鎖完整體驗", "Sign in to unlock the full experience")}
+        subtitle={t(
+          "訪客每人限占卜 2 次。登入即贈 30 點,先前的占卜結果會自動保留進您的占卜紀錄。",
+          "Guests are limited to 2 divinations. Sign in for 30 bonus credits — your previous readings will be carried over into your history."
+        )}
+      />
+
+      {/* ---- 通用登入 modal(handleLoginForShare 觸發) ---- */}
+      <LoginOptionsModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        lineEnabled={LINE_LOGIN_ENABLED}
+      />
 
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
         <AnimatePresence mode="wait">

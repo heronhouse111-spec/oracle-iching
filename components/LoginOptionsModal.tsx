@@ -1,0 +1,518 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
+import {
+  signInWithSocial,
+  signInWithEmailMagicLink,
+  type SocialProvider,
+} from "@/lib/auth/signIn";
+
+export interface LoginOptionsModalProps {
+  open: boolean;
+  onClose: () => void;
+  /** 登入完成後要回到的路徑,預設 "/" */
+  next?: string;
+  /** 標題客製化 —— 例如訪客 gate 會改成「登入以解鎖完整體驗」 */
+  title?: string;
+  /** 副標,可選 */
+  subtitle?: string;
+  /** Line 目前走 Supabase Pro 的 Custom OIDC,尚未開通就隱藏按鈕(避免點了就踩雷) */
+  lineEnabled?: boolean;
+}
+
+/**
+ * 統一的登入 modal —— Google / Apple / Line / Email magic link 一起出。
+ *
+ * UX:
+ * - 三個 OAuth 按鈕並列,icon + 品牌色
+ * - 最底下 Email magic link,預設摺疊成連結,點開展開 input + 送信
+ * - 任何 provider 失敗 → 紅色小字顯示在 modal 底部(不彈 alert,避免打斷)
+ */
+export default function LoginOptionsModal({
+  open,
+  onClose,
+  next,
+  title,
+  subtitle,
+  lineEnabled = false,
+}: LoginOptionsModalProps) {
+  const { t } = useLanguage();
+
+  const [busy, setBusy] = useState<SocialProvider | "email" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [emailMode, setEmailMode] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+
+  // 每次開關重置狀態,避免殘留錯誤/已寄信 flag
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setEmailMode(false);
+      setEmail("");
+      setEmailSent(false);
+      setBusy(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const handleSocial = async (provider: SocialProvider) => {
+    setError(null);
+    setBusy(provider);
+    try {
+      await signInWithSocial(provider, { next });
+      // OAuth 成功會 full-page redirect,不會走到這一行
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const addr = email.trim();
+    if (!addr || !/.+@.+\..+/.test(addr)) {
+      setError(t("請輸入有效的 Email", "Please enter a valid email"));
+      return;
+    }
+    setBusy("email");
+    try {
+      await signInWithEmailMagicLink(addr, { next });
+      setEmailSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        background: "rgba(5,5,20,0.72)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="mystic-card"
+        style={{
+          maxWidth: 380,
+          width: "100%",
+          padding: "28px 24px 22px",
+          textAlign: "center",
+          position: "relative",
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label={t("關閉", "Close")}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 12,
+            width: 28,
+            height: 28,
+            background: "none",
+            border: "none",
+            color: "rgba(192,192,208,0.6)",
+            fontSize: 18,
+            cursor: "pointer",
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+
+        <div style={{ fontSize: 34, marginBottom: 6 }}>✦</div>
+        <h3
+          className="text-gold-gradient"
+          style={{
+            fontFamily: "'Noto Serif TC', serif",
+            fontSize: 20,
+            fontWeight: 700,
+            marginBottom: 6,
+          }}
+        >
+          {title ?? t("登入 / 註冊", "Sign in")}
+        </h3>
+        <p
+          style={{
+            color: "rgba(192,192,208,0.75)",
+            fontSize: 13,
+            marginBottom: 20,
+            lineHeight: 1.6,
+          }}
+        >
+          {subtitle ??
+            t(
+              "選擇慣用的登入方式,我們會為你建立會員帳號",
+              "Choose how you'd like to sign in — we'll create your account automatically"
+            )}
+        </p>
+
+        {/* === 三個 OAuth 按鈕 === */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <ProviderButton
+            label={t("使用 Google 帳號登入", "Continue with Google")}
+            iconBg="#fff"
+            icon={<GoogleIcon />}
+            onClick={() => handleSocial("google")}
+            busy={busy === "google"}
+            disabled={busy !== null}
+          />
+          <ProviderButton
+            label={t("使用 Apple 帳號登入", "Continue with Apple")}
+            iconBg="#000"
+            icon={<AppleIcon />}
+            labelColor="#fff"
+            bg="#000"
+            border="1px solid #000"
+            onClick={() => handleSocial("apple")}
+            busy={busy === "apple"}
+            disabled={busy !== null}
+          />
+          {lineEnabled ? (
+            <ProviderButton
+              label={t("使用 LINE 帳號登入", "Continue with LINE")}
+              iconBg="#06C755"
+              icon={<LineIcon />}
+              labelColor="#fff"
+              bg="#06C755"
+              border="1px solid #06C755"
+              onClick={() => handleSocial("line")}
+              busy={busy === "line"}
+              disabled={busy !== null}
+            />
+          ) : (
+            <button
+              type="button"
+              disabled
+              title={t("即將推出", "Coming soon")}
+              style={{
+                padding: "10px 14px",
+                borderRadius: 10,
+                border: "1px solid rgba(192,192,208,0.15)",
+                color: "rgba(192,192,208,0.4)",
+                fontSize: 13,
+                background: "none",
+                cursor: "not-allowed",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              {t(
+                "使用 LINE 帳號登入(即將推出)",
+                "Continue with LINE (Coming soon)"
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* === 分隔線 === */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            margin: "18px 0 14px",
+            color: "rgba(192,192,208,0.4)",
+            fontSize: 11,
+          }}
+        >
+          <div style={{ flex: 1, height: 1, background: "rgba(192,192,208,0.15)" }} />
+          <span>{t("或", "or")}</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(192,192,208,0.15)" }} />
+        </div>
+
+        {/* === Email magic link === */}
+        {!emailMode ? (
+          <button
+            type="button"
+            onClick={() => setEmailMode(true)}
+            style={{
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid rgba(212,168,85,0.35)",
+              color: "#d4a855",
+              fontSize: 13,
+              background: "none",
+              cursor: "pointer",
+              width: "100%",
+              fontWeight: 600,
+            }}
+          >
+            {t("✉  用 Email 登入(寄連結給你)", "✉  Email me a magic link")}
+          </button>
+        ) : emailSent ? (
+          <div
+            style={{
+              padding: "14px 12px",
+              borderRadius: 10,
+              background: "rgba(212,168,85,0.08)",
+              border: "1px solid rgba(212,168,85,0.2)",
+              color: "rgba(232,232,240,0.9)",
+              fontSize: 13,
+              lineHeight: 1.6,
+            }}
+          >
+            {t(
+              `登入連結已寄出至 ${email},請至信箱點擊連結完成登入(若找不到請查看垃圾信件匣)`,
+              `A sign-in link has been sent to ${email}. Click the link in the email to continue. (Check spam if not found.)`
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleEmailSubmit} style={{ textAlign: "left" }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                color: "rgba(192,192,208,0.7)",
+                marginBottom: 6,
+              }}
+            >
+              {t("Email 地址", "Email address")}
+            </label>
+            <input
+              type="email"
+              autoFocus
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid rgba(212,168,85,0.3)",
+                background: "rgba(13,13,43,0.5)",
+                color: "#e8e8f0",
+                fontSize: 14,
+                marginBottom: 10,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={busy !== null}
+              className="btn-gold"
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                opacity: busy !== null ? 0.6 : 1,
+                cursor: busy !== null ? "wait" : "pointer",
+              }}
+            >
+              {busy === "email"
+                ? t("寄送中…", "Sending…")
+                : t("寄送登入連結", "Send magic link")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmailMode(false)}
+              style={{
+                width: "100%",
+                marginTop: 8,
+                padding: "6px",
+                background: "none",
+                border: "none",
+                color: "rgba(192,192,208,0.55)",
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+            >
+              {t("← 回上一頁", "← Back")}
+            </button>
+          </form>
+        )}
+
+        {/* === 錯誤訊息 === */}
+        {error && (
+          <p
+            style={{
+              marginTop: 14,
+              padding: "8px 10px",
+              borderRadius: 8,
+              background: "rgba(229,57,67,0.1)",
+              border: "1px solid rgba(229,57,67,0.3)",
+              color: "#ff9a9a",
+              fontSize: 12,
+              lineHeight: 1.5,
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        <p
+          style={{
+            marginTop: 18,
+            color: "rgba(192,192,208,0.45)",
+            fontSize: 11,
+            lineHeight: 1.5,
+          }}
+        >
+          {t(
+            "登入即表示同意 ",
+            "By signing in you agree to our "
+          )}
+          <a
+            href="/terms"
+            target="_blank"
+            style={{ color: "rgba(212,168,85,0.7)", textDecoration: "underline" }}
+          >
+            {t("服務條款", "Terms")}
+          </a>
+          {t(" 與 ", " and ")}
+          <a
+            href="/privacy"
+            target="_blank"
+            style={{ color: "rgba(212,168,85,0.7)", textDecoration: "underline" }}
+          >
+            {t("隱私權政策", "Privacy Policy")}
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============ 子元件 ============
+
+interface ProviderButtonProps {
+  label: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  bg?: string;
+  border?: string;
+  labelColor?: string;
+  onClick: () => void;
+  busy: boolean;
+  disabled: boolean;
+}
+
+function ProviderButton({
+  label,
+  icon,
+  iconBg,
+  bg,
+  border,
+  labelColor,
+  onClick,
+  busy,
+  disabled,
+}: ProviderButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: border ?? "1px solid rgba(212,168,85,0.35)",
+        background: bg ?? "rgba(255,255,255,0.05)",
+        color: labelColor ?? "#e8e8f0",
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: disabled ? "wait" : "pointer",
+        opacity: disabled && !busy ? 0.5 : 1,
+        transition: "background 0.15s ease",
+        width: "100%",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: iconBg,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </span>
+      <span>{busy ? "…" : label}</span>
+    </button>
+  );
+}
+
+// ============ SVG icons ============
+
+function GoogleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M23 12.27c0-.88-.08-1.73-.23-2.54H12v4.8h6.18c-.27 1.43-1.07 2.64-2.28 3.46v2.87h3.69c2.16-1.99 3.41-4.92 3.41-8.59z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23.5c3.08 0 5.66-1.02 7.55-2.76l-3.69-2.87c-1.02.68-2.32 1.09-3.86 1.09-2.97 0-5.49-2-6.39-4.7H1.8v2.96C3.67 20.9 7.55 23.5 12 23.5z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.61 14.26c-.23-.68-.36-1.4-.36-2.14s.13-1.46.36-2.14V7.02H1.8C1.04 8.55.6 10.22.6 12.12c0 1.9.44 3.57 1.2 5.1l3.81-2.96z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.42c1.68 0 3.18.58 4.37 1.72l3.27-3.27C17.65 2.09 15.08 1 12 1 7.55 1 3.67 3.6 1.8 7.02l3.81 2.96C6.51 7.42 9.03 5.42 12 5.42z"
+      />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#fff"
+        d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
+      />
+    </svg>
+  );
+}
+
+function LineIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#fff"
+        d="M19.37 9.17c0-4.09-4.1-7.42-9.14-7.42S1.09 5.08 1.09 9.17c0 3.67 3.25 6.74 7.65 7.32.3.06.7.2.8.45.1.23.06.59.03.82l-.13.78c-.04.23-.18.9.79.49.97-.41 5.25-3.09 7.17-5.3 1.33-1.46 1.97-2.94 1.97-4.56zM6.4 11.12H4.59c-.13 0-.24-.11-.24-.24V7.24c0-.13.11-.24.24-.24h.45c.13 0 .24.11.24.24v2.94H6.4c.13 0 .24.11.24.24v.45c0 .14-.11.25-.24.25zm1.34-.24c0 .13-.11.24-.24.24h-.45c-.13 0-.24-.11-.24-.24V7.24c0-.13.11-.24.24-.24h.45c.13 0 .24.11.24.24v3.64zm4.01 0c0 .13-.11.24-.24.24h-.45c-.02 0-.05-.01-.07-.01h-.01l-.02-.01-.01-.01h-.01c-.02-.01-.03-.02-.05-.04l-1.57-2.12v2.04c0 .13-.11.24-.24.24h-.45c-.13 0-.24-.11-.24-.24V7.24c0-.13.11-.24.24-.24h.52c.03.01.06.03.08.05l1.57 2.12V7.24c0-.13.11-.24.24-.24h.45c.13 0 .24.11.24.24v3.64zm3.37-2.75c0 .13-.11.24-.24.24h-1.57v.6h1.57c.13 0 .24.11.24.24v.45c0 .13-.11.24-.24.24h-1.57v.6h1.57c.13 0 .24.11.24.24v.45c0 .13-.11.24-.24.24h-2.33c-.13 0-.24-.11-.24-.24V7.24c0-.13.11-.24.24-.24h2.33c.13 0 .24.11.24.24v.45z"
+      />
+    </svg>
+  );
+}

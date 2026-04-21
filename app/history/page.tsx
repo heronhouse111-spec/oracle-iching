@@ -7,6 +7,12 @@ import { motion } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import HexagramDisplay from "@/components/HexagramDisplay";
+import LoginOptionsModal from "@/components/LoginOptionsModal";
+
+// Line 目前尚未在 Supabase 後台啟用 → env 開關控制顯示
+const LINE_LOGIN_ENABLED =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 import { getHexagramByNumber } from "@/data/hexagrams";
 import { getCardById, THREE_CARD_POSITIONS } from "@/data/tarot";
 import { questionCategories } from "@/lib/divination";
@@ -167,14 +173,11 @@ export default function HistoryPage() {
     load();
   }, []);
 
-  const handleGuestLogin = async () => {
+  // 開登入 modal(Google / Apple / Line / Email magic link 共用)
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const handleGuestLogin = () => {
     if (!isSupabaseConfigured) return;
-    const { createClient } = await import("@/lib/supabase/client");
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-    });
+    setLoginModalOpen(true);
   };
 
   // Subscription gating:
@@ -205,6 +208,12 @@ export default function HistoryPage() {
   return (
     <div style={{ minHeight: "100vh" }}>
       <Header />
+
+      <LoginOptionsModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        lineEnabled={LINE_LOGIN_ENABLED}
+      />
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
         <h1 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif", textAlign: "center", marginBottom: 8 }}>
           {t("占卜紀錄", "Divination History")}
