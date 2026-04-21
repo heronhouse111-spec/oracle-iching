@@ -323,7 +323,7 @@ export default function HistoryPage() {
                 </button>
               )}
               <Link
-                href="/account"
+                href="/account/upgrade"
                 style={{
                   padding: "10px 22px",
                   fontSize: 13,
