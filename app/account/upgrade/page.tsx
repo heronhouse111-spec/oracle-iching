@@ -4,11 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
+import TwaPurchaseNotice from "@/components/TwaPurchaseNotice";
+import CurrencySwitcher from "@/components/CurrencySwitcher";
+import { useIsTWA } from "@/lib/env/useIsTWA";
+import { useCurrency } from "@/lib/geo/useCurrency";
 import {
   SUBSCRIPTION_PLANS,
   SUBSCRIPTION_BENEFITS_ZH,
   SUBSCRIPTION_BENEFITS_EN,
-  formatTwd,
+  formatPrice,
+  formatPriceOf,
+  priceOf,
   type SubscriptionPlanId,
 } from "@/lib/pricing";
 
@@ -25,6 +31,8 @@ interface SubscriptionSummary {
 
 export default function UpgradePage() {
   const { locale, t } = useLanguage();
+  const isTwa = useIsTWA();
+  const { currency } = useCurrency();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [current, setCurrent] = useState<SubscriptionSummary | null>(null);
   const [pendingPlan, setPendingPlan] = useState<SubscriptionPlanId | null>(
@@ -154,7 +162,15 @@ export default function UpgradePage() {
           </div>
         )}
 
-        {/* ---- Plan grid ---- */}
+        {/* ---- TWA guard: Play Billing policy compliance ----
+             Play 上架的 TWA 殼內不可顯示 in-app purchase UI。      */}
+        {isTwa && <TwaPurchaseNotice kind="subscription" />}
+
+        {/* ---- Currency switcher (web only) ---- */}
+        {!isTwa && <CurrencySwitcher />}
+
+        {/* ---- Plan grid (web only) ---- */}
+        {!isTwa && (
         <div
           style={{
             display: "grid",
@@ -166,10 +182,11 @@ export default function UpgradePage() {
           {SUBSCRIPTION_PLANS.map((plan) => {
             const isCurrent =
               current?.is_active && current.subscription_plan === plan.id;
+            const planPrice = priceOf(plan.price, currency);
             const perMonth =
               plan.id === "lifetime"
                 ? null
-                : plan.priceTwd / plan.amortizeMonths;
+                : planPrice / plan.amortizeMonths;
             return (
               <div
                 key={plan.id}
@@ -227,7 +244,7 @@ export default function UpgradePage() {
                       fontWeight: 700,
                     }}
                   >
-                    {formatTwd(plan.priceTwd)}
+                    {formatPriceOf(plan.price, currency)}
                   </span>
                   <span
                     style={{
@@ -250,8 +267,14 @@ export default function UpgradePage() {
                     }}
                   >
                     {t(
-                      `相當於 ${formatTwd(Math.round(perMonth))} / 月,省 20%`,
-                      `≈ ${formatTwd(Math.round(perMonth))} / month · save 20%`
+                      `相當於 ${formatPrice(
+                        currency === "TWD" ? Math.round(perMonth) : Number(perMonth.toFixed(2)),
+                        currency
+                      )} / 月,省 20%`,
+                      `≈ ${formatPrice(
+                        currency === "TWD" ? Math.round(perMonth) : Number(perMonth.toFixed(2)),
+                        currency
+                      )} / month · save 20%`
                     )}
                   </div>
                 )}
@@ -343,8 +366,10 @@ export default function UpgradePage() {
             );
           })}
         </div>
+        )}
 
-        {/* ---- Footer links ---- */}
+        {/* ---- Footer links (web only) ---- */}
+        {!isTwa && (
         <div
           className="mystic-card"
           style={{
@@ -383,6 +408,7 @@ export default function UpgradePage() {
             {t("看加購包 →", "See Credit Packs →")}
           </Link>
         </div>
+        )}
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <Link
@@ -398,8 +424,8 @@ export default function UpgradePage() {
         </div>
       </main>
 
-      {/* ---- "Coming soon" modal ---- */}
-      {pendingPlan && (
+      {/* ---- "Coming soon" modal (web only — TWA has no purchase trigger) ---- */}
+      {!isTwa && pendingPlan && (
         <div
           onClick={() => setPendingPlan(null)}
           style={{
@@ -435,9 +461,11 @@ export default function UpgradePage() {
                 marginBottom: 12,
               }}
             >
-              {authed
-                ? t("金流準備中", "Payment Coming Soon")
-                : t("請先登入", "Sign In First")}
+              {!authed
+                ? t("請先登入", "Sign In First")
+                : currency === "USD"
+                ? t("國際支付即將推出", "International Payment Coming Soon")
+                : t("金流準備中", "Payment Coming Soon")}
             </h3>
             <p
               style={{
@@ -447,24 +475,47 @@ export default function UpgradePage() {
                 marginBottom: 20,
               }}
             >
-              {authed
+              {!authed
                 ? t(
-                    "訂閱功能即將開放,上線前會以 email 通知。想優先試用可到首頁訂閱電子報。",
-                    "Subscription will open shortly — you'll be notified via email when live."
-                  )
-                : t(
                     "訂閱與點數需要綁定帳號,請先登入。登入送 30 點,老使用者自動補 500 點。",
                     "Subscriptions require an account. Sign in to continue — 30 credits on signup, 500 for existing users."
+                  )
+                : currency === "USD"
+                ? t(
+                    "國際信用卡(USD)訂閱正在整合中。你可以切換到 NT$ 用台灣金流,或留 email 等我們通知上線。",
+                    "International (USD) subscription is being integrated. Switch to NT$ for the Taiwan payment rail, or leave your email so we can notify you when USD goes live."
+                  )
+                : t(
+                    "訂閱功能即將開放,上線前會以 email 通知。想優先試用可到首頁訂閱電子報。",
+                    "Subscription will open shortly — you'll be notified via email when live."
                   )}
             </p>
             {authed ? (
-              <button
-                onClick={() => setPendingPlan(null)}
-                className="btn-gold"
-                style={{ padding: "8px 24px", fontSize: 13 }}
-              >
-                {t("了解", "Got it")}
-              </button>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                {currency === "USD" && (
+                  <Link
+                    href="/account/international-soon"
+                    className="btn-gold"
+                    style={{ padding: "8px 18px", fontSize: 13, textDecoration: "none" }}
+                  >
+                    {t("查看替代方案 →", "See alternatives →")}
+                  </Link>
+                )}
+                <button
+                  onClick={() => setPendingPlan(null)}
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("了解", "Got it")}
+                </button>
+              </div>
             ) : (
               <div
                 style={{

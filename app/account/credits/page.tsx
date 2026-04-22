@@ -4,9 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
+import TwaPurchaseNotice from "@/components/TwaPurchaseNotice";
+import CurrencySwitcher from "@/components/CurrencySwitcher";
+import { useIsTWA } from "@/lib/env/useIsTWA";
+import { useCurrency } from "@/lib/geo/useCurrency";
 import {
   CREDIT_PACKS,
-  formatTwd,
+  formatPriceOf,
   type CreditPackId,
 } from "@/lib/pricing";
 
@@ -23,6 +27,8 @@ interface BalanceResponse {
 
 export default function CreditsPurchasePage() {
   const { locale, t } = useLanguage();
+  const isTwa = useIsTWA();
+  const { currency } = useCurrency();
 
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
@@ -185,7 +191,16 @@ export default function CreditsPurchasePage() {
           </div>
         )}
 
-        {/* ---- Pack grid ---- */}
+        {/* ---- TWA guard: Play Billing policy compliance ----
+             在 Play 上架的 TWA 殼內不能出現 in-app purchase UI,
+             否則 100% 會被 Google Play 下架。                      */}
+        {isTwa && <TwaPurchaseNotice kind="credits" />}
+
+        {/* ---- Currency switcher (web only) ---- */}
+        {!isTwa && <CurrencySwitcher />}
+
+        {/* ---- Pack grid (web only) ---- */}
+        {!isTwa && (
         <div
           style={{
             display: "grid",
@@ -289,7 +304,7 @@ export default function CreditsPurchasePage() {
                     marginBottom: 16,
                   }}
                 >
-                  {formatTwd(pack.priceTwd)}
+                  {formatPriceOf(pack.price, currency)}
                 </div>
                 <button
                   onClick={() => setPendingPack(pack.id)}
@@ -306,8 +321,10 @@ export default function CreditsPurchasePage() {
             );
           })}
         </div>
+        )}
 
-        {/* ---- Footer links ---- */}
+        {/* ---- Footer links (web only) ---- */}
+        {!isTwa && (
         <div
           className="mystic-card"
           style={{
@@ -346,6 +363,7 @@ export default function CreditsPurchasePage() {
             {t("看訂閱方案 →", "See Subscription Plans →")}
           </Link>
         </div>
+        )}
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <Link
@@ -361,8 +379,8 @@ export default function CreditsPurchasePage() {
         </div>
       </main>
 
-      {/* ---- "Coming soon" modal ---- */}
-      {pendingPack && (
+      {/* ---- "Coming soon" modal (web only — TWA has no purchase trigger) ---- */}
+      {!isTwa && pendingPack && (
         <div
           onClick={() => setPendingPack(null)}
           style={{
@@ -398,9 +416,11 @@ export default function CreditsPurchasePage() {
                 marginBottom: 12,
               }}
             >
-              {authed
-                ? t("金流準備中", "Payment Coming Soon")
-                : t("請先登入", "Sign In First")}
+              {!authed
+                ? t("請先登入", "Sign In First")
+                : currency === "USD"
+                ? t("國際支付即將推出", "International Payment Coming Soon")
+                : t("金流準備中", "Payment Coming Soon")}
             </h3>
             <p
               style={{
@@ -410,24 +430,47 @@ export default function CreditsPurchasePage() {
                 marginBottom: 20,
               }}
             >
-              {authed
+              {!authed
                 ? t(
-                    "購買功能即將開放,上線前會以 email 通知。現階段登入即贈 30 點,老使用者已自動補 500 點。",
-                    "Credit purchase will open shortly — you'll be notified via email. Meanwhile, signup grants 30 credits; existing users have been topped up with 500."
-                  )
-                : t(
                     "購買點數需要綁定帳號。登入即贈 30 點,老使用者自動補 500 點。",
                     "Purchases require an account. Sign in for 30 bonus credits (500 for returning users)."
+                  )
+                : currency === "USD"
+                ? t(
+                    "國際信用卡(USD)支付正在整合中。您可以切換到 NT$ 使用台灣金流,或等我們 email 通知。現階段登入即贈 30 點。",
+                    "International (USD) payment is being integrated. Switch to NT$ to use the Taiwan payment rail, or we'll email you when USD goes live. Signup grants 30 credits."
+                  )
+                : t(
+                    "購買功能即將開放,上線前會以 email 通知。現階段登入即贈 30 點,老使用者已自動補 500 點。",
+                    "Credit purchase will open shortly — you'll be notified via email. Meanwhile, signup grants 30 credits; existing users have been topped up with 500."
                   )}
             </p>
             {authed ? (
-              <button
-                onClick={() => setPendingPack(null)}
-                className="btn-gold"
-                style={{ padding: "8px 24px", fontSize: 13 }}
-              >
-                {t("了解", "Got it")}
-              </button>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                {currency === "USD" && (
+                  <Link
+                    href="/account/international-soon"
+                    className="btn-gold"
+                    style={{ padding: "8px 18px", fontSize: 13, textDecoration: "none" }}
+                  >
+                    {t("查看替代方案 →", "See alternatives →")}
+                  </Link>
+                )}
+                <button
+                  onClick={() => setPendingPack(null)}
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("了解", "Got it")}
+                </button>
+              </div>
             ) : (
               <div
                 style={{

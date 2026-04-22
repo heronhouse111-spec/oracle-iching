@@ -41,26 +41,14 @@ const LINE_LOGIN_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 
-const APPLE_LOGIN_ENABLED =
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED === "true";
-
 // 支援的登入方式清單(對外顯示順序)
-// Apple / LINE 需 env flag 開啟,未開啟時整列不 render(避免使用者看到無法用的選項)。
-// Facebook 保留在此頁 —— 這是 FB 唯一的綁定入口,
-// 已登入使用者可把 FB 追加到自己帳號上,下次用 FB 登入會認得,避免生出孤兒帳號。
-const ALL_PROVIDERS: { key: SocialProvider | "email"; label: string; labelEn: string; color: string }[] = [
+const PROVIDERS: { key: SocialProvider | "email"; label: string; labelEn: string; color: string }[] = [
   { key: "google", label: "Google", labelEn: "Google", color: "#4285F4" },
   { key: "apple", label: "Apple", labelEn: "Apple", color: "#000" },
   { key: "facebook", label: "Facebook", labelEn: "Facebook", color: "#1877F2" },
   { key: "line", label: "LINE", labelEn: "LINE", color: "#06C755" },
   { key: "email", label: "Email 登入連結", labelEn: "Email Magic Link", color: "#d4a855" },
 ];
-const PROVIDERS = ALL_PROVIDERS.filter((p) => {
-  if (p.key === "apple") return APPLE_LOGIN_ENABLED;
-  if (p.key === "line") return LINE_LOGIN_ENABLED;
-  return true;
-});
 
 export default function LinkedAccountsPage() {
   const { t } = useLanguage();
@@ -197,8 +185,8 @@ export default function LinkedAccountsPage() {
           }}
         >
           {t(
-            "你可以把多種登入方式綁到同一個帳號,點數與占卜紀錄共通。想改用 Facebook 登入?請先用目前的 Google 或 Email 登入,然後在下方按「綁定 Facebook」。未綁定就直接用 FB 登入會變新帳號,點數無法帶過去。",
-            "Link multiple sign-in methods so credits and history stay on one account. To use Facebook next time, sign in with your current Google or Email first, then click \"Link\" beside Facebook below. Logging in with Facebook without linking first will create a new, separate account."
+            "你可以綁定多種登入方式,未來不論用 Google / Apple / Facebook / LINE / Email 連結登入,都會進到同一個帳號,點數與占卜紀錄共通。",
+            "Link multiple sign-in methods so that whether you log in with Google / Apple / Facebook / LINE / Email magic link, you always reach the same account with shared credits and history."
           )}
         </p>
 
