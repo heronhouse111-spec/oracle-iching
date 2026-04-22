@@ -50,6 +50,17 @@ body {
   background-color: var(--color-mystic-dark);
   color: #ffffff;
   font-family: var(--font-sans);
+
+  /*
+   * iOS PWA 加到桌面後(full-screen + statusBarStyle:black-translucent),
+   * 狀態列 / notch / 圓角會疊在頁面上,若不處理 safe-area 會裁掉頂部和兩側。
+   * 這裡把非 fixed 內容整體推進 safe-area 範圍。fixed header 不受此影響,
+   * 要在 Header 元件內另外處理 paddingTop: env(safe-area-inset-top)。
+   * 刻意不加 padding-bottom —— Footer 目前不是 fixed,不會跟 home indicator 撞。
+   */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Starfield background */
