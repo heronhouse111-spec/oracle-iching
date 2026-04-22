@@ -63,35 +63,91 @@ export interface UseCurrencyResult {
   clearOverride: () => void;
 }
 
+/**
+ * 跨 hook-instance 同步用的 custom event。
+ *
+ * 為何需要:多個 component 各自 call useCurrency() 時,每個 useState 是獨立的。
+ * 在 A component 按切換,B component 不會重新 render,要等頁面 reload 重新讀
+ * localStorage 才更新。用 window event 讓所有 instance 都能收到變更通知。
+ *
+ * - 同 tab 內:dispatch CurrencyChangeEvent
+ * - 跨 tab:原生 storage event(localStorage 寫入會觸發其他 tab 的 storage event)
+ */
+const CURRENCY_CHANGE_EVENT = "oracle:currency-change";
+
+interface CurrencyChangeDetail {
+  currency: Currency;
+  autoDetected: boolean;
+}
+
+function broadcastCurrency(detail: CurrencyChangeDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<CurrencyChangeDetail>(CURRENCY_CHANGE_EVENT, { detail })
+  );
+}
+
 export function useCurrency(): UseCurrencyResult {
   // SSR 預設 TWD(台灣主市場),mount 後校正
   const [currency, setCurrencyState] = useState<Currency>("TWD");
   const [autoDetected, setAutoDetected] = useState(true);
 
   useEffect(() => {
-    // 1. localStorage 手動覆寫
-    try {
-      const override = localStorage.getItem(CURRENCY_OVERRIDE_KEY);
-      if (isValidCurrency(override)) {
-        setCurrencyState(override);
-        setAutoDetected(false);
+    // ---- 初始化:依優先序偵測一次 ----
+    const applyDetection = () => {
+      // 1. localStorage 手動覆寫
+      try {
+        const override = localStorage.getItem(CURRENCY_OVERRIDE_KEY);
+        if (isValidCurrency(override)) {
+          setCurrencyState(override);
+          setAutoDetected(false);
+          return;
+        }
+      } catch {
+        /* 無 localStorage */
+      }
+
+      // 2. middleware 的 geo cookie
+      const country = readCookie(GEO_COOKIE);
+      if (country) {
+        setCurrencyState(countryToCurrency(country));
+        setAutoDetected(true);
         return;
       }
-    } catch {
-      /* 無 localStorage */
-    }
 
-    // 2. middleware 的 geo cookie
-    const country = readCookie(GEO_COOKIE);
-    if (country) {
-      setCurrencyState(countryToCurrency(country));
+      // 3. 瀏覽器語系粗判(本地開發 / 非 Vercel 部署的 fallback)
+      setCurrencyState(detectFromBrowser());
       setAutoDetected(true);
-      return;
-    }
+    };
 
-    // 3. 瀏覽器語系粗判(本地開發 / 非 Vercel 部署的 fallback)
-    setCurrencyState(detectFromBrowser());
-    setAutoDetected(true);
+    applyDetection();
+
+    // ---- 同 tab:聽 CurrencyChangeEvent(setCurrency / clearOverride 會 dispatch) ----
+    const onChange = (e: Event) => {
+      const ev = e as CustomEvent<CurrencyChangeDetail>;
+      if (!ev.detail) return;
+      setCurrencyState(ev.detail.currency);
+      setAutoDetected(ev.detail.autoDetected);
+    };
+
+    // ---- 跨 tab:聽原生 storage event(不同 tab 改 localStorage 會觸發) ----
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== CURRENCY_OVERRIDE_KEY) return;
+      if (isValidCurrency(e.newValue)) {
+        setCurrencyState(e.newValue);
+        setAutoDetected(false);
+      } else {
+        // override 被清空 → 重跑偵測
+        applyDetection();
+      }
+    };
+
+    window.addEventListener(CURRENCY_CHANGE_EVENT, onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(CURRENCY_CHANGE_EVENT, onChange);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const setCurrency = useCallback((c: Currency) => {
@@ -104,6 +160,8 @@ export function useCurrency(): UseCurrencyResult {
     }
     // 同時寫 cookie 讓下次 SSR / route handlers 看得到
     writeCookie(CURRENCY_OVERRIDE_KEY, c);
+    // 通知其他 useCurrency instance
+    broadcastCurrency({ currency: c, autoDetected: false });
   }, []);
 
   const clearOverride = useCallback(() => {
@@ -115,12 +173,10 @@ export function useCurrency(): UseCurrencyResult {
     writeCookie(CURRENCY_OVERRIDE_KEY, ""); // 立刻過期
     // 重新依偵測優先序
     const country = readCookie(GEO_COOKIE);
-    if (country) {
-      setCurrencyState(countryToCurrency(country));
-    } else {
-      setCurrencyState(detectFromBrowser());
-    }
+    const next = country ? countryToCurrency(country) : detectFromBrowser();
+    setCurrencyState(next);
     setAutoDetected(true);
+    broadcastCurrency({ currency: next, autoDetected: true });
   }, []);
 
   return { currency, autoDetected, setCurrency, clearOverride };
