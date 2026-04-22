@@ -129,6 +129,24 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(212,168,85,0.25); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(212,168,85,0.5); }
 
+/*
+ * iOS Safari auto-zoom fix:
+ *   點 <input>/<textarea> 聚焦時,若 font-size < 16px,iOS 會把整個頁面放大來「幫你看清楚」,
+ *   但 blur 或導航到下一頁都不會把 zoom 縮回去 —— 結果後續畫面一直維持放大狀態,
+ *   左右邊緣被視窗切掉。PWA(加到桌面)狀態下一樣會觸發。
+ *
+ *   修法:手機寬度下強制所有表單輸入元素 font-size >= 16px。
+ *   用 !important 覆蓋 inline style,避免逐一改每個 <input>/<textarea>。
+ *   desktop 不受影響(保留各元件原本的視覺節奏)。
+ */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Coin flip animation */
 @keyframes coinFlip {
   0% { transform: rotateY(0deg) scale(1); }
