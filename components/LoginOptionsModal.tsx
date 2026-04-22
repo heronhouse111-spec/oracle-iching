@@ -8,6 +8,11 @@ import {
   signInWithEmailMagicLink,
   type SocialProvider,
 } from "@/lib/auth/signIn";
+import {
+  useIsInAppBrowser,
+  openInExternalBrowserViaLine,
+  type InAppBrowserApp,
+} from "@/lib/env/useIsInAppBrowser";
 
 export interface LoginOptionsModalProps {
   open: boolean;
@@ -51,6 +56,10 @@ export default function LoginOptionsModal({
   lineEnabled = false,
 }: LoginOptionsModalProps) {
   const { t } = useLanguage();
+
+  // In-app browser 偵測 —— LINE/FB/IG/Messenger 等內嵌 WebView 會被 Google 擋 OAuth
+  // (錯誤碼 disallowed_useragent / 403)。偵測到後顯示警示橫幅並提供脫困動線。
+  const { isInApp, app: inAppName } = useIsInAppBrowser();
 
   const [busy, setBusy] = useState<SocialProvider | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -224,6 +233,19 @@ export default function LoginOptionsModal({
             )}
         </p>
 
+        {/* === In-app browser 警示 ===
+            LINE/FB/IG 等 App 的內嵌 WebView 開啟此頁時,Google 會以
+            「disallowed_useragent」擋下 OAuth。這裡主動告知並提供脫困路徑。
+            - LINE:一鍵「在外部瀏覽器開啟」(?openExternalBrowser=1)
+            - 其他 App:顯示圖文說明,請用戶從 App 的選單手動切換
+            Email magic link 不走 OAuth,所以這個警示下方的 email 登入還是能用。 */}
+        {isInApp && (
+          <InAppBrowserNotice
+            app={inAppName}
+            t={t}
+          />
+        )}
+
         {/* === OAuth 按鈕 ===
             目前只顯示 Google。Apple / LINE 用 env flag 控制,預設隱藏。
             Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}
@@ -234,7 +256,8 @@ export default function LoginOptionsModal({
             icon={<GoogleIcon />}
             onClick={() => handleSocial("google")}
             busy={busy === "google"}
-            disabled={busy !== null}
+            // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
+            disabled={busy !== null || isInApp}
           />
           {APPLE_LOGIN_ENABLED && (
             <ProviderButton
@@ -246,7 +269,7 @@ export default function LoginOptionsModal({
               border="1px solid #000"
               onClick={() => handleSocial("apple")}
               busy={busy === "apple"}
-              disabled={busy !== null}
+              disabled={busy !== null || isInApp}
             />
           )}
           {lineEnabled && (
@@ -259,7 +282,7 @@ export default function LoginOptionsModal({
               border="1px solid #06C755"
               onClick={() => handleSocial("line")}
               busy={busy === "line"}
-              disabled={busy !== null}
+              disabled={busy !== null || isInApp}
             />
           )}
         </div>
@@ -438,6 +461,158 @@ export default function LoginOptionsModal({
 }
 
 // ============ 子元件 ============
+
+/**
+ * In-app browser 警示橫幅 —— 偵測到用戶在 LINE/FB/IG 等 App 的內嵌瀏覽器
+ * 開啟登入頁時顯示。告知 Google OAuth 會被擋,並提供脫困動線。
+ *
+ * 依 App 分流:
+ * - LINE:顯示「在預設瀏覽器開啟」按鈕 —— LINE 支援 ?openExternalBrowser=1
+ *   query param,觸發後會自動用系統預設瀏覽器開新分頁。
+ * - Facebook / Instagram / Messenger:沒有類似 query param,必須教用戶
+ *   從 App 右上角選單(⋯ 或 ⋮)找「在外部瀏覽器中開啟」。依 iOS / Android
+ *   UI 差異,文案折衷寫成「右上角選單」。
+ * - WeChat / TikTok / 其他:通用提示。
+ */
+interface InAppBrowserNoticeProps {
+  app: InAppBrowserApp | null;
+  t: (zh: string, en: string) => string;
+}
+
+function InAppBrowserNotice({ app, t }: InAppBrowserNoticeProps) {
+  const handleOpenExternal = () => {
+    openInExternalBrowserViaLine();
+  };
+
+  // 文案依 App 分流
+  let heading: string;
+  let body: string;
+  if (app === "line") {
+    heading = t(
+      "偵測到你正在 LINE 內開啟,Google 登入會被擋。",
+      "You're inside LINE — Google sign-in won't work here."
+    );
+    body = t(
+      "點下方按鈕用預設瀏覽器開啟,登入後再回來。",
+      "Tap below to reopen in your default browser, then sign in."
+    );
+  } else if (app === "facebook") {
+    heading = t(
+      "偵測到你正在 Facebook / Messenger 內開啟,Google 登入會被擋。",
+      "You're inside Facebook / Messenger — Google sign-in won't work here."
+    );
+    body = t(
+      "請點右上角 ⋯ 選單,選「在外部瀏覽器中開啟」或「在 Safari/Chrome 中開啟」。",
+      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\" (or Safari / Chrome)."
+    );
+  } else if (app === "instagram") {
+    heading = t(
+      "偵測到你正在 Instagram 內開啟,Google 登入會被擋。",
+      "You're inside Instagram — Google sign-in won't work here."
+    );
+    body = t(
+      "請點右上角 ⋯ 選單,選「在外部瀏覽器中開啟」。",
+      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\"."
+    );
+  } else if (app === "wechat") {
+    heading = t(
+      "偵測到你正在微信內開啟,Google 登入會被擋。",
+      "You're inside WeChat — Google sign-in won't work here."
+    );
+    body = t(
+      "請點右上角 ⋯,選「在瀏覽器中打開」。",
+      "Tap the ⋯ menu in the top-right and choose \"Open in browser\"."
+    );
+  } else {
+    // tiktok / threads / unknown
+    heading = t(
+      "偵測到你正在 App 的內嵌瀏覽器中,Google 登入會被擋。",
+      "You're inside an app's in-app browser — Google sign-in won't work here."
+    );
+    body = t(
+      "請從 App 選單切換到預設瀏覽器(Safari / Chrome)再登入。",
+      "Please switch to your default browser (Safari / Chrome) and sign in there."
+    );
+  }
+
+  return (
+    <div
+      role="alert"
+      style={{
+        marginBottom: 14,
+        padding: "12px 12px 11px",
+        borderRadius: 10,
+        background: "rgba(255,176,72,0.08)",
+        border: "1px solid rgba(255,176,72,0.35)",
+        textAlign: "left",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          marginBottom: app === "line" ? 10 : 0,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            fontSize: 16,
+            lineHeight: 1.2,
+            color: "#ffb048",
+            flexShrink: 0,
+            marginTop: 1,
+          }}
+        >
+          ⚠
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12.5,
+              lineHeight: 1.55,
+              color: "#ffd99a",
+              fontWeight: 600,
+            }}
+          >
+            {heading}
+          </p>
+          <p
+            style={{
+              margin: "4px 0 0",
+              fontSize: 12,
+              lineHeight: 1.55,
+              color: "rgba(232,232,240,0.78)",
+            }}
+          >
+            {body}
+          </p>
+        </div>
+      </div>
+      {app === "line" && (
+        <button
+          type="button"
+          onClick={handleOpenExternal}
+          style={{
+            width: "100%",
+            padding: "9px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,176,72,0.55)",
+            background: "rgba(255,176,72,0.18)",
+            color: "#ffd99a",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {t("在預設瀏覽器開啟", "Open in default browser")}
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface ProviderButtonProps {
   label: string;
