@@ -122,12 +122,20 @@ export default function PrivacyPage() {
             </section>
 
             <section style={sectionStyle}>
-              <h2 style={sectionHeadingStyle}>三、資料存儲位置</h2>
+              <h2 style={sectionHeadingStyle}>三、資料存儲位置與加密</h2>
               <p style={paragraphStyle}>
                 您於登入狀態下產生的帳號與占卜資料,由本平台合作之第三方雲端
                 服務(見第四章)託管,伺服器位於亞太地區,因此涉及個人資料
                 之國際傳輸。未登入時產生的占卜資料僅保存於您的瀏覽器本機
                 (localStorage),不會上傳至本平台伺服器。
+              </p>
+              <p style={paragraphStyle}>
+                <strong>傳輸加密</strong>:所有瀏覽器 / App 與本平台之間的
+                通訊皆強制使用 HTTPS/TLS 加密,包含登入、占卜送出、AI 對話
+                與訂閱金流。
+                <br />
+                <strong>儲存加密</strong>:雲端資料庫供應商於儲存層預設提供
+                靜態加密(encryption at rest),金鑰由供應商管理。
               </p>
             </section>
 
@@ -138,9 +146,10 @@ export default function PrivacyPage() {
               </p>
               <ul style={listStyle}>
                 <li>
-                  <strong>登入驗證服務</strong>:您透過 Google OAuth 登入,
-                  我們僅取得 email、顯示名稱與頭像。不會存取您的通訊錄、
-                  雲端硬碟或其他 Google 帳戶資料。
+                  <strong>登入驗證服務</strong>:您可選擇 Google OAuth
+                  或 Facebook Login 登入,我們僅取得 email、顯示名稱
+                  與頭像,不會存取通訊錄、雲端硬碟、好友清單或其他
+                  社群帳戶資料。
                 </li>
                 <li>
                   <strong>AI 服務提供商</strong>:您的問題內容、卦象 / 牌面
@@ -313,7 +322,7 @@ export default function PrivacyPage() {
             </section>
 
             <section style={sectionStyle}>
-              <h2 style={sectionHeadingStyle}>3. Where Data Is Stored</h2>
+              <h2 style={sectionHeadingStyle}>3. Where Data Is Stored & Encryption</h2>
               <p style={paragraphStyle}>
                 Data generated while signed in is hosted by third-party cloud
                 providers (see Section 4) on servers located in the
@@ -321,6 +330,16 @@ export default function PrivacyPage() {
                 transfer of personal data. Divination data generated while
                 signed out is stored only in your browser&apos;s localStorage
                 and is never uploaded to our servers.
+              </p>
+              <p style={paragraphStyle}>
+                <strong>In transit</strong>: All traffic between your browser
+                or App and our servers is encrypted via HTTPS/TLS, including
+                sign-in, divinations, AI follow-up chat, and subscription
+                payments.
+                <br />
+                <strong>At rest</strong>: Our cloud database provider applies
+                encryption-at-rest by default at the storage layer, with keys
+                managed by the provider.
               </p>
             </section>
 
@@ -332,10 +351,10 @@ export default function PrivacyPage() {
               </p>
               <ul style={listStyle}>
                 <li>
-                  <strong>Authentication provider</strong>: You sign in via
-                  Google OAuth. We receive only email, display name, and
-                  avatar. We do not access your contacts, Drive, or any other
-                  Google account data.
+                  <strong>Authentication providers</strong>: You can sign in
+                  via Google OAuth or Facebook Login. We receive only email,
+                  display name, and avatar. We do not access your contacts,
+                  Drive, friend list, or any other social account data.
                 </li>
                 <li>
                   <strong>AI service providers</strong>: Your question,

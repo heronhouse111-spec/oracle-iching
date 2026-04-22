@@ -7,6 +7,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
 // 客戶端送來的「抽牌結果」
 interface DrawnCardRequest {
@@ -177,7 +178,10 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: systemPrompt },
+          {
+            role: "system",
+            content: withSafetyPreamble(systemPrompt, locale),
+          },
           { role: "user", content: userMessage },
         ],
         max_tokens: 600,

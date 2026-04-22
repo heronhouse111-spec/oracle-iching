@@ -7,6 +7,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
 export async function POST(request: NextRequest) {
   try {
@@ -120,7 +121,7 @@ Rules:
 - Use natural flowing sentences, no bullet points`);
 
     const apiMessages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withSafetyPreamble(systemPrompt, locale) },
       ...messages,
     ];
 

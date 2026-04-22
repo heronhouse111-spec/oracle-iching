@@ -22,11 +22,23 @@ export interface LoginOptionsModalProps {
   lineEnabled?: boolean;
 }
 
+// Apple 登入開關 —— 需 $99/yr Apple Developer Program 才能配 Services ID,
+// 尚未取得前先用 env flag 隱藏,避免使用者點了踩雷。
+// 未來要啟用:在 .env 設 NEXT_PUBLIC_APPLE_LOGIN_ENABLED=true
+const APPLE_LOGIN_ENABLED =
+  typeof process !== "undefined" &&
+  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED === "true";
+
 /**
- * 統一的登入 modal —— Google / Apple / Line / Email magic link 一起出。
+ * 統一的登入 modal —— Google + Email magic link 為主,Apple / LINE 視開關顯示。
+ *
+ * 設計決策:
+ * - Facebook **不**在這裡:FB OAuth 預設不綁定到已存在的 Gmail 帳號,
+ *   會生出孤兒 user(點數/訂閱歸屬錯誤)。改走「登入後去 /account/linked 追加綁定」。
+ * - Apple / LINE:尚未配置完成時隱藏按鈕,避免點了才收到錯誤。
  *
  * UX:
- * - 三個 OAuth 按鈕並列,icon + 品牌色
+ * - OAuth 按鈕並列,icon + 品牌色
  * - 最底下 Email magic link,預設摺疊成連結,點開展開 input + 送信
  * - 任何 provider 失敗 → 紅色小字顯示在 modal 底部(不彈 alert,避免打斷)
  */
@@ -212,7 +224,9 @@ export default function LoginOptionsModal({
             )}
         </p>
 
-        {/* === 三個 OAuth 按鈕 === */}
+        {/* === OAuth 按鈕 ===
+            目前只顯示 Google。Apple / LINE 用 env flag 控制,預設隱藏。
+            Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <ProviderButton
             label={t("使用 Google 帳號登入", "Continue with Google")}
@@ -222,29 +236,20 @@ export default function LoginOptionsModal({
             busy={busy === "google"}
             disabled={busy !== null}
           />
-          <ProviderButton
-            label={t("使用 Apple 帳號登入", "Continue with Apple")}
-            iconBg="#000"
-            icon={<AppleIcon />}
-            labelColor="#fff"
-            bg="#000"
-            border="1px solid #000"
-            onClick={() => handleSocial("apple")}
-            busy={busy === "apple"}
-            disabled={busy !== null}
-          />
-          <ProviderButton
-            label={t("使用 Facebook 帳號登入", "Continue with Facebook")}
-            iconBg="#1877F2"
-            icon={<FacebookIcon />}
-            labelColor="#fff"
-            bg="#1877F2"
-            border="1px solid #1877F2"
-            onClick={() => handleSocial("facebook")}
-            busy={busy === "facebook"}
-            disabled={busy !== null}
-          />
-          {lineEnabled ? (
+          {APPLE_LOGIN_ENABLED && (
+            <ProviderButton
+              label={t("使用 Apple 帳號登入", "Continue with Apple")}
+              iconBg="#000"
+              icon={<AppleIcon />}
+              labelColor="#fff"
+              bg="#000"
+              border="1px solid #000"
+              onClick={() => handleSocial("apple")}
+              busy={busy === "apple"}
+              disabled={busy !== null}
+            />
+          )}
+          {lineEnabled && (
             <ProviderButton
               label={t("使用 LINE 帳號登入", "Continue with LINE")}
               iconBg="#06C755"
@@ -256,30 +261,6 @@ export default function LoginOptionsModal({
               busy={busy === "line"}
               disabled={busy !== null}
             />
-          ) : (
-            <button
-              type="button"
-              disabled
-              title={t("即將推出", "Coming soon")}
-              style={{
-                padding: "10px 14px",
-                borderRadius: 10,
-                border: "1px solid rgba(192,192,208,0.15)",
-                color: "rgba(192,192,208,0.4)",
-                fontSize: 13,
-                background: "none",
-                cursor: "not-allowed",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              {t(
-                "使用 LINE 帳號登入(即將推出)",
-                "Continue with LINE (Coming soon)"
-              )}
-            </button>
           )}
         </div>
 
@@ -555,17 +536,6 @@ function AppleIcon() {
       <path
         fill="#fff"
         d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
-      />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#fff"
-        d="M13.5 21.5v-8h2.7l.4-3.1h-3.1V8.4c0-.9.3-1.5 1.6-1.5H17V4.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.6v3.1h2.7v8h3.2z"
       />
     </svg>
   );
