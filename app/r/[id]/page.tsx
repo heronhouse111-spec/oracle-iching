@@ -76,7 +76,7 @@ export async function generateMetadata({
   const d = await loadPublic(id);
   if (!d) {
     return {
-      title: "Oracle 問事 | 易經 × 塔羅 · AI 占卜",
+      title: "Oracle 易問 | 易經 × 塔羅 · AI 占卜",
       description: "東方易經 · 西方塔羅 · AI 即時解盤。",
     };
   }
@@ -85,17 +85,17 @@ export async function generateMetadata({
   let title: string;
   if (d.divine_type === "tarot") {
     title = zh
-      ? "三牌塔羅占卜 — Oracle 問事"
+      ? "三牌塔羅占卜 — Oracle 易問"
       : "Three-Card Tarot Reading — Oracle";
   } else if (d.hexagram_number !== null) {
     const hex = getHexagramByNumber(d.hexagram_number);
     title = hex
       ? zh
-        ? `第 ${hex.number} 卦 ${hex.nameZh} — Oracle 問事`
+        ? `第 ${hex.number} 卦 ${hex.nameZh} — Oracle 易問`
         : `Hexagram ${hex.number}: ${hex.nameEn} — Oracle`
-      : "Oracle 問事 | 易經 × 塔羅";
+      : "Oracle 易問 | 易經 × 塔羅";
   } else {
-    title = "Oracle 問事 | 易經 × 塔羅";
+    title = "Oracle 易問 | 易經 × 塔羅";
   }
 
   const description = zh
@@ -261,7 +261,7 @@ export default async function PublicDivinationPage({
             }}
           >
             <span style={{ fontSize: 22 }}>{brandIcon}</span>
-            <span>{t("Oracle 問事", "Oracle")}</span>
+            <span>{t("Oracle 易問", "Oracle")}</span>
           </Link>
           <Link
             href="/"

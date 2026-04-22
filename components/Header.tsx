@@ -44,7 +44,7 @@ export default function Header() {
         <Link href="/" onClick={handleHomeClick} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Image
             src="/logo-64.png"
-            alt={t("Oracle 問事", "Oracle")}
+            alt={t("Oracle 易問", "Oracle")}
             width={36}
             height={36}
             priority
@@ -57,7 +57,7 @@ export default function Header() {
             }}
           />
           <span className="text-gold-gradient" style={{ fontFamily: "'Noto Serif TC', serif", fontWeight: 700, fontSize: 18 }}>
-            {t("Oracle 問事", "Oracle")}
+            {t("Oracle 易問", "Oracle")}
           </span>
         </Link>
 
