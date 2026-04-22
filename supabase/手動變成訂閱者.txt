@@ -27,3 +27,58 @@ select p.id, u.email, p.display_name, p.credits_balance
 from public.profiles p
 join auth.users u on u.id = p.id
 where u.email = 'heronhouse111@gmail.com';
+
+
+
+Enter keystore password: →heronhouse111@we#are@good
+
+
+SHA256: 6C:72:C9:19:AD:F0:86:25:67:4C:C8:39:03:7F:85:3D:89:44:74:5B:DE:6F:BB:64:A4:20:44:FF:55:69:CC:96
+
+
+
+Keystore path: C:\oracle-twa\android.keystore
+    
+Title: Oracle 易問 — Android Keystore (TWA)
+Username: android(alias)
+Password:heronhouse111@we#are@good
+Notes 欄位貼:
+Alias: android
+     Type: PKCS12
+     SHA256 (upload): 6C:72:C9:19:AD:F0:86:25:67:4C:C8:39:03:7F:85:3D:89:44:74:5B:DE:6F:BB:64:A4:20:44:FF:55:69:CC:96
+     Validity until: 2053-09-07
+     Created: 2026-04-22
+
+
+# 1. 驗證 keystore 檔沒壞
+ls C:\oracle-twa\android.keystore
+
+# 2. 複製到 OneDrive(自動同步雲端)
+copy C:\oracle-twa\android.keystore "$env:OneDrive\Oracle-易問-TWA-keystore-2026-04-22.keystore"
+
+# 3. 確認有進 OneDrive
+ls "$env:OneDrive\Oracle-易問-*"
+
+
+② 密碼管理器 1Password / Bitwarden 建一筆:
+
+Title: Oracle 易問 — Android Keystore (TWA)
+Username: android(alias)
+Password: heronhouse111@we#are@good
+Attach file: C:\oracle-twa\android.keystore(兩者都支援附件)
+Notes:
+
+
+
+Keystore path: C:\oracle-twa\android.keystore
+  Alias: android
+  Type: PKCS12, RSA 2048
+  SHA256: 6C:72:C9:19:AD:F0:86:25:67:4C:C8:39:03:7F:85:3D:89:44:74:5B:DE:6F:BB:64:A4:20:44:FF:55:69:CC:96
+  SHA1: AF:D9:8D:36:88:19:1B:BE:D5:5A:28:6D:9A:40:1F:A4:77:D0:C0:29
+  DN: CN=Heronhouse, OU=Heronhouse, O=Heronhouse, L=ChiaYi, ST=Taiwan, C=tw
+  Validity: 2026-04-22 → 2053-09-07
+  Package: me.heronhouse.oracle
+
+
+
+
