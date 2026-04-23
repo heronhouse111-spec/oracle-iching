@@ -1,13 +1,15 @@
 // ============================================
-// 塔羅牌 Rider-Waite-Smith 78 張完整資料
+// 塔羅牌 78 張完整資料(Rider-Waite-Smith 牌義體系)
 // ============================================
-// 圖檔:luciellaes.itch.io CC0 版 → public/tarot/*.jpg
+// 圖檔:由鷺居國際以 Google Gemini AI 繪圖重新繪製,構圖參考源自公共領域之
+//       Rider-Waite-Smith 塔羅 (Pamela Colman Smith, 1909)。
+//       檔案輸出於 public/tarot/*.jpg:
 //   - Major: 00-TheFool.jpg ~ 21-TheWorld.jpg
 //   - Minor: {Suit}{01-14}.jpg, suit ∈ Cups / Pentacles / Swords / Wands
 //     01=Ace、02-10=數字、11=Page、12=Knight、13=Queen、14=King
 //   - CardBacks.jpg 為牌背(面朝下時顯示)
 //
-// 牌義為 Rider-Waite-Smith 傳統詮釋的濃縮版本,餵給 AI 解讀用
+// 牌義採 Rider-Waite-Smith 傳統詮釋之濃縮版本(公共領域),餵給 AI 解讀用
 // ============================================
 
 export type TarotSuit = "major" | "wands" | "cups" | "swords" | "pentacles";
