@@ -4,6 +4,7 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import Footer from "@/components/Footer";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
+import GoogleOneTap from "@/components/GoogleOneTap";
 
 // metadataBase 讓 OG/twitter 圖路徑可以用相對 URL — Next 16 建議要設
 const siteUrl = (() => {
@@ -81,6 +82,8 @@ export default function RootLayout({
           {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
           <ServiceWorkerRegister />
           <InstallPrompt />
+          {/* Google One Tap — 未登入時自動跳「以 xxx 身份繼續」,iPhone/iPad 也能秒登 */}
+          <GoogleOneTap />
         </LanguageProvider>
       </body>
     </html>
