@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
@@ -13,6 +13,10 @@ import {
   openInExternalBrowserViaLine,
   type InAppBrowserApp,
 } from "@/lib/env/useIsInAppBrowser";
+import {
+  GSI_CLIENT_ID_CONFIGURED,
+  renderGoogleButton,
+} from "@/lib/auth/googleIdentity";
 
 export interface LoginOptionsModalProps {
   open: boolean;
@@ -67,6 +71,12 @@ export default function LoginOptionsModal({
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
 
+  // Google 官方 rendered button 要塞進這個 ref 所指的 div。
+  // 改用 GSI id_token flow(而非 signInWithOAuth redirect)的目的:
+  // 舊流程 Google 同意畫面會顯示「繼續使用 xpijubxjokrpysrpjrct.supabase.co」,
+  // 是因為 redirect_uri 設在 Supabase 自家網域;id_token flow 全程留在 oracle.heronhouse.me。
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
   // SSR safety: portal 目標只能在 client 取得。mounted 之前不 render。
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -102,6 +112,28 @@ export default function LoginOptionsModal({
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  // 每次 modal 打開時(且不在 in-app browser,且 GSI 可用),把 Google 官方按鈕畫進 ref div。
+  // In-app browser 時,GSI 跟 OAuth 一樣會被擋,改走下面的 fallback ProviderButton(它會 disabled)。
+  useEffect(() => {
+    if (!open) return;
+    if (!GSI_CLIENT_ID_CONFIGURED) return;
+    if (isInApp) return;
+    if (!googleBtnRef.current) return;
+    // 重覆 render 會累加按鈕,每次先清空
+    googleBtnRef.current.innerHTML = "";
+    renderGoogleButton(googleBtnRef.current, {
+      type: "standard",
+      theme: "filled_blue",
+      size: "large",
+      text: "signin_with",
+      shape: "pill",
+      width: 320,
+      logo_alignment: "left",
+    }).catch((e) => {
+      console.warn("[LoginOptionsModal] GSI render 失敗:", e);
+    });
+  }, [open, isInApp]);
 
   if (!open || !mounted) return null;
 
@@ -247,18 +279,34 @@ export default function LoginOptionsModal({
         )}
 
         {/* === OAuth 按鈕 ===
-            目前只顯示 Google。Apple / LINE 用 env flag 控制,預設隱藏。
+            Google:用 GSI id_token flow(renderButton)。好處是全程留在本網域,
+                    Google 同意畫面顯示的是 Oracle 易問,而不是 xpijubxjokrpysrpjrct.supabase.co。
+                    In-app browser / 沒設 Client ID env 時,fallback 回舊的 signInWithOAuth 按鈕。
+            Apple / LINE:用 env flag 控制,預設隱藏。
             Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <ProviderButton
-            label={t("使用 Google 帳號登入", "Continue with Google")}
-            iconBg="#fff"
-            icon={<GoogleIcon />}
-            onClick={() => handleSocial("google")}
-            busy={busy === "google"}
-            // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
-            disabled={busy !== null || isInApp}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+          {GSI_CLIENT_ID_CONFIGURED && !isInApp ? (
+            // Google 官方 rendered button —— width 320 跟 modal 內容區等寬感受
+            <div
+              ref={googleBtnRef}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                minHeight: 40,
+              }}
+            />
+          ) : (
+            <ProviderButton
+              label={t("使用 Google 帳號登入", "Continue with Google")}
+              iconBg="#fff"
+              icon={<GoogleIcon />}
+              onClick={() => handleSocial("google")}
+              busy={busy === "google"}
+              // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
+              disabled={busy !== null || isInApp}
+            />
+          )}
           {APPLE_LOGIN_ENABLED && (
             <ProviderButton
               label={t("使用 Apple 帳號登入", "Continue with Apple")}
