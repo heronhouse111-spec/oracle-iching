@@ -1824,7 +1824,7 @@ export default function Home() {
                   />
                   <Image
                     src="/logo-256.png"
-                    alt={t("易問", "Oracle")}
+                    alt={t("易問", "Tarogram")}
                     width={140}
                     height={140}
                     priority
@@ -1939,7 +1939,7 @@ export default function Home() {
             <motion.div key="dt" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("選擇占卜工具", "Choose Your Oracle")}
+                  {t("選擇占卜工具", "Choose Your Method")}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6 }}>
                   {t("兩種系統皆以你提出的問題為核心給出指引", "Both systems will center on the question you asked")}

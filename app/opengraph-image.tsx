@@ -10,7 +10,7 @@ import { join } from "path";
  * Satori 沒有 CJK 字型,英文標語為主,中文字元一律避開或用 logo 圖本體承載。
  */
 
-export const alt = "Oracle — I Ching × Tarot × AI";
+export const alt = "Tarogram — I Ching × Tarot × AI";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -88,7 +88,7 @@ export default async function Image() {
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={logoDataUri}
-              alt="Oracle"
+              alt="Tarogram"
               width={360}
               height={360}
               style={{

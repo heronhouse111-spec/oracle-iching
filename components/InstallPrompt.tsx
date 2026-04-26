@@ -226,7 +226,7 @@ export default function InstallPrompt() {
               marginBottom: 4,
             }}
           >
-            {t("把 Oracle 加到主畫面", "Add Oracle to home screen")}
+            {t("把 Tarogram 加到主畫面", "Add Tarogram to home screen")}
           </div>
 
           {iosMode ? (

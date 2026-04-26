@@ -125,7 +125,7 @@ export default function InstallPage() {
               marginBottom: 10,
             }}
           >
-            {t("把 Oracle 加到主畫面", "Add Oracle to your home screen")}
+            {t("把 Tarogram 加到主畫面", "Add Tarogram to your home screen")}
           </h1>
           <p
             style={{
@@ -178,8 +178,8 @@ export default function InstallPage() {
               "No banner? Tap ⋮ (top-right) → \"Add to home screen\" or \"Install app\""
             ),
             t(
-              "確認命名後按「新增」,桌面會多一個 Oracle icon",
-              "Confirm the name, tap \"Add\". Oracle icon appears on your home screen"
+              "確認命名後按「新增」,桌面會多一個 Tarogram icon",
+              "Confirm the name, tap \"Add\". Tarogram icon appears on your home screen"
             ),
           ]}
           extra={
@@ -218,7 +218,7 @@ export default function InstallPage() {
               "Scroll down and tap \"Add to Home Screen\""
             ),
             t(
-              "右上角「新增」,桌面會多一個 Oracle icon,點開即是全螢幕 app",
+              "右上角「新增」,桌面會多一個 Tarogram icon,點開即是全螢幕 app",
               "Tap \"Add\" (top-right). Tap the new icon on your home screen to launch fullscreen"
             ),
           ]}
@@ -242,8 +242,8 @@ export default function InstallPage() {
               "Click the \"Install\" icon ⊕ on the right side of the address bar"
             ),
             t(
-              "或從瀏覽器選單 ⋮ 找「安裝 Oracle 易問」",
-              "Or from menu ⋮ → \"Install Oracle 易問\""
+              "或從瀏覽器選單 ⋮ 找「安裝 Tarogram 易問」",
+              "Or from menu ⋮ → \"Install Tarogram 易問\""
             ),
             t(
               "確認後會從作業系統啟動列直接打開獨立視窗",
@@ -299,8 +299,8 @@ export default function InstallPage() {
           <Faq
             q={t("要怎麼移除?", "How do I remove it?")}
             a={t(
-              "長按桌面上的 Oracle icon,選「移除」或「解除安裝」即可。不會刪除任何會員資料。",
-              "Long-press the Oracle icon → \"Remove\" or \"Uninstall\". Your account data is not affected."
+              "長按桌面上的 Tarogram icon,選「移除」或「解除安裝」即可。不會刪除任何會員資料。",
+              "Long-press the Tarogram icon → \"Remove\" or \"Uninstall\". Your account data is not affected."
             )}
           />
           <Faq

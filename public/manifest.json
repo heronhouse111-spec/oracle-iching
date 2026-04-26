@@ -1,7 +1,7 @@
 {
   "id": "/?source=pwa",
-  "name": "Oracle 易問 | 易經 × 塔羅 · AI 占卜",
-  "short_name": "Oracle 易問",
+  "name": "Tarogram 易問 | 易經 × 塔羅 · AI 占卜",
+  "short_name": "Tarogram 易問",
   "description": "東方易經 · 西方塔羅 · AI 即時解盤。Ancient wisdom meets AI divination.",
   "start_url": "/?source=pwa",
   "scope": "/",

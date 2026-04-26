@@ -1,4 +1,4 @@
-# Oracle 易問 · Google Play 打包指南 (Bubblewrap TWA)
+# Tarogram 易問 · Google Play 打包指南 (Bubblewrap TWA)
 
 > 從零到 `.aab` 上傳到 Play Console 的完整流程。
 > 目標產物:`app-release-bundle.aab`(Play Store 上架用)+ `app-release-signed.apk`(Internal Testing 側載測試用)。
@@ -126,8 +126,8 @@ bubblewrap init --manifest https://oracle.heronhouse.me/manifest.json
 | 問題 | 這個專案該填 | 理由 |
 |---|---|---|
 | Domain being opened in the TWA | `oracle.heronhouse.me` | 自動帶,確認 |
-| Name of the application | `Oracle 易問` | 中文 launcher name |
-| Short name | `Oracle` | 桌面 icon 底下的短名,太長會被截 |
+| Name of the application | `Tarogram 易問` | 中文 launcher name |
+| Short name | `Tarogram` | 桌面 icon 底下的短名,太長會被截 |
 | Application ID (package name) | `me.heronhouse.oracle` | **必須跟 assetlinks.json 裡的 `package_name` 一致** |
 | Display mode | `standalone` | 不要 `fullscreen`(會藏狀態列,UX 差) |
 | Status bar color | `#0a0a1a` | 跟 manifest `theme_color` 一致 |
@@ -278,7 +278,7 @@ https://developers.google.com/digital-asset-links/tools/generator
 
 - Play Console → **建立應用程式**
 - Default language:`繁體中文(台灣) – zh-TW`
-- App name:`Oracle 易問`
+- App name:`Tarogram 易問`
 - App or game:**App**
 - Free or paid:**Free**
 - 兩個同意框勾起來

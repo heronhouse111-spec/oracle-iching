@@ -151,8 +151,8 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
   // 注意:ShareCard 被 html-to-image 截圖,外部圖若跨網域未有 CORS header 會直接拒絕。
   // 把 logo 放在 public/ 下用相對 URL 確保永遠同源可載。
   const brandText = isTarot
-    ? t("塔羅占卜", "Oracle Tarot")
-    : t("易經占卜", "Oracle I Ching");
+    ? t("塔羅占卜", "Tarogram Tarot")
+    : t("易經占卜", "Tarogram I Ching");
 
   return (
     <div
@@ -241,7 +241,7 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo-128.png"
-              alt="Oracle"
+              alt="Tarogram"
               width={56}
               height={56}
               style={{

@@ -280,7 +280,7 @@ export default function LoginOptionsModal({
 
         {/* === OAuth 按鈕 ===
             Google:用 GSI id_token flow(renderButton)。好處是全程留在本網域,
-                    Google 同意畫面顯示的是 Oracle 易問,而不是 xpijubxjokrpysrpjrct.supabase.co。
+                    Google 同意畫面顯示的是 Tarogram 易問,而不是 xpijubxjokrpysrpjrct.supabase.co。
                     In-app browser / 沒設 Client ID env 時,fallback 回舊的 signInWithOAuth 按鈕。
             Apple / LINE:用 env flag 控制,預設隱藏。
             Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}

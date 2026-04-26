@@ -1,5 +1,5 @@
 /**
- * Oracle 易問 · Service Worker
+ * Tarogram 易問 · Service Worker
  *
  * 目的:
  * - 讓 Chrome / Android 把這個站判定為「可安裝 PWA」,跳自動安裝橫幅。

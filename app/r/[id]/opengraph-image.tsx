@@ -17,7 +17,7 @@ import { getCardById } from "@/data/tarot";
  * readFile + fonts[] 載入(參考 Next.js ImageResponse 文件)。
  */
 
-export const alt = "Oracle — I Ching × Tarot × AI";
+export const alt = "Tarogram — I Ching × Tarot × AI";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -277,7 +277,7 @@ export default async function Image({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={logoDataUri}
-                  alt="Oracle"
+                  alt="Tarogram"
                   width={56}
                   height={56}
                   style={{
@@ -309,7 +309,7 @@ export default async function Image({
                   letterSpacing: 2,
                 }}
               >
-                Oracle · {isTarot ? "Tarot" : "I Ching"}
+                Tarogram · {isTarot ? "Tarot" : "I Ching"}
               </span>
             </div>
             <span style={{ fontSize: 20, color: "rgba(192,192,208,0.6)" }}>
