@@ -4,7 +4,7 @@
  * /install —— PWA 安裝教學落地頁。
  *
  * 對外兩個用途:
- * 1. 社群宣傳:「加入我們 → oracle.heronhouse.me/install」短連結,圖文教學引導使用者把 app 加到桌面。
+ * 1. 社群宣傳:「加入我們 → tarogram.heronhouse.me/install」短連結,圖文教學引導使用者把 app 加到桌面。
  * 2. 站內 fallback:footer 一定有連結到這,使用者搞不清楚怎麼加主畫面時隨時看得到。
  *
  * UX 策略:
@@ -50,7 +50,7 @@ export default function InstallPage() {
   const [installed, setInstalled] = useState(false);
 
   // TWA 內已經是 app 了,不需要再看「如何加到主畫面」教學;
-  // 而且這頁有露出 oracle.heronhouse.me URL,Play 政策不允許出現。
+  // 而且這頁有露出 tarogram.heronhouse.me URL,Play 政策不允許出現。
   // 一進來直接導回首頁。
   useEffect(() => {
     if (isTwa) router.replace("/");
@@ -85,7 +85,7 @@ export default function InstallPage() {
     setDeferredEvent(null);
   };
 
-  // TWA 內不渲染任何內容(避免 oracle.heronhouse.me URL 在 redirect 前閃出)
+  // TWA 內不渲染任何內容(避免 tarogram.heronhouse.me URL 在 redirect 前閃出)
   if (isTwa) return null;
 
   return (
@@ -166,8 +166,8 @@ export default function InstallPage() {
           active={platform === "android"}
           steps={[
             t(
-              "打開 Chrome(或 Samsung Internet / Edge)瀏覽 oracle.heronhouse.me",
-              "Open Chrome (or Samsung Internet / Edge) and visit oracle.heronhouse.me"
+              "打開 Chrome(或 Samsung Internet / Edge)瀏覽 tarogram.heronhouse.me",
+              "Open Chrome (or Samsung Internet / Edge) and visit tarogram.heronhouse.me"
             ),
             t(
               "若底部跳出「安裝應用程式」橫幅,直接按「安裝」即可",
@@ -209,7 +209,7 @@ export default function InstallPage() {
           active={platform === "ios"}
           steps={[
             t(
-              "用 Safari 打開 oracle.heronhouse.me(Chrome iOS 版不支援)",
+              "用 Safari 打開 tarogram.heronhouse.me(Chrome iOS 版不支援)",
               "Open in Safari (Chrome/Firefox iOS won't work for this)"
             ),
             t("點畫面底部中間的「分享」按鈕 ⬆", "Tap the Share button ⬆ at the bottom"),
@@ -234,7 +234,7 @@ export default function InstallPage() {
           active={platform === "desktop"}
           steps={[
             t(
-              "用 Chrome 或 Edge 打開 oracle.heronhouse.me",
+              "用 Chrome 或 Edge 打開 tarogram.heronhouse.me",
               "Open in Chrome or Edge"
             ),
             t(

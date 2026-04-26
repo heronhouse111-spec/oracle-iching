@@ -154,7 +154,7 @@ export default async function Image({
     if (process.env.VERCEL_URL) {
       return `https://${process.env.VERCEL_URL}`;
     }
-    return "https://oracle.heronhouse.me";
+    return "https://tarogram.heronhouse.me";
   };
   const baseUrl = resolveBaseUrl();
 

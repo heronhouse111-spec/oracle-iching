@@ -74,7 +74,7 @@ export default function LoginOptionsModal({
   // Google 官方 rendered button 要塞進這個 ref 所指的 div。
   // 改用 GSI id_token flow(而非 signInWithOAuth redirect)的目的:
   // 舊流程 Google 同意畫面會顯示「繼續使用 xpijubxjokrpysrpjrct.supabase.co」,
-  // 是因為 redirect_uri 設在 Supabase 自家網域;id_token flow 全程留在 oracle.heronhouse.me。
+  // 是因為 redirect_uri 設在 Supabase 自家網域;id_token flow 全程留在 tarogram.heronhouse.me。
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
   // SSR safety: portal 目標只能在 client 取得。mounted 之前不 render。

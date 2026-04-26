@@ -10,7 +10,7 @@
  * 兩邊共用同一個 callback(handleCredentialResponse),避免重複定義。
  * 關鍵:**都用 signInWithIdToken,完全不走 signInWithOAuth redirect**。
  * 舊的 redirect 流程會讓 Google 同意畫面顯示 "xpijubxjokrpysrpjrct.supabase.co",
- * id_token 流程留在 oracle.heronhouse.me 同一頁,不會跳離。
+ * id_token 流程留在 tarogram.heronhouse.me 同一頁,不會跳離。
  */
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;

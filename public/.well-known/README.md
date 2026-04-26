@@ -24,7 +24,7 @@ name 不同,**兩邊都要一致**(Play Console + assetlinks.json)。
 ## 如何驗證
 
 部署後打開:
-https://oracle.heronhouse.me/.well-known/assetlinks.json
+https://tarogram.heronhouse.me/.well-known/assetlinks.json
 
 應能直接回傳 JSON(Content-Type: application/json)。Google 驗證工具:
 https://developers.google.com/digital-asset-links/tools/generator

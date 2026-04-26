@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
   }
 
   // service callback URL —— hub 付款 + 發票完成後會 POST 到這
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://oracle.heronhouse.me";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://tarogram.heronhouse.me";
   const callbackUrl = `${baseUrl}/api/billing/ecpay/granted`;
 
   const orderPayload = {

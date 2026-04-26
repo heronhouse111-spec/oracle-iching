@@ -10,7 +10,7 @@
  * 部署前置作業(使用者要做):
  *   1. GCP Console 建立 Pub/Sub topic (e.g. play-rtdn)
  *   2. 為這個 topic 建 push subscription
- *      - Push endpoint: https://oracle.heronhouse.me/api/billing/play/rtdn-webhook?secret=<RTDN_SHARED_SECRET>
+ *      - Push endpoint: https://tarogram.heronhouse.me/api/billing/play/rtdn-webhook?secret=<RTDN_SHARED_SECRET>
  *      - 不啟用 OIDC(目前用 query string secret 認證,簡單)
  *   3. Play Console → Monetize → Subscriptions → 設定 RTDN
  *      - Topic name: projects/<project-id>/topics/play-rtdn

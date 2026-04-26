@@ -13,7 +13,7 @@ const siteUrl = (() => {
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL)
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "https://oracle.heronhouse.me";
+  return "https://tarogram.heronhouse.me";
 })();
 
 export const metadata: Metadata = {

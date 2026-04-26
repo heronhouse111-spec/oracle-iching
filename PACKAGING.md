@@ -118,14 +118,14 @@ bubblewrap doctor
 mkdir C:\Users\Eliot\oracle-twa
 cd C:\Users\Eliot\oracle-twa
 
-bubblewrap init --manifest https://oracle.heronhouse.me/manifest.json
+bubblewrap init --manifest https://tarogram.heronhouse.me/manifest.json
 ```
 
 ### Bubblewrap 會問一連串問題 —— 對照表
 
 | 問題 | 這個專案該填 | 理由 |
 |---|---|---|
-| Domain being opened in the TWA | `oracle.heronhouse.me` | 自動帶,確認 |
+| Domain being opened in the TWA | `tarogram.heronhouse.me` | 自動帶,確認 |
 | Name of the application | `Tarogram 易問` | 中文 launcher name |
 | Short name | `Tarogram` | 桌面 icon 底下的短名,太長會被截 |
 | Application ID (package name) | `me.heronhouse.oracle` | **必須跟 assetlinks.json 裡的 `package_name` 一致** |
@@ -133,7 +133,7 @@ bubblewrap init --manifest https://oracle.heronhouse.me/manifest.json
 | Status bar color | `#0a0a1a` | 跟 manifest `theme_color` 一致 |
 | Background color (啟動閃屏) | `#0a0a1a` | 開 app 時黑底那瞬間,跟主題色一致才不閃 |
 | Starting URL | **`/?source=twa`** | ⚠️ **手動改!**manifest 裡是 `?source=pwa`,TWA 要用 `twa` 讓 `useIsTWA()` 偵測到,關掉 Play Billing 違規的購買 UI |
-| Icon URL | `https://oracle.heronhouse.me/logo-512.png` | 512 px maskable |
+| Icon URL | `https://tarogram.heronhouse.me/logo-512.png` | 512 px maskable |
 | Maskable icon URL | 同上 | |
 | Monochrome icon URL (通知列單色) | 空(按 Enter 跳過) | 可選,之後再補 |
 | Fallback behavior | `customtabs` | TWA 主用,網站 SSL 壞了退 Custom Tabs,不退 browser |
@@ -258,14 +258,14 @@ git push
 等 Vercel Ready 後,瀏覽器直接開:
 
 ```
-https://oracle.heronhouse.me/.well-known/assetlinks.json
+https://tarogram.heronhouse.me/.well-known/assetlinks.json
 ```
 
 應該看到剛填的 JSON(Content-Type: application/json)。
 
 再用 Google 官方工具驗:
 https://developers.google.com/digital-asset-links/tools/generator
-- Hosting site domain: `oracle.heronhouse.me`
+- Hosting site domain: `tarogram.heronhouse.me`
 - App package name: `me.heronhouse.oracle`
 - App package fingerprint: 剛那串 SHA256
 - 按 **Test statement** → 應該 ✅ 綠勾
