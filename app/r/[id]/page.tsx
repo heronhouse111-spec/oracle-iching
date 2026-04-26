@@ -261,7 +261,7 @@ export default async function PublicDivinationPage({
             }}
           >
             <span style={{ fontSize: 22 }}>{brandIcon}</span>
-            <span>{t("Oracle 易問", "Oracle")}</span>
+            <span>{t("易問", "Oracle")}</span>
           </Link>
           <Link
             href="/"

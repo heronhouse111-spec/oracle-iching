@@ -1824,7 +1824,7 @@ export default function Home() {
                   />
                   <Image
                     src="/logo-256.png"
-                    alt={t("Oracle 易問", "Oracle")}
+                    alt={t("易問", "Oracle")}
                     width={140}
                     height={140}
                     priority
