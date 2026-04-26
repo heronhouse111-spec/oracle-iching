@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import GoogleOneTap from "@/components/GoogleOneTap";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 // metadataBase 讓 OG/twitter 圖路徑可以用相對 URL — Next 16 建議要設
 const siteUrl = (() => {
@@ -77,6 +78,7 @@ export default function RootLayout({
       </head>
       <body className="bg-stars" style={{ minHeight: "100vh" }}>
         <LanguageProvider>
+          <AnnouncementBanner />
           {children}
           <Footer />
           {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
