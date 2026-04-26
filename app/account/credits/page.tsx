@@ -46,6 +46,10 @@ export default function CreditsPurchasePage() {
     text: string;
   } | null>(null);
 
+  // Web 端 ECPay 結帳:loading 中 pack id(避免 double-click)
+  const [ecpayLoading, setEcpayLoading] = useState<CreditPackId | null>(null);
+  const [ecpayError, setEcpayError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setAuthed(false);
@@ -145,6 +149,49 @@ export default function CreditsPurchasePage() {
   useEffect(() => {
     if (isTwa) setPlayReady(isPlayBillingAvailable());
   }, [isTwa]);
+
+  /**
+   * Web 端走 ECPay 結帳 —— 打 /api/billing/ecpay/checkout 拿 hub checkoutUrl,
+   * 然後 window.location.assign 跳過去(hub 會 auto-submit ECPay form)。
+   */
+  const handleEcpayCheckout = async (packId: CreditPackId) => {
+    if (!authed) {
+      setEcpayError(t("請先登入帳號再購買", "Please sign in before purchasing"));
+      return;
+    }
+    setEcpayLoading(packId);
+    setEcpayError(null);
+    try {
+      const res = await fetch("/api/billing/ecpay/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "credits", packId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setEcpayError(
+          t(
+            `下單失敗:${err.error ?? res.statusText}`,
+            `Checkout failed: ${err.error ?? res.statusText}`,
+          ),
+        );
+        return;
+      }
+      const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
+      // 跳到 hub checkout 頁,hub 會 auto-submit 到綠界
+      window.location.assign(checkoutUrl);
+    } catch (e) {
+      setEcpayError(
+        t(
+          `網路錯誤:${e instanceof Error ? e.message : String(e)}`,
+          `Network error: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    } finally {
+      // 跳轉中,通常使用者不會看到 loading 狀態被重置
+      setEcpayLoading(null);
+    }
+  };
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -306,6 +353,24 @@ export default function CreditsPurchasePage() {
           </div>
         )}
 
+        {/* ---- Web ECPay 錯誤訊息 ---- */}
+        {!isTwa && ecpayError && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: "1px solid rgba(248,113,113,0.5)",
+              background: "rgba(248,113,113,0.08)",
+              color: "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {ecpayError}
+          </div>
+        )}
+
         {/* ---- Currency switcher (web only) ---- */}
         {!isTwa && <CurrencySwitcher />}
 
@@ -423,26 +488,31 @@ export default function CreditsPurchasePage() {
                     if (isTwa) {
                       handlePlayPurchase(pack.id);
                     } else {
-                      setPendingPack(pack.id);
+                      handleEcpayCheckout(pack.id);
                     }
                   }}
-                  disabled={isTwa && (!playReady || playPurchasing !== null)}
+                  disabled={
+                    (isTwa && (!playReady || playPurchasing !== null)) ||
+                    (!isTwa && ecpayLoading === pack.id)
+                  }
                   className="btn-gold"
                   style={{
                     width: "100%",
                     padding: "10px 16px",
                     fontSize: 13,
                     opacity:
-                      isTwa && (!playReady || playPurchasing !== null)
+                      (isTwa && (!playReady || playPurchasing !== null)) ||
+                      (!isTwa && ecpayLoading === pack.id)
                         ? 0.5
                         : 1,
                     cursor:
-                      isTwa && (!playReady || playPurchasing !== null)
+                      (isTwa && (!playReady || playPurchasing !== null)) ||
+                      (!isTwa && ecpayLoading === pack.id)
                         ? "not-allowed"
                         : "pointer",
                   }}
                 >
-                  {playPurchasing === pack.id
+                  {playPurchasing === pack.id || ecpayLoading === pack.id
                     ? t("處理中…", "Processing…")
                     : t("購買", "Purchase")}
                 </button>

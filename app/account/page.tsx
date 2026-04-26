@@ -36,6 +36,79 @@ export default function AccountPage() {
   const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 取消訂閱
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const handleCancelSubscription = async () => {
+    if (!confirm(
+      t(
+        "確認取消訂閱?\n\n下一期不會再自動扣款,但你仍可使用會員權益直到目前已付期限結束。",
+        "Cancel subscription?\n\nNo further auto-renewal will occur, but you'll keep member benefits until the current period ends.",
+      ),
+    )) {
+      return;
+    }
+    setCancelLoading(true);
+    setCancelMessage(null);
+    try {
+      const res = await fetch("/api/billing/ecpay/cancel-subscription", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCancelMessage({
+          kind: "error",
+          text: t(
+            `取消失敗:${err.error ?? res.statusText}`,
+            `Cancel failed: ${err.error ?? res.statusText}`,
+          ),
+        });
+        return;
+      }
+      setCancelMessage({
+        kind: "success",
+        text: t(
+          "已取消下期續扣。會員權益維持到目前已付期限結束。",
+          "Auto-renewal canceled. Member benefits remain until current period ends.",
+        ),
+      });
+      // 重抓 summary 顯示新狀態
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { user: u2 } } = await supabase.auth.getUser();
+      if (u2) {
+        const { data } = await supabase
+          .from("user_subscription_summary")
+          .select("*")
+          .eq("user_id", u2.id)
+          .maybeSingle();
+        if (data) setSummary(data as SubscriptionSummary);
+      }
+    } catch (e) {
+      setCancelMessage({
+        kind: "error",
+        text: t(
+          `網路錯誤:${e instanceof Error ? e.message : String(e)}`,
+          `Network: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      });
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // 是否該顯示「取消訂閱」按鈕
+  // 條件:有效中(is_active) + 還沒被取消(status=active) + 是月/年訂閱(lifetime 不能取消,本來就一次付清)
+  const canCancelSubscription =
+    summary?.is_active === true &&
+    summary?.subscription_status === "active" &&
+    (summary?.subscription_plan === "monthly" ||
+      summary?.subscription_plan === "yearly");
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setIsLoading(false);
@@ -530,6 +603,49 @@ export default function AccountPage() {
           >
             {t("登出", "Sign Out")}
           </button>
+
+          {/* 取消訂閱 — 小、低調,只在有效中訂閱者出現 */}
+          {canCancelSubscription && (
+            <button
+              onClick={handleCancelSubscription}
+              disabled={cancelLoading}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 12px",
+                color: "rgba(192,192,208,0.4)",
+                fontSize: 11,
+                background: "none",
+                border: "none",
+                cursor: cancelLoading ? "not-allowed" : "pointer",
+                textDecoration: "underline",
+                opacity: cancelLoading ? 0.5 : 1,
+              }}
+              title={t(
+                "停止下期自動扣款。會員權益保留到目前期限結束。",
+                "Stop auto-renewal. Benefits keep until current period ends.",
+              )}
+            >
+              {cancelLoading
+                ? t("處理中…", "Processing…")
+                : t("取消訂閱(停止下期續扣)", "Cancel subscription (stop auto-renewal)")}
+            </button>
+          )}
+          {cancelMessage && (
+            <div
+              style={{
+                padding: "8px 12px",
+                fontSize: 11,
+                color:
+                  cancelMessage.kind === "success" ? "#6ee7b7" : "#fca5a5",
+                lineHeight: 1.5,
+              }}
+            >
+              {cancelMessage.text}
+            </div>
+          )}
+
           <Link
             href="/account/delete"
             style={{

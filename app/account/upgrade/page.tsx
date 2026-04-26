@@ -50,6 +50,49 @@ export default function UpgradePage() {
     text: string;
   } | null>(null);
 
+  // Web ECPay 訂閱結帳
+  const [ecpayLoading, setEcpayLoading] =
+    useState<SubscriptionPlanId | null>(null);
+  const [ecpayError, setEcpayError] = useState<string | null>(null);
+
+  const handleEcpaySubscribe = async (planId: SubscriptionPlanId) => {
+    if (planId === "lifetime") return; // 不販售
+    if (!authed) {
+      setEcpayError(t("請先登入帳號再訂閱", "Please sign in before subscribing"));
+      return;
+    }
+    setEcpayLoading(planId);
+    setEcpayError(null);
+    try {
+      const res = await fetch("/api/billing/ecpay/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "subscription", planId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setEcpayError(
+          t(
+            `下單失敗:${err.error ?? res.statusText}`,
+            `Checkout failed: ${err.error ?? res.statusText}`,
+          ),
+        );
+        return;
+      }
+      const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
+      window.location.assign(checkoutUrl);
+    } catch (e) {
+      setEcpayError(
+        t(
+          `網路錯誤:${e instanceof Error ? e.message : String(e)}`,
+          `Network error: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    } finally {
+      setEcpayLoading(null);
+    }
+  };
+
   const [playReady, setPlayReady] = useState(false);
   useEffect(() => {
     if (isTwa) setPlayReady(isPlayBillingAvailable());
@@ -279,6 +322,23 @@ export default function UpgradePage() {
 
         {/* ---- Currency switcher (web only) ---- */}
         {!isTwa && <CurrencySwitcher />}
+
+        {!isTwa && ecpayError && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: "1px solid rgba(248,113,113,0.5)",
+              background: "rgba(248,113,113,0.08)",
+              color: "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {ecpayError}
+          </div>
+        )}
         {/* 訂閱方案 grid 在 TWA + web 都顯示;onClick 行為依環境分流 */}
 
         {/* ---- Plan grid(TWA + web 都顯示) ---- */}
@@ -484,11 +544,12 @@ export default function UpgradePage() {
                       if (isTwa) {
                         handlePlayPurchaseSubscription(plan.id);
                       } else {
-                        setPendingPlan(plan.id);
+                        handleEcpaySubscribe(plan.id);
                       }
                     }}
                     disabled={
-                      isTwa && (!playReady || playPurchasing !== null)
+                      (isTwa && (!playReady || playPurchasing !== null)) ||
+                      (!isTwa && ecpayLoading === plan.id)
                     }
                     className="btn-gold"
                     style={{
@@ -496,16 +557,18 @@ export default function UpgradePage() {
                       padding: "10px 16px",
                       fontSize: 13,
                       opacity:
-                        isTwa && (!playReady || playPurchasing !== null)
+                        (isTwa && (!playReady || playPurchasing !== null)) ||
+                        (!isTwa && ecpayLoading === plan.id)
                           ? 0.5
                           : 1,
                       cursor:
-                        isTwa && (!playReady || playPurchasing !== null)
+                        (isTwa && (!playReady || playPurchasing !== null)) ||
+                        (!isTwa && ecpayLoading === plan.id)
                           ? "not-allowed"
                           : "pointer",
                     }}
                   >
-                    {playPurchasing === plan.id
+                    {playPurchasing === plan.id || ecpayLoading === plan.id
                       ? t("處理中…", "Processing…")
                       : t("選擇此方案", "Choose This Plan")}
                   </button>
