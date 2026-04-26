@@ -44,6 +44,11 @@ next-env.d.ts
 api key appbackend.txt
 *.key
 *.secret
+# 手動操作筆記容易夾帶 token / keystore 密碼,一律不 commit
+supabase/手動變成訂閱者.txt
+supabase/變回免費會員.txt
+supabase/*訂閱者*.txt
+supabase/*管理員*.txt
 
 # brand source assets(8MB+ 原檔,不進 git,改存本機/雲端硬碟)
 logo-source.png

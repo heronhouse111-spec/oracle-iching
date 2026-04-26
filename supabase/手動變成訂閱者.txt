@@ -98,13 +98,13 @@ Keystore path: C:\oracle-twa\android.keystore
 
 heronhouse111/oracle-iching
 
-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
+<GITHUB_PAT_REDACTED — 已於 2026-04-26 撤銷,新的請另存>
 
-Vercel Access Token 
-vcp_0QCUfTTcOpCozZYBqHVjM7ZoM88yL93LyMabUsAnGYUzEhox613hEaZ4
+Vercel Access Token
+<VERCEL_TOKEN_REDACTED — 已於 2026-04-26 撤銷>
 
  Project ID:prj_1UvcByLfb6gWnJxuAoeMZ2T2DxoQ
 
 Supabase Management API Token
-sbp_a113f896a59cff6090b4d5a9d40dfde7423e7d43
+<SUPABASE_MGMT_TOKEN_REDACTED — 已於 2026-04-26 撤銷>
 
