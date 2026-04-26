@@ -1,0 +1,339 @@
+/**
+ * Admin 後台 light theme — 對齊 heronhouse.me / pay.heronhouse.me 視覺
+ *
+ * 設計原則:
+ *   - 白色卡片 + 淺藍 dot grid 底紋(承襲 hub 的點陣科技感)
+ *   - 主色:海軍藍 #0f2748 / 中藍 #3b6fa3 / 點綴 #1e4272
+ *   - 文字:#0f1a2e 主 / #5a6a82 次 / #8a99b0 弱
+ *   - Sans-serif 為主(Noto Serif TC 用於標題仍保留東方氣息,但加重字重)
+ *
+ * 範圍:只在 /admin/* 路由生效(透過 .admin-light 包覆)。
+ * 前台的 mystic dark theme 完全不受影響。
+ */
+
+.admin-light {
+  /* 重新定義 admin 內的色彩 token */
+  --al-bg: #f4f7fb;
+  --al-bg-deep: #e6ecf5;
+  --al-surface: #ffffff;
+  --al-surface-alt: #fafcfe;
+  --al-border: #dbe3ee;
+  --al-border-strong: #c2d0e3;
+
+  --al-text: #0f1a2e;
+  --al-text-muted: #5a6a82;
+  --al-text-subtle: #8a99b0;
+
+  --al-brand-50: #eef4fa;
+  --al-brand-100: #dae8f3;
+  --al-brand-300: #7aa8d2;
+  --al-brand-500: #3b6fa3;
+  --al-brand-700: #1e4272;
+  --al-brand-800: #173256;
+  --al-brand-900: #0f2748;
+
+  --al-success: #1f7a43;
+  --al-success-bg: #e5f2eb;
+  --al-danger: #b93a3a;
+  --al-danger-bg: #f8e7e5;
+  --al-warn: #b87014;
+  --al-warn-bg: #fbf0d8;
+
+  --al-shadow-sm: 0 1px 2px rgba(15, 39, 72, 0.06);
+  --al-shadow-md:
+    0 1px 2px rgba(15, 39, 72, 0.06),
+    0 8px 24px -8px rgba(15, 39, 72, 0.14);
+
+  /* 覆蓋:bg + 字色 + dot grid 底紋 */
+  position: relative;
+  min-height: 100vh;
+  color: var(--al-text);
+  background-color: var(--al-bg);
+  background-image:
+    radial-gradient(
+      circle at center,
+      rgba(15, 39, 72, 0.07) 1px,
+      transparent 1.2px
+    ),
+    linear-gradient(180deg, var(--al-bg) 0%, var(--al-bg-deep) 100%);
+  background-size:
+    22px 22px,
+    100% 100%;
+  font-family:
+    "Inter", system-ui, -apple-system, "Segoe UI", "Noto Sans TC",
+    "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+
+/* ─── 把 mystic-card 替換為 hh-card 風格 ─── */
+.admin-light .mystic-card {
+  background: var(--al-surface) !important;
+  border: 1px solid var(--al-border) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--al-shadow-md) !important;
+  color: var(--al-text) !important;
+  backdrop-filter: none;
+}
+
+/* ─── 金色漸層文字改藍色漸層 ─── */
+.admin-light .text-gold-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--al-brand-900) 0%,
+    var(--al-brand-500) 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* ─── 金色按鈕改藍色 ─── */
+.admin-light .btn-gold {
+  background: linear-gradient(
+    135deg,
+    var(--al-brand-800) 0%,
+    var(--al-brand-500) 100%
+  ) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 4px 14px -4px rgba(15, 39, 72, 0.4) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-light .btn-gold:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 8px 20px -4px rgba(15, 39, 72, 0.5) !important;
+}
+
+/* ─── 表單元素 ─── */
+.admin-light input,
+.admin-light textarea,
+.admin-light select {
+  background: var(--al-surface) !important;
+  border: 1px solid var(--al-border-strong) !important;
+  color: var(--al-text) !important;
+  border-radius: 8px;
+}
+
+.admin-light input::placeholder,
+.admin-light textarea::placeholder {
+  color: var(--al-text-subtle) !important;
+}
+
+.admin-light input:focus,
+.admin-light textarea:focus,
+.admin-light select:focus {
+  outline: 2px solid rgba(59, 111, 163, 0.25) !important;
+  border-color: var(--al-brand-500) !important;
+}
+
+/* ─── 表格表頭 ─── */
+.admin-light table thead tr {
+  background: var(--al-brand-50) !important;
+  color: var(--al-text-muted) !important;
+}
+
+.admin-light table tbody tr {
+  border-top-color: var(--al-border) !important;
+}
+
+.admin-light table tbody tr:hover {
+  background: var(--al-surface-alt) !important;
+}
+
+/* ─── code / mono 文字 ─── */
+.admin-light code,
+.admin-light pre,
+.admin-light [style*="monospace"],
+.admin-light [style*='font-family: "Noto Serif TC"'] {
+  /* code 維持 mono;Noto Serif TC 標題用 admin 字色 */
+}
+
+.admin-light pre {
+  background: var(--al-surface-alt) !important;
+  color: var(--al-text) !important;
+  border: 1px solid var(--al-border) !important;
+  border-radius: 8px;
+}
+
+/* ─── 連結 ─── */
+.admin-light a {
+  color: var(--al-brand-700);
+}
+
+/* ─── 暗色文字 fallback(處理 inline rgba(192,192,208,…)) ─── */
+.admin-light [style*="rgba(192,192,208,0.85)"],
+.admin-light [style*="rgba(192,192,208,0.9)"] {
+  color: var(--al-text) !important;
+}
+.admin-light [style*="rgba(192,192,208,0.7)"],
+.admin-light [style*="rgba(192,192,208,0.75)"],
+.admin-light [style*="rgba(192,192,208,0.8)"] {
+  color: var(--al-text-muted) !important;
+}
+.admin-light [style*="rgba(192,192,208,0.5)"],
+.admin-light [style*="rgba(192,192,208,0.55)"],
+.admin-light [style*="rgba(192,192,208,0.6)"],
+.admin-light [style*="rgba(192,192,208,0.65)"] {
+  color: var(--al-text-muted) !important;
+}
+.admin-light [style*="rgba(192,192,208,0.4)"],
+.admin-light [style*="rgba(192,192,208,0.45)"] {
+  color: var(--al-text-subtle) !important;
+}
+
+/* ─── 金色 inline 改成藍 ─── */
+.admin-light [style*="color: #d4a855"],
+.admin-light [style*="color:#d4a855"] {
+  color: var(--al-brand-700) !important;
+}
+.admin-light [style*="background: rgba(212,168,85,0.06)"],
+.admin-light [style*="background: rgba(212,168,85,0.04)"],
+.admin-light [style*="background: rgba(212,168,85,0.05)"],
+.admin-light [style*="background: rgba(212,168,85,0.08)"],
+.admin-light [style*="background: rgba(212,168,85,0.10)"],
+.admin-light [style*="background: rgba(212,168,85,0.1)"],
+.admin-light [style*="background: rgba(212,168,85,0.12)"],
+.admin-light [style*="background: rgba(212,168,85,0.15)"] {
+  background: var(--al-brand-50) !important;
+}
+.admin-light [style*="border: 1px solid rgba(212,168,85"],
+.admin-light [style*="border:1px solid rgba(212,168,85"] {
+  border-color: var(--al-brand-100) !important;
+}
+
+/* ─── 暗背景 inline 改白 ─── */
+.admin-light [style*="background: rgba(13,13,43,0.5)"],
+.admin-light [style*="background:rgba(13,13,43,0.5)"] {
+  background: var(--al-surface) !important;
+}
+
+/* ─── 狀態色語意對齊 ─── */
+.admin-light [style*="color: #6ee7b7"],
+.admin-light [style*="color:#6ee7b7"] {
+  color: var(--al-success) !important;
+}
+.admin-light [style*="color: #fca5a5"],
+.admin-light [style*="color:#fca5a5"] {
+  color: var(--al-danger) !important;
+}
+.admin-light [style*="color: #ffd99a"],
+.admin-light [style*="color:#ffd99a"] {
+  color: var(--al-warn) !important;
+}
+
+.admin-light [style*="background: rgba(110,231,183"] {
+  background: var(--al-success-bg) !important;
+}
+.admin-light [style*="background: rgba(248,113,113"] {
+  background: var(--al-danger-bg) !important;
+}
+.admin-light [style*="background: rgba(255,176,72"] {
+  background: var(--al-warn-bg) !important;
+}
+
+/* ─── 邊框語意色 ─── */
+.admin-light [style*="border: 1px solid rgba(110,231,183"],
+.admin-light [style*="border-color: rgba(110,231,183"] {
+  border-color: rgba(31, 122, 67, 0.3) !important;
+}
+.admin-light [style*="border: 1px solid rgba(248,113,113"],
+.admin-light [style*="border-color: rgba(248,113,113"] {
+  border-color: rgba(185, 58, 58, 0.3) !important;
+}
+.admin-light [style*="border: 1px solid rgba(255,176,72"] {
+  border-color: rgba(184, 112, 20, 0.3) !important;
+}
+
+/* ─── AdminNav 配色 ─── */
+/* AdminNav 維持原本的深色玻璃 chrome,跟上方 Header 一致;
+   下方 admin 內容區才是 light surface — 這個對比讓導覽列像 app chrome,
+   主內容像 dashboard,跟 Stripe / Linear 等專業後台慣例一致。 */
+
+/* ─── Heading 字色保險 ─── */
+.admin-light h1:not(.text-gold-gradient),
+.admin-light h2:not(.text-gold-gradient),
+.admin-light h3:not(.text-gold-gradient) {
+  color: var(--al-text);
+}
+
+/* ─── Tailwind 自訂色覆蓋(dashboard StatCard / TrendChart 等使用) ─── */
+.admin-light [class*="text-mystic-silver/9"],
+.admin-light [class*="text-mystic-silver/8"] {
+  color: var(--al-text) !important;
+}
+.admin-light [class*="text-mystic-silver/7"],
+.admin-light [class*="text-mystic-silver/6"] {
+  color: var(--al-text-muted) !important;
+}
+.admin-light [class*="text-mystic-silver/5"],
+.admin-light [class*="text-mystic-silver/4"],
+.admin-light [class*="text-mystic-silver/3"] {
+  color: var(--al-text-subtle) !important;
+}
+.admin-light [class*="text-mystic-gold"] {
+  color: var(--al-brand-700) !important;
+}
+
+.admin-light [class*="border-mystic-gold"] {
+  border-color: var(--al-brand-100) !important;
+}
+.admin-light [class*="border-mystic-silver"] {
+  border-color: var(--al-border) !important;
+}
+
+/* StatCard 用 Tailwind gradient utilities,把 gold/silver 漸層改藍 */
+.admin-light [class*="from-mystic-gold"] {
+  --tw-gradient-from: rgba(59, 111, 163, 0.18) var(--tw-gradient-from-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.admin-light [class*="to-mystic-gold"] {
+  --tw-gradient-to: rgba(59, 111, 163, 0) var(--tw-gradient-to-position) !important;
+}
+.admin-light [class*="from-mystic-silver"] {
+  --tw-gradient-from: rgba(122, 168, 210, 0.18) var(--tw-gradient-from-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.admin-light [class*="to-mystic-silver"] {
+  --tw-gradient-to: rgba(122, 168, 210, 0) var(--tw-gradient-to-position) !important;
+}
+
+/* StatCard 用了 from-rose-400 / from-emerald-400 — 用語意色維持(警告/成功 視覺) */
+.admin-light [class*="from-rose-400"] {
+  --tw-gradient-from: rgba(185, 58, 58, 0.12) var(--tw-gradient-from-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.admin-light [class*="from-emerald-400"] {
+  --tw-gradient-from: rgba(31, 122, 67, 0.14) var(--tw-gradient-from-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+/* ─── Header(全站 chrome)在 admin 模式下也淡化一點 ─── */
+.admin-light + header,
+.admin-light header {
+  /* Header 現在是 fixed 在 body 上,不在 .admin-light 內。
+     如果未來想讓 admin Header 也變 light,可以在這裡 override,
+     或在 layout 加 body class 觸發 globals.css 的條件 styles。
+     目前先讓它維持原樣作為 app chrome 區隔。 */
+}
+
+/* ─── 白色卡片內也要記得處理 mystic-card 內的暗色文字 ─── */
+.admin-light .mystic-card .text-mystic-silver,
+.admin-light .mystic-card [class*="text-mystic-silver"] {
+  color: var(--al-text-muted) !important;
+}
+
+/* ─── 漸層光暈裝飾(部分 card 有 boxShadow:0 0 30px rgba(212,168,85)) ─── */
+.admin-light [style*="boxShadow"][style*="rgba(212,168,85"],
+.admin-light [style*="box-shadow"][style*="rgba(212,168,85"] {
+  box-shadow: var(--al-shadow-md) !important;
+}
+

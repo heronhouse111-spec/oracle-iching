@@ -2,7 +2,8 @@
 
 /**
  * Admin 共用頂部導覽列。所有 /admin/* 頁面都用這個。
- * 顯示在 main Header 下方,作為 sub-section navigation。
+ *
+ * 視覺對齊 heronhouse.me / pay.heronhouse.me — 白色玻璃 nav + 藍色 active state。
  */
 
 import Link from "next/link";
@@ -30,13 +31,15 @@ export default function AdminNav() {
 
   return (
     <nav
+      className="admin-nav"
       style={{
         position: "sticky",
         top: 64,
         zIndex: 10,
-        background: "rgba(10,10,26,0.85)",
-        backdropFilter: "blur(8px)",
-        borderBottom: "1px solid rgba(212,168,85,0.15)",
+        background: "rgba(255, 255, 255, 0.82)",
+        backdropFilter: "saturate(160%) blur(10px)",
+        WebkitBackdropFilter: "saturate(160%) blur(10px)",
+        borderBottom: "1px solid #dbe3ee",
         padding: "10px 16px",
         display: "flex",
         gap: 8,
@@ -58,11 +61,12 @@ export default function AdminNav() {
               fontSize: 12,
               borderRadius: 9999,
               textDecoration: "none",
-              border: `1px solid ${active ? "rgba(212,168,85,0.6)" : "rgba(192,192,208,0.15)"}`,
-              background: active ? "rgba(212,168,85,0.1)" : "transparent",
-              color: active ? "#d4a855" : "rgba(192,192,208,0.7)",
+              border: `1px solid ${active ? "#3b6fa3" : "#dbe3ee"}`,
+              background: active ? "#eef4fa" : "transparent",
+              color: active ? "#1e4272" : "#5a6a82",
               whiteSpace: "nowrap",
               fontWeight: active ? 600 : 400,
+              transition: "background 0.15s ease, color 0.15s ease",
             }}
           >
             <span aria-hidden style={{ marginRight: 6 }}>
