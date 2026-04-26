@@ -122,12 +122,14 @@ export async function POST(req: NextRequest) {
       periodType = "M";
       frequency = 1;
       execTimes = 99; // 上限,直到使用者取消
-      itemName = "易問會員(月)";
+      // ⚠ 不要用全形括號 ( )!綠界定期定額 server 對 ItemName 做字元過濾
+      // 後再算 hash,跟我們算的對不上會噴 CheckMacValue Error。改用簡單字元。
+      itemName = "易問月會員";
     } else if (body.planId === "yearly") {
       periodType = "Y";
       frequency = 1;
       execTimes = 9; // 綠界年扣最多 9 期
-      itemName = "易問會員(年)";
+      itemName = "易問年會員";
     } else {
       return NextResponse.json(
         { error: "validation", detail: `${body.planId} 不支援網頁訂閱(只有 monthly / yearly)` },
