@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import CurrencySwitcher from "@/components/CurrencySwitcher";
+import LoginOptionsModal from "@/components/LoginOptionsModal";
 import { useIsTWA } from "@/lib/env/useIsTWA";
 import { useCurrency } from "@/lib/geo/useCurrency";
 import {
@@ -55,10 +56,31 @@ export default function UpgradePage() {
     useState<SubscriptionPlanId | null>(null);
   const [ecpayError, setEcpayError] = useState<string | null>(null);
 
+  // 登入 modal 開關 + 「使用者剛剛點了哪個 plan」記下來
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingAfterLoginPlan, setPendingAfterLoginPlan] =
+    useState<SubscriptionPlanId | null>(null);
+
+  // 防止 autoSubscribe URL param 被多次觸發
+  const autoSubscribeTriggeredRef = useRef(false);
+
+  // 把 ?autoSubscribe=<planId> 推進 URL,讓 GSI window.location.reload()
+  // 那條登入路徑回來後 URL 還帶得到參數,autoSubscribe useEffect 才會觸發。
+  const openLoginModalForPlan = (planId: SubscriptionPlanId) => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("autoSubscribe", planId);
+      window.history.replaceState({}, "", url.toString());
+    }
+    setPendingAfterLoginPlan(planId);
+    setLoginModalOpen(true);
+  };
+
   const handleEcpaySubscribe = async (planId: SubscriptionPlanId) => {
     if (planId === "lifetime") return; // 不販售
     if (!authed) {
-      setEcpayError(t("請先登入帳號再訂閱", "Please sign in before subscribing"));
+      // 未登入 → 開登入 modal,登入完成後 autoSubscribe useEffect 自動續跑
+      openLoginModalForPlan(planId);
       return;
     }
     setEcpayLoading(planId);
@@ -108,10 +130,8 @@ export default function UpgradePage() {
       return;
     }
     if (!authed) {
-      setPlayToast({
-        kind: "error",
-        text: t("請先登入帳號再訂閱", "Please sign in before subscribing"),
-      });
+      // 未登入 → 開登入 modal
+      openLoginModalForPlan(planId);
       return;
     }
     setPlayPurchasing(planId);
@@ -176,6 +196,42 @@ export default function UpgradePage() {
       if (data) setCurrent(data as SubscriptionSummary);
     });
   }, []);
+
+  /**
+   * autoSubscribe URL 偵測:當使用者從登入頁回跳(URL 帶 ?autoSubscribe=<planId>),
+   * 且 authed === true,自動觸發對應訂閱流程(TWA → Play、web → ECPay)。
+   *
+   * 跑完(或已觸發過)就把 query string 從網址裡清掉,避免重整再跑一次。
+   */
+  useEffect(() => {
+    if (authed !== true) return;
+    if (autoSubscribeTriggeredRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    const autoSubscribe = url.searchParams.get("autoSubscribe");
+    if (!autoSubscribe) return;
+
+    const valid = (SUBSCRIPTION_PLANS as readonly { id: SubscriptionPlanId }[])
+      .some((p) => p.id === autoSubscribe && p.id !== "lifetime");
+    if (!valid) {
+      url.searchParams.delete("autoSubscribe");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    autoSubscribeTriggeredRef.current = true;
+    url.searchParams.delete("autoSubscribe");
+    window.history.replaceState({}, "", url.toString());
+
+    const planId = autoSubscribe as SubscriptionPlanId;
+    if (isTwa) {
+      void handlePlayPurchaseSubscription(planId);
+    } else {
+      void handleEcpaySubscribe(planId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, isTwa]);
 
   const mainStyle = {
     paddingTop: 80,
@@ -634,6 +690,34 @@ export default function UpgradePage() {
           </Link>
         </div>
       </main>
+
+      {/* ---- 登入 modal —— 未登入點「選擇此方案」時開啟,
+            next 帶 ?autoSubscribe=<planId>,登入完成後 useEffect 自動續跑 ---- */}
+      <LoginOptionsModal
+        open={loginModalOpen}
+        onClose={() => {
+          setLoginModalOpen(false);
+          setPendingAfterLoginPlan(null);
+          // 使用者放棄登入 → 把 ?autoSubscribe 從 URL 清掉
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has("autoSubscribe")) {
+              url.searchParams.delete("autoSubscribe");
+              window.history.replaceState({}, "", url.toString());
+            }
+          }
+        }}
+        next={
+          pendingAfterLoginPlan
+            ? `/account/upgrade?autoSubscribe=${pendingAfterLoginPlan}`
+            : "/account/upgrade"
+        }
+        title={t("登入即可完成訂閱", "Sign in to complete your subscription")}
+        subtitle={t(
+          "登入後會自動帶你進入訂閱結帳頁",
+          "We'll take you straight to checkout after sign-in"
+        )}
+      />
 
       {/* ---- "Coming soon" modal (web only — TWA has no purchase trigger) ---- */}
       {!isTwa && pendingPlan && (

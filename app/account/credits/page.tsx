@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import CurrencySwitcher from "@/components/CurrencySwitcher";
+import LoginOptionsModal from "@/components/LoginOptionsModal";
 import { useIsTWA } from "@/lib/env/useIsTWA";
 import { useCurrency } from "@/lib/geo/useCurrency";
 import {
@@ -49,6 +50,14 @@ export default function CreditsPurchasePage() {
   // Web 端 ECPay 結帳:loading 中 pack id(避免 double-click)
   const [ecpayLoading, setEcpayLoading] = useState<CreditPackId | null>(null);
   const [ecpayError, setEcpayError] = useState<string | null>(null);
+
+  // 登入 modal 開關 + 「使用者剛剛點了哪個 pack」記下來,登入完成後自動觸發
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingAfterLoginPack, setPendingAfterLoginPack] =
+    useState<CreditPackId | null>(null);
+
+  // 防止 autoBuy URL param 被多次觸發(StrictMode 雙呼叫 / 重渲染)
+  const autoBuyTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -97,13 +106,23 @@ export default function CreditsPurchasePage() {
    *   - 不打開「金流準備中」modal,直接觸發 Google 內建付款 UI
    *   - 成功後 backend 已補點,我們只要重抓餘額顯示
    */
+  // 把 ?autoBuy=<packId> 推進 URL,確保不論用 OAuth redirect / Email magic link
+  // / GSI window.location.reload() 哪一條登入路徑,登入完成後頁面 URL 都還帶這參數,
+  // autoBuy useEffect 才會觸發。
+  const openLoginModalForPack = (packId: CreditPackId) => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("autoBuy", packId);
+      window.history.replaceState({}, "", url.toString());
+    }
+    setPendingAfterLoginPack(packId);
+    setLoginModalOpen(true);
+  };
+
   const handlePlayPurchase = async (packId: CreditPackId) => {
     if (!authed) {
-      // 未登入,引導去登入
-      setPlayToast({
-        kind: "error",
-        text: t("請先登入帳號再購買", "Please sign in before purchasing"),
-      });
+      // 未登入 → 開登入 modal,登入完成後 autoBuy useEffect 會自動續跑
+      openLoginModalForPack(packId);
       return;
     }
     setPlayPurchasing(packId);
@@ -151,12 +170,57 @@ export default function CreditsPurchasePage() {
   }, [isTwa]);
 
   /**
+   * autoBuy URL 偵測:當使用者從登入頁回跳(URL 帶 ?autoBuy=<packId>),
+   * 且 authed === true,自動觸發對應結帳流程(TWA → Play、web → ECPay)。
+   *
+   * 跑完(或已觸發過)就把 query string 從網址裡清掉,避免重整再跑一次。
+   * 用 useRef 確保整個 page 生命週期只執行一次。
+   */
+  useEffect(() => {
+    if (authed !== true) return;
+    if (autoBuyTriggeredRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    const autoBuy = url.searchParams.get("autoBuy");
+    if (!autoBuy) return;
+
+    const valid = (CREDIT_PACKS as readonly { id: CreditPackId }[]).some(
+      (p) => p.id === autoBuy
+    );
+    if (!valid) {
+      // 無效值,直接清掉 query
+      url.searchParams.delete("autoBuy");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    autoBuyTriggeredRef.current = true;
+    // 先把 URL 上的 autoBuy 拿掉,避免使用者按上一頁 / 重整時重打
+    url.searchParams.delete("autoBuy");
+    window.history.replaceState({}, "", url.toString());
+
+    // TWA / web 分流(注意:TWA 不會走這個 flow,因為 LoginOptionsModal
+    // 在 TWA 內開 Google OAuth 大多數情況也能成功;但保險起見兩條都接)
+    const packId = autoBuy as CreditPackId;
+    if (isTwa) {
+      void handlePlayPurchase(packId);
+    } else {
+      void handleEcpayCheckout(packId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, isTwa]);
+
+  /**
    * Web 端走 ECPay 結帳 —— 打 /api/billing/ecpay/checkout 拿 hub checkoutUrl,
    * 然後 window.location.assign 跳過去(hub 會 auto-submit ECPay form)。
    */
   const handleEcpayCheckout = async (packId: CreditPackId) => {
     if (!authed) {
-      setEcpayError(t("請先登入帳號再購買", "Please sign in before purchasing"));
+      // 未登入 → 開登入 modal。LoginOptionsModal 會帶 next=/account/credits?autoBuy=<id>,
+      // 而我們同時把 autoBuy 寫進當前 URL —— 兩道保險,確保 OAuth redirect / Email link
+      // / GSI reload 三條路徑回來後,autoBuy useEffect 都能自動續跑結帳
+      openLoginModalForPack(packId);
       return;
     }
     setEcpayLoading(packId);
@@ -281,28 +345,31 @@ export default function CreditsPurchasePage() {
           </div>
         )}
 
-        {/* ---- Signed-out hint ---- */}
+        {/* ---- Signed-out hint ----
+            未登入時提供柔和的提示;真正觸發登入是在點「購買」時,
+            handleEcpayCheckout / handlePlayPurchase 會自動開 LoginOptionsModal,
+            登入完成後 autoBuy useEffect 自動續跑結帳。所以不要顯示紅框錯誤訊息。 */}
         {authed === false && (
           <div
             className="mystic-card"
             style={{
-              padding: 16,
-              marginBottom: 24,
+              padding: 14,
+              marginBottom: 20,
               textAlign: "center",
-              background: "rgba(212,168,85,0.05)",
-              border: "1px solid rgba(212,168,85,0.25)",
+              background: "rgba(212,168,85,0.04)",
+              border: "1px solid rgba(212,168,85,0.18)",
             }}
           >
             <span
               style={{
-                color: "rgba(212,168,85,0.9)",
+                color: "rgba(212,168,85,0.85)",
                 fontSize: 12,
                 lineHeight: 1.7,
               }}
             >
               {t(
-                "登入後可查看目前餘額、下次補點時間",
-                "Sign in to see your current balance and next refill date"
+                "點擊購買即可登入並完成付款",
+                "Tap a pack to sign in and complete checkout"
               )}
             </span>
           </div>
@@ -577,6 +644,34 @@ export default function CreditsPurchasePage() {
           </Link>
         </div>
       </main>
+
+      {/* ---- 登入 modal —— 未登入點「購買」時開啟,
+            next 帶 ?autoBuy=<packId>,登入完 callback 跳回後 autoBuy useEffect 自動續跑 ---- */}
+      <LoginOptionsModal
+        open={loginModalOpen}
+        onClose={() => {
+          setLoginModalOpen(false);
+          setPendingAfterLoginPack(null);
+          // 使用者放棄登入 → 把 ?autoBuy 從 URL 清掉,避免下次重整還會觸發
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has("autoBuy")) {
+              url.searchParams.delete("autoBuy");
+              window.history.replaceState({}, "", url.toString());
+            }
+          }
+        }}
+        next={
+          pendingAfterLoginPack
+            ? `/account/credits?autoBuy=${pendingAfterLoginPack}`
+            : "/account/credits"
+        }
+        title={t("登入即可完成購買", "Sign in to complete your purchase")}
+        subtitle={t(
+          "登入後會自動帶你進入結帳頁",
+          "We'll take you straight to checkout after sign-in"
+        )}
+      />
 
       {/* ---- "Coming soon" modal (web only — TWA has no purchase trigger) ---- */}
       {!isTwa && pendingPack && (
