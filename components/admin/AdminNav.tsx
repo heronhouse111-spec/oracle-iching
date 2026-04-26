@@ -18,8 +18,11 @@ const ITEMS: NavItem[] = [
   { href: "/admin", label: "首頁", emoji: "🏠" },
   { href: "/admin/users", label: "使用者", emoji: "👥" },
   { href: "/admin/pricing", label: "方案 / 金額", emoji: "💰" },
+  { href: "/admin/promo-codes", label: "促銷碼", emoji: "🎟️" },
   { href: "/admin/announcements", label: "公告", emoji: "📢" },
   { href: "/admin/flags", label: "Feature Flags", emoji: "🚩" },
+  { href: "/admin/audit-log", label: "Audit Log", emoji: "🔍" },
+  { href: "/admin/admins", label: "管理員", emoji: "👮" },
 ];
 
 export default function AdminNav() {

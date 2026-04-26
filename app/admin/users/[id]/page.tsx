@@ -20,6 +20,10 @@ interface UserDetail {
     is_admin: boolean | null;
     credits_balance: number;
     credits_refills_at: string | null;
+    role?: "user" | "support" | "admin" | "super_admin";
+    banned?: boolean;
+    banned_reason?: string | null;
+    banned_at?: string | null;
   };
   subscription: {
     plan: string;
@@ -64,6 +68,11 @@ export default function AdminUserDetailPage() {
   const [grantError, setGrantError] = useState<string | null>(null);
   const [grantSuccess, setGrantSuccess] = useState<string | null>(null);
 
+  // ban modal state
+  const [banOpen, setBanOpen] = useState(false);
+  const [banReason, setBanReason] = useState("");
+  const [banBusy, setBanBusy] = useState(false);
+
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
@@ -90,6 +99,42 @@ export default function AdminUserDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleBan = async () => {
+    if (banReason.trim().length < 4) {
+      alert("封鎖原因至少 4 字");
+      return;
+    }
+    setBanBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/ban`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: banReason.trim() }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        alert(j.detail ?? j.error);
+        return;
+      }
+      setBanOpen(false);
+      setBanReason("");
+      await load();
+    } finally {
+      setBanBusy(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!confirm("確定解除封鎖?")) return;
+    const res = await fetch(`/api/admin/users/${id}/ban`, { method: "DELETE" });
+    if (!res.ok) {
+      const j = await res.json();
+      alert(j.detail ?? j.error);
+      return;
+    }
+    await load();
+  };
 
   const handleGrant = async () => {
     setGrantError(null);
@@ -206,8 +251,8 @@ export default function AdminUserDetailPage() {
                   <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginTop: 6 }}>
                     UID: <code>{data.profile.id}</code>
                   </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 10, fontSize: 11 }}>
-                    {data.profile.is_admin && (
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, fontSize: 11, flexWrap: "wrap" }}>
+                    {data.profile.role && data.profile.role !== "user" && (
                       <span
                         style={{
                           padding: "3px 8px",
@@ -215,9 +260,24 @@ export default function AdminUserDetailPage() {
                           background: "rgba(212,168,85,0.15)",
                           border: "1px solid rgba(212,168,85,0.4)",
                           color: "#d4a855",
+                          textTransform: "uppercase",
                         }}
                       >
-                        ADMIN
+                        {data.profile.role}
+                      </span>
+                    )}
+                    {data.profile.banned && (
+                      <span
+                        style={{
+                          padding: "3px 8px",
+                          borderRadius: 9999,
+                          background: "rgba(248,113,113,0.15)",
+                          border: "1px solid rgba(248,113,113,0.4)",
+                          color: "#fca5a5",
+                        }}
+                        title={data.profile.banned_reason ?? ""}
+                      >
+                        🚫 BANNED
                       </span>
                     )}
                     {data.subscription?.is_active && (
@@ -248,13 +308,46 @@ export default function AdminUserDetailPage() {
                   >
                     ✦ {data.profile.credits_balance}
                   </div>
-                  <button
-                    onClick={() => setGrantOpen(true)}
-                    className="btn-gold"
-                    style={{ marginTop: 8, padding: "8px 18px", fontSize: 13 }}
-                  >
-                    補 / 扣點
-                  </button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setGrantOpen(true)}
+                      className="btn-gold"
+                      style={{ padding: "8px 18px", fontSize: 13 }}
+                    >
+                      補 / 扣點
+                    </button>
+                    {data.profile.banned ? (
+                      <button
+                        onClick={handleUnban}
+                        style={{
+                          padding: "8px 18px",
+                          fontSize: 13,
+                          borderRadius: 9999,
+                          border: "1px solid rgba(110,231,183,0.4)",
+                          background: "rgba(110,231,183,0.08)",
+                          color: "#6ee7b7",
+                          cursor: "pointer",
+                        }}
+                      >
+                        解封
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setBanOpen(true)}
+                        style={{
+                          padding: "8px 18px",
+                          fontSize: 13,
+                          borderRadius: 9999,
+                          border: "1px solid rgba(248,113,113,0.4)",
+                          background: "rgba(248,113,113,0.08)",
+                          color: "#fca5a5",
+                          cursor: "pointer",
+                        }}
+                      >
+                        🚫 封鎖
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -496,6 +589,96 @@ export default function AdminUserDetailPage() {
                   }}
                 >
                   {grantBusy ? "處理中…" : "確認執行"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Ban modal ─── */}
+        {banOpen && (
+          <div
+            onClick={() => setBanOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.7)",
+              backdropFilter: "blur(4px)",
+              zIndex: 1000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mystic-card"
+              style={{ padding: 24, maxWidth: 420, width: "100%" }}
+            >
+              <h3 style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 18, color: "#fca5a5", marginBottom: 12 }}>
+                🚫 封鎖使用者
+              </h3>
+              <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginBottom: 16 }}>
+                封鎖後該帳號無法占卜、無法購買點數 / 訂閱。可隨時解封。
+                <br />
+                ⚠ 不能封鎖 admin / support 角色帳號。
+              </p>
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                封鎖原因(必填,≥4 字)
+              </label>
+              <textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                rows={3}
+                placeholder="例如:濫用 AI、洗排行榜、客訴未處理"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(248,113,113,0.3)",
+                  background: "rgba(13,13,43,0.5)",
+                  color: "#e8e8f0",
+                  fontSize: 13,
+                  resize: "none",
+                  marginBottom: 12,
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                }}
+              />
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setBanOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleBan}
+                  disabled={banBusy}
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(248,113,113,0.5)",
+                    background: "rgba(248,113,113,0.15)",
+                    color: "#fca5a5",
+                    cursor: banBusy ? "wait" : "pointer",
+                    opacity: banBusy ? 0.6 : 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  {banBusy ? "處理中…" : "確認封鎖"}
                 </button>
               </div>
             </div>
