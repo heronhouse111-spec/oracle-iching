@@ -7,6 +7,22 @@ SET subscription_status     = 'active',
 WHERE id = (SELECT id FROM auth.users WHERE email = 'heronhouse111@gmail.com');
 
 
+https://xpijubxjokrpysrpjrct.storage.supabase.co/storage/v1/s3
+
+ap-southeast-1
+
+Access keys
+
+09267847814159388a72329ae7224a8d
+
+7759a5f08959e4b74b9ad4e5360555f53cb0ceabdf4924cea13898e7d0d552b7
+
+
+data base pass
+
+?FV.86zpA&SyKd7
+
+
 -- 測完後把自己關回免費
 UPDATE public.profiles
 SET subscription_status     = 'free',
@@ -80,5 +96,15 @@ Keystore path: C:\oracle-twa\android.keystore
   Package: me.heronhouse.oracle
 
 
+heronhouse111/oracle-iching
 
+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
+
+Vercel Access Token 
+vcp_0QCUfTTcOpCozZYBqHVjM7ZoM88yL93LyMabUsAnGYUzEhox613hEaZ4
+
+ Project ID:prj_1UvcByLfb6gWnJxuAoeMZ2T2DxoQ
+
+Supabase Management API Token
+sbp_a113f896a59cff6090b4d5a9d40dfde7423e7d43
 

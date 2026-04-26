@@ -573,7 +573,7 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
               letterSpacing: 1,
             }}
           >
-            oracle.heronhouse.me
+            heronhouse.me
           </span>
         </div>
       </div>
@@ -612,7 +612,7 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
                   whiteSpace: "nowrap",
                 }}
               >
-                oracle.heronhouse.me
+                heronhouse.me
               </div>
             ))}
           </div>

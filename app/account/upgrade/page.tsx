@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
-import TwaPurchaseNotice from "@/components/TwaPurchaseNotice";
 import CurrencySwitcher from "@/components/CurrencySwitcher";
 import { useIsTWA } from "@/lib/env/useIsTWA";
 import { useCurrency } from "@/lib/geo/useCurrency";
@@ -17,6 +16,10 @@ import {
   priceOf,
   type SubscriptionPlanId,
 } from "@/lib/pricing";
+import {
+  isPlayBillingAvailable,
+  purchaseSubscription,
+} from "@/lib/billing/playBilling";
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -38,6 +41,74 @@ export default function UpgradePage() {
   const [pendingPlan, setPendingPlan] = useState<SubscriptionPlanId | null>(
     null
   );
+
+  // Play Billing 處理中(顯示 loading + disable 按鈕)
+  const [playPurchasing, setPlayPurchasing] =
+    useState<SubscriptionPlanId | null>(null);
+  const [playToast, setPlayToast] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const [playReady, setPlayReady] = useState(false);
+  useEffect(() => {
+    if (isTwa) setPlayReady(isPlayBillingAvailable());
+  }, [isTwa]);
+
+  const handlePlayPurchaseSubscription = async (planId: SubscriptionPlanId) => {
+    if (planId === "lifetime") {
+      // Play Billing 不支援 lifetime,UI 不該觸發到這
+      setPlayToast({
+        kind: "error",
+        text: t("終身方案不在此提供", "Lifetime not available here"),
+      });
+      return;
+    }
+    if (!authed) {
+      setPlayToast({
+        kind: "error",
+        text: t("請先登入帳號再訂閱", "Please sign in before subscribing"),
+      });
+      return;
+    }
+    setPlayPurchasing(planId);
+    setPlayToast(null);
+    try {
+      const result = await purchaseSubscription(planId);
+      if (!result.ok) {
+        if (result.code === "user_canceled") return;
+        setPlayToast({
+          kind: "error",
+          text: t(`訂閱失敗:${result.error}`, `Subscribe failed: ${result.error}`),
+        });
+        return;
+      }
+      // 重抓訂閱狀態
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from("user_subscription_summary")
+            .select("subscription_status, subscription_plan, is_active")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (data) setCurrent(data as SubscriptionSummary);
+        }
+      } catch {
+        /* noop */
+      }
+      setPlayToast({
+        kind: "success",
+        text: t("訂閱成功!權益已啟用", "Subscribed — benefits active"),
+      });
+    } finally {
+      setPlayPurchasing(null);
+    }
+  };
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -164,13 +235,54 @@ export default function UpgradePage() {
 
         {/* ---- TWA guard: Play Billing policy compliance ----
              Play 上架的 TWA 殼內不可顯示 in-app purchase UI。      */}
-        {isTwa && <TwaPurchaseNotice kind="subscription" />}
+        {/* TWA toast */}
+        {isTwa && playToast && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: `1px solid ${
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.5)"
+                  : "rgba(248,113,113,0.5)"
+              }`,
+              background:
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.08)"
+                  : "rgba(248,113,113,0.08)",
+              color: playToast.kind === "success" ? "#6ee7b7" : "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {playToast.text}
+          </div>
+        )}
+        {isTwa && !playReady && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              fontSize: 12,
+              color: "rgba(192,192,208,0.7)",
+            }}
+          >
+            {t(
+              "正在初始化付款服務,請稍候…",
+              "Initializing payment service, please wait…"
+            )}
+          </div>
+        )}
 
         {/* ---- Currency switcher (web only) ---- */}
         {!isTwa && <CurrencySwitcher />}
+        {/* 訂閱方案 grid 在 TWA + web 都顯示;onClick 行為依環境分流 */}
 
-        {/* ---- Plan grid (web only) ---- */}
-        {!isTwa && (
+        {/* ---- Plan grid(TWA + web 都顯示) ---- */}
+        {(
         <div
           style={{
             display: "grid",
@@ -349,17 +461,53 @@ export default function UpgradePage() {
                   >
                     ✓ {t("目前方案", "Current Plan")}
                   </button>
+                ) : plan.id === "lifetime" ? (
+                  // 終身方案不再販售(網頁也已隱藏);留按鈕避免破版,點擊無動作
+                  <button
+                    disabled
+                    style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      borderRadius: 9999,
+                      border: "1px solid rgba(192,192,208,0.2)",
+                      background: "transparent",
+                      color: "rgba(192,192,208,0.4)",
+                      fontSize: 13,
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {t("已停售", "Discontinued")}
+                  </button>
                 ) : (
                   <button
-                    onClick={() => setPendingPlan(plan.id)}
+                    onClick={() => {
+                      if (isTwa) {
+                        handlePlayPurchaseSubscription(plan.id);
+                      } else {
+                        setPendingPlan(plan.id);
+                      }
+                    }}
+                    disabled={
+                      isTwa && (!playReady || playPurchasing !== null)
+                    }
                     className="btn-gold"
                     style={{
                       width: "100%",
                       padding: "10px 16px",
                       fontSize: 13,
+                      opacity:
+                        isTwa && (!playReady || playPurchasing !== null)
+                          ? 0.5
+                          : 1,
+                      cursor:
+                        isTwa && (!playReady || playPurchasing !== null)
+                          ? "not-allowed"
+                          : "pointer",
                     }}
                   >
-                    {t("選擇此方案", "Choose This Plan")}
+                    {playPurchasing === plan.id
+                      ? t("處理中…", "Processing…")
+                      : t("選擇此方案", "Choose This Plan")}
                   </button>
                 )}
               </div>
@@ -368,8 +516,8 @@ export default function UpgradePage() {
         </div>
         )}
 
-        {/* ---- Footer links (web only) ---- */}
-        {!isTwa && (
+        {/* ---- Footer links(TWA + web 都顯示) ---- */}
+        {(
         <div
           className="mystic-card"
           style={{

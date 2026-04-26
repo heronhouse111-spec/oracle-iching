@@ -15,9 +15,11 @@
  */
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useIsTWA } from "@/lib/env/useIsTWA";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -40,10 +42,19 @@ function detectPlatform(): Platform {
 
 export default function InstallPage() {
   const { t } = useLanguage();
+  const router = useRouter();
+  const isTwa = useIsTWA();
   const [platform, setPlatform] = useState<Platform>("other");
   const [deferredEvent, setDeferredEvent] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+
+  // TWA 內已經是 app 了,不需要再看「如何加到主畫面」教學;
+  // 而且這頁有露出 oracle.heronhouse.me URL,Play 政策不允許出現。
+  // 一進來直接導回首頁。
+  useEffect(() => {
+    if (isTwa) router.replace("/");
+  }, [isTwa, router]);
 
   useEffect(() => {
     setPlatform(detectPlatform());
@@ -73,6 +84,9 @@ export default function InstallPage() {
     }
     setDeferredEvent(null);
   };
+
+  // TWA 內不渲染任何內容(避免 oracle.heronhouse.me URL 在 redirect 前閃出)
+  if (isTwa) return null;
 
   return (
     <div style={{ minHeight: "100vh" }}>

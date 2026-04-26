@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { useIsTWA } from "@/lib/env/useIsTWA";
 
 export interface InsufficientCreditsModalProps {
   open: boolean;
@@ -14,10 +13,15 @@ export interface InsufficientCreditsModalProps {
 /**
  * 點數不足 modal —— 402 從 /api/divine|tarot|chat 回來時由 page.tsx 觸發顯示。
  *
- * 三個選項:
- *   1. 升級訂閱 —— 連到 /account/upgrade
- *   2. 購買點數包 —— 連到 /account/credits
- *   3. 看廣告領點 —— 灰掉(Phase D 才接 AdMob,現在只放 placeholder)
+ * UI 不分 TWA / web,一律顯示「升級訂閱 / 購買點數」CTA:
+ *   - TWA 環境:點下去進到 /account/upgrade 或 /account/credits,
+ *               那兩頁會走 Play Billing(Digital Goods API)
+ *   - Web 環境:點下去進到同樣的頁面,但走網頁版的 ECPay 流程
+ *
+ * 為什麼不分 TWA / web:
+ *   Google Play 的 anti-steering 政策禁止 TWA 內出現「請到網頁版購買」這類訊息。
+ *   舊版本曾經放過顯示 oracle.heronhouse.me URL 的 TWA 分支,**已移除**。
+ *   現在 TWA 內的購買流程是用 Play Billing,所以 CTA 直接點下去就 OK。
  */
 export default function InsufficientCreditsModal({
   open,
@@ -25,7 +29,6 @@ export default function InsufficientCreditsModal({
   onClose,
 }: InsufficientCreditsModalProps) {
   const { t } = useLanguage();
-  const isTwa = useIsTWA();
 
   // ESC 關閉
   useEffect(() => {
@@ -104,123 +107,65 @@ export default function InsufficientCreditsModal({
           )}
         </p>
 
-        {isTwa ? (
-          // ---- TWA 版本:Play Billing 合規,純文字告知,不放購買 CTA ----
-          <div
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* 升級訂閱 —— 主要 CTA */}
+          <Link
+            href="/account/upgrade"
+            onClick={onClose}
             style={{
-              padding: "14px 14px 16px",
+              display: "block",
+              padding: "11px 16px",
               borderRadius: 10,
-              border: "1px solid rgba(212,168,85,0.25)",
-              background: "rgba(212,168,85,0.05)",
-              textAlign: "center",
+              background: "linear-gradient(135deg, #d4a855 0%, #b88a3f 100%)",
+              color: "#1a1530",
+              fontWeight: 700,
+              fontSize: 14,
+              textDecoration: "none",
             }}
           >
-            <p
-              style={{
-                color: "rgba(192,192,208,0.8)",
-                fontSize: 12,
-                lineHeight: 1.7,
-                margin: "0 0 10px 0",
-              }}
-            >
-              {t(
-                "點數與訂閱管理僅於網頁版開放。請在瀏覽器前往:",
-                "Credit purchase and subscription are web-only. Please open in your browser:"
-              )}
-            </p>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "6px 14px",
-                borderRadius: 8,
-                border: "1px solid rgba(212,168,85,0.35)",
-                color: "#d4a855",
-                fontFamily: "'SF Mono', Menlo, monospace",
-                fontSize: 13,
-                userSelect: "all",
-              }}
-            >
-              oracle.heronhouse.me
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                display: "block",
-                margin: "14px auto 0",
-                padding: "8px 22px",
-                borderRadius: 9999,
-                border: "1px solid rgba(192,192,208,0.3)",
-                background: "none",
-                color: "rgba(192,192,208,0.8)",
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              {t("了解", "Got it")}
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* 升級訂閱 —— 主要 CTA */}
-            <Link
-              href="/account/upgrade"
-              onClick={onClose}
-              style={{
-                display: "block",
-                padding: "11px 16px",
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #d4a855 0%, #b88a3f 100%)",
-                color: "#1a1530",
-                fontWeight: 700,
-                fontSize: 14,
-                textDecoration: "none",
-              }}
-            >
-              {t("升級訂閱 · 每月補點數", "Upgrade · Monthly Refill")}
-            </Link>
+            {t("升級訂閱 · 每月補點數", "Upgrade · Monthly Refill")}
+          </Link>
 
-            {/* 購買點數包 —— 次要 */}
-            <Link
-              href="/account/credits"
-              onClick={onClose}
-              style={{
-                display: "block",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid rgba(212,168,85,0.35)",
-                color: "#d4a855",
-                fontWeight: 600,
-                fontSize: 13,
-                textDecoration: "none",
-                background: "none",
-              }}
-            >
-              {t("購買點數包", "Buy Credit Pack")}
-            </Link>
+          {/* 購買點數包 —— 次要 */}
+          <Link
+            href="/account/credits"
+            onClick={onClose}
+            style={{
+              display: "block",
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid rgba(212,168,85,0.35)",
+              color: "#d4a855",
+              fontWeight: 600,
+              fontSize: 13,
+              textDecoration: "none",
+              background: "none",
+            }}
+          >
+            {t("購買點數包", "Buy Credit Pack")}
+          </Link>
 
-            {/* 看廣告領點 —— Phase D 才接,先灰掉 */}
-            <button
-              type="button"
-              disabled
-              title={t("即將推出", "Coming soon")}
-              style={{
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid rgba(192,192,208,0.15)",
-                color: "rgba(192,192,208,0.4)",
-                fontSize: 13,
-                background: "none",
-                cursor: "not-allowed",
-              }}
-            >
-              {t(
-                "看廣告領點數（即將推出）",
-                "Watch Ad for Credits (Coming soon)"
-              )}
-            </button>
-          </div>
-        )}
+          {/* 看廣告領點 —— Phase D 才接,先灰掉 */}
+          <button
+            type="button"
+            disabled
+            title={t("即將推出", "Coming soon")}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid rgba(192,192,208,0.15)",
+              color: "rgba(192,192,208,0.4)",
+              fontSize: 13,
+              background: "none",
+              cursor: "not-allowed",
+            }}
+          >
+            {t(
+              "看廣告領點數(即將推出)",
+              "Watch Ad for Credits (Coming soon)"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

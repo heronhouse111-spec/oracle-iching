@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
-import TwaPurchaseNotice from "@/components/TwaPurchaseNotice";
 import CurrencySwitcher from "@/components/CurrencySwitcher";
 import { useIsTWA } from "@/lib/env/useIsTWA";
 import { useCurrency } from "@/lib/geo/useCurrency";
@@ -13,6 +12,10 @@ import {
   formatPriceOf,
   type CreditPackId,
 } from "@/lib/pricing";
+import {
+  isPlayBillingAvailable,
+  purchaseCreditPack,
+} from "@/lib/billing/playBilling";
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -34,6 +37,14 @@ export default function CreditsPurchasePage() {
   const [balance, setBalance] = useState<number | null>(null);
   const [refillsAt, setRefillsAt] = useState<string | null>(null);
   const [pendingPack, setPendingPack] = useState<CreditPackId | null>(null);
+
+  // Play Billing 進行中的 pack id(顯示 loading + disable 按鈕)
+  const [playPurchasing, setPlayPurchasing] = useState<CreditPackId | null>(null);
+  // Play Billing 成功 / 失敗訊息
+  const [playToast, setPlayToast] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -75,6 +86,65 @@ export default function CreditsPurchasePage() {
       { year: "numeric", month: "long", day: "numeric" }
     );
   };
+
+  /**
+   * TWA 殼內透過 Play Billing 購買點數。
+   * 跟 web 不同:
+   *   - 不打開「金流準備中」modal,直接觸發 Google 內建付款 UI
+   *   - 成功後 backend 已補點,我們只要重抓餘額顯示
+   */
+  const handlePlayPurchase = async (packId: CreditPackId) => {
+    if (!authed) {
+      // 未登入,引導去登入
+      setPlayToast({
+        kind: "error",
+        text: t("請先登入帳號再購買", "Please sign in before purchasing"),
+      });
+      return;
+    }
+    setPlayPurchasing(packId);
+    setPlayToast(null);
+    try {
+      const result = await purchaseCreditPack(packId);
+      if (!result.ok) {
+        if (result.code === "user_canceled") {
+          // 使用者自己取消,不顯示錯誤
+          return;
+        }
+        setPlayToast({
+          kind: "error",
+          text: t(
+            `購買失敗:${result.error}`,
+            `Purchase failed: ${result.error}`
+          ),
+        });
+        return;
+      }
+      // 成功 → 重抓餘額
+      try {
+        const res = await fetch("/api/credits/balance", { cache: "no-store" });
+        if (res.ok) {
+          const data: BalanceResponse = await res.json();
+          setBalance(data.balance);
+          setRefillsAt(data.refillsAt);
+        }
+      } catch {
+        /* 餘額拉失敗也沒關係,下次重整就有 */
+      }
+      setPlayToast({
+        kind: "success",
+        text: t("購買成功!點數已補入帳號", "Purchase complete — credits added"),
+      });
+    } finally {
+      setPlayPurchasing(null);
+    }
+  };
+
+  // TWA 環境下偵測 Play Billing 是否可用(有些舊版 Chrome 沒 Digital Goods API)
+  const [playReady, setPlayReady] = useState(false);
+  useEffect(() => {
+    if (isTwa) setPlayReady(isPlayBillingAvailable());
+  }, [isTwa]);
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -191,16 +261,56 @@ export default function CreditsPurchasePage() {
           </div>
         )}
 
-        {/* ---- TWA guard: Play Billing policy compliance ----
-             在 Play 上架的 TWA 殼內不能出現 in-app purchase UI,
-             否則 100% 會被 Google Play 下架。                      */}
-        {isTwa && <TwaPurchaseNotice kind="credits" />}
+        {/* ---- TWA toast(購買結果通知) ---- */}
+        {isTwa && playToast && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: `1px solid ${
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.5)"
+                  : "rgba(248,113,113,0.5)"
+              }`,
+              background:
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.08)"
+                  : "rgba(248,113,113,0.08)",
+              color:
+                playToast.kind === "success" ? "#6ee7b7" : "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {playToast.text}
+          </div>
+        )}
+
+        {/* ---- TWA: Play Billing 不可用警示 ---- */}
+        {isTwa && !playReady && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              fontSize: 12,
+              color: "rgba(192,192,208,0.7)",
+            }}
+          >
+            {t(
+              "正在初始化付款服務,請稍候…",
+              "Initializing payment service, please wait…"
+            )}
+          </div>
+        )}
 
         {/* ---- Currency switcher (web only) ---- */}
         {!isTwa && <CurrencySwitcher />}
 
-        {/* ---- Pack grid (web only) ---- */}
-        {!isTwa && (
+        {/* ---- Pack grid (TWA + web 都顯示;onClick 行為依環境分流) ---- */}
+        {(
         <div
           style={{
             display: "grid",
@@ -304,18 +414,37 @@ export default function CreditsPurchasePage() {
                     marginBottom: 16,
                   }}
                 >
+                  {/* TWA 內價格由 Play Store 在地化顯示(未來可從 fetchSkuDetails 拉,
+                       目前先用 lib/pricing.ts 的硬編碼;Play 後台一致即可) */}
                   {formatPriceOf(pack.price, currency)}
                 </div>
                 <button
-                  onClick={() => setPendingPack(pack.id)}
+                  onClick={() => {
+                    if (isTwa) {
+                      handlePlayPurchase(pack.id);
+                    } else {
+                      setPendingPack(pack.id);
+                    }
+                  }}
+                  disabled={isTwa && (!playReady || playPurchasing !== null)}
                   className="btn-gold"
                   style={{
                     width: "100%",
                     padding: "10px 16px",
                     fontSize: 13,
+                    opacity:
+                      isTwa && (!playReady || playPurchasing !== null)
+                        ? 0.5
+                        : 1,
+                    cursor:
+                      isTwa && (!playReady || playPurchasing !== null)
+                        ? "not-allowed"
+                        : "pointer",
                   }}
                 >
-                  {t("購買", "Purchase")}
+                  {playPurchasing === pack.id
+                    ? t("處理中…", "Processing…")
+                    : t("購買", "Purchase")}
                 </button>
               </div>
             );
@@ -323,8 +452,8 @@ export default function CreditsPurchasePage() {
         </div>
         )}
 
-        {/* ---- Footer links (web only) ---- */}
-        {!isTwa && (
+        {/* ---- Footer links(TWA + web 都顯示) ---- */}
+        {(
         <div
           className="mystic-card"
           style={{

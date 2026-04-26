@@ -145,7 +145,7 @@ export default async function Image() {
               letterSpacing: 4,
             }}
           >
-            oracle.heronhouse.me
+            heronhouse.me
           </div>
         </div>
       </div>

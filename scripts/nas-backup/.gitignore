@@ -1,0 +1,8 @@
+# 保護真正的設定檔 (含密碼) 不被 commit
+.env
+
+# 如果有人不小心把備份檔放進來
+*.dump
+*.sql
+*.sql.gz
+backup.log

@@ -75,8 +75,8 @@ export default function PrivacyPage() {
           <article style={articleStyle}>
             <section style={sectionStyle}>
               <p style={paragraphStyle}>
-                鷺居國際(以下簡稱「本平台」)非常重視您的個人資料保護。本政策
-                說明我們於 oracle.heronhouse.me 及其子網域(以下合稱「本服務」)
+                鷺居國際(以下簡稱「本平台」,網域 heronhouse.me)非常重視您的
+                個人資料保護。本政策說明我們於本平台及其旗下服務(以下合稱「本服務」)
                 所蒐集、使用、儲存與處理之個人資料內容。您使用本服務即代表您
                 已閱讀並同意本政策。
               </p>
@@ -266,10 +266,10 @@ export default function PrivacyPage() {
           <article style={articleStyle}>
             <section style={sectionStyle}>
               <p style={paragraphStyle}>
-                Heronhouse (&quot;we,&quot; &quot;us&quot;) takes your privacy
-                seriously. This Privacy Policy describes what personal data we
-                collect, how we use it, and your rights when you use
-                oracle.heronhouse.me and its subdomains (the &quot;Service&quot;).
+                Heronhouse (heronhouse.me, &quot;we,&quot; &quot;us&quot;) takes
+                your privacy seriously. This Privacy Policy describes what
+                personal data we collect, how we use it, and your rights when
+                you use our platform and its services (the &quot;Service&quot;).
                 By using the Service, you acknowledge that you have read and
                 agree to this Policy.
               </p>

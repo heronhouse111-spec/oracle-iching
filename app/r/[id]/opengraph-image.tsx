@@ -313,7 +313,7 @@ export default async function Image({
               </span>
             </div>
             <span style={{ fontSize: 20, color: "rgba(192,192,208,0.6)" }}>
-              oracle.heronhouse.me
+              heronhouse.me
             </span>
           </div>
 

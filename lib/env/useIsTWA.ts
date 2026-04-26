@@ -4,10 +4,16 @@
  * useIsTWA — 偵測當前載入環境是否為 Google Play 上架的 TWA 殼。
  *
  * 為何需要:
- *   Google Play 政策要求所有在 Play 商店散佈的 app,若涉及數位商品/服務購買,
- *   必須使用 Google Play Billing。我們的金流是綠界,無法 Play Billing 化。
- *   因此 **TWA 殼內必須完全不呈現 in-app purchase UI**。
- *   使用者看到的是「點數/訂閱請到網頁版」的靜態說明,不是可點的購買按鈕。
+ *   購買流程在 TWA 跟 web 是兩條不同路徑:
+ *     - TWA 內 → 走 Google Play Billing(Digital Goods API + PaymentRequest)
+ *     - Web 內 → 走 ECPay(透過 heronhouse-payments hub)
+ *   useIsTWA() 在 /account/credits 跟 /account/upgrade 兩頁用來分流 onClick handler。
+ *
+ *   ⚠️ 之前(2026-04 之前)曾用 TwaPurchaseNotice 在 TWA 內顯示「請到網頁版購買 +
+ *      oracle.heronhouse.me URL」,違反 Google Play anti-steering 政策,**已移除**。
+ *      新版兩端都顯示真實購買 CTA,只是 onClick 走不同支付管道。
+ *
+ *   PWA (`?source=pwa`) 不算 TWA,跟一般網頁一樣走 ECPay。
  *
  * 偵測策略(多層 fallback):
  *   1) sessionStorage 標記:一旦在這個 tab 偵測過,全程維持 TWA 模式
