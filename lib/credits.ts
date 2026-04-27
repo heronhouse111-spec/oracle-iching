@@ -27,6 +27,16 @@ export const CREDIT_COSTS = {
   TAROT_FOLLOWUP: 10,
   /** 跟老師的一則追問對話 */
   CHAT: 1,
+  /** Yes/No 一張牌占卜 — 輕量入口,1 點防濫用 */
+  YESNO: 1,
+  /** 每日一卡 — 每天 1 點當回訪鉤子(同 user 同日重抽走 cache 不再扣) */
+  DAILY: 1,
+  /** 多牌陣加價(牌數 × 解讀深度) — 愛情十字 5 卡 / 凱爾特十字 10 卡 / 年度 12 卡 */
+  TAROT_5_CARD: 8,
+  TAROT_10_CARD: 12,
+  TAROT_12_CARD: 14,
+  /** Deep Insight 模式加成(訂閱戶才能用,免費版鎖在 Quick) */
+  DEEP_INSIGHT_SURCHARGE: 3,
 } as const;
 
 export type CreditReason =
@@ -35,6 +45,8 @@ export type CreditReason =
   | "spend_tarot"
   | "spend_tarot_followup"
   | "spend_chat"
+  | "spend_yesno"
+  | "spend_daily"
   | "refund_api_error"
   | "signup_bonus"
   | "onboarding_bonus"
