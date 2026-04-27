@@ -8,7 +8,8 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
-import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
+import { appendPersonaPrompt } from "@/lib/personas";
+import { resolvePersonaServer } from "@/lib/personasDb";
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       isActiveSubscriber = Boolean(profile?.is_active);
     }
-    const persona = resolvePersona(personaId, isActiveSubscriber);
+    const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
     const cost = CREDIT_COSTS.CHAT;
 

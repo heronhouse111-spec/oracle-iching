@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { getCardById, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
 import { getSpread, type Spread } from "@/data/spreads";
-import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
+import { appendPersonaPrompt } from "@/lib/personas";
+import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
 import {
   spendCredits,
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       isDeep && isActiveSubscriber ? "deep" : "quick";
 
     // Persona — premium 人格在非訂閱戶會自動退回 default
-    const persona = resolvePersona(personaId, isActiveSubscriber);
+    const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
     let cost = tarotCostFor(spread, isFollowUp);
     if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;

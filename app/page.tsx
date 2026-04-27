@@ -2481,15 +2481,13 @@ export default function Home() {
                   }}
                 />
 
-                {/* 占卜師人格 + Quick/Deep 模式選擇 — 易經 / 塔羅 各自有不同的人格清單 */}
+                {/* 占卜師人格 + Quick/Deep 模式選擇 — picker 自己 fetch /api/personas,我們只給系統 */}
                 <PersonaDepthPicker
                   isSubscriber={isActive}
                   personaId={personaId}
                   depth={readingDepth}
                   onChange={handlePersonaDepthChange}
-                  personas={getPersonasForSystem(
-                    divineType === "iching" ? "iching" : "tarot"
-                  )}
+                  system={divineType === "iching" ? "iching" : "tarot"}
                   onUpgrade={() => {
                     if (typeof window !== "undefined") {
                       window.location.assign("/account/upgrade");

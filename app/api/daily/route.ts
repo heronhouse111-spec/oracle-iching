@@ -10,7 +10,8 @@
 
 import { NextRequest } from "next/server";
 import { tarotDeck, type DrawnCard } from "@/data/tarot";
-import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
+import { appendPersonaPrompt } from "@/lib/personas";
+import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
     isActiveSubscriber = Boolean(profile?.is_active);
-    const persona = resolvePersona(personaId, isActiveSubscriber);
+    const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
     // 同日重抽 → 不再扣點。查 credit_transactions 今天有沒有 spend_daily 記錄
     const dateKey = taipeiTodayKey();

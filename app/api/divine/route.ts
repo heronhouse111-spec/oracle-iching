@@ -8,7 +8,8 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
-import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
+import { appendPersonaPrompt } from "@/lib/personas";
+import { resolvePersonaServer } from "@/lib/personasDb";
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
     const effectiveDepth: "quick" | "deep" =
       depth === "deep" && isActiveSubscriber ? "deep" : "quick";
-    const persona = resolvePersona(personaId, isActiveSubscriber);
+    const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
     let cost = isFollowUp ? CREDIT_COSTS.DIVINE_FOLLOWUP : CREDIT_COSTS.DIVINE;
     if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;

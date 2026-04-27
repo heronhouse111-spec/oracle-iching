@@ -14,7 +14,8 @@
 
 import { NextRequest } from "next/server";
 import { getCardById, type TarotCard } from "@/data/tarot";
-import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
+import { appendPersonaPrompt } from "@/lib/personas";
+import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
 import {
   spendCredits,
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       isActiveSubscriber = Boolean(profile?.is_active);
     }
-    const persona = resolvePersona(personaId, isActiveSubscriber);
+    const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = CREDIT_COSTS.YESNO;
 
     if (user) {
