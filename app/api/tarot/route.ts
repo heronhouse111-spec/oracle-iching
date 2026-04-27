@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
-import { getCardById, THREE_CARD_POSITIONS, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import { getCardById, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import { getSpread, type Spread } from "@/data/spreads";
+import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
 import { createClient } from "@/lib/supabase/server";
 import {
   spendCredits,
@@ -9,11 +11,26 @@ import {
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
-// 客戶端送來的「抽牌結果」
+// 客戶端送來的「抽牌結果」— position 改為任意 string,給多牌陣用
 interface DrawnCardRequest {
   cardId: string;
-  position: "past" | "present" | "future";
+  position: string;
   isReversed: boolean;
+}
+
+/**
+ * 多牌陣加價表 — cardCount → cost
+ * 3 卡走原本 TAROT(5),5/10/12 卡各自獨立費率(避免一張卡都加 1 點不夠勸退濫用)
+ */
+function tarotCostFor(spread: Spread, isFollowUp: boolean): number {
+  if (isFollowUp) return CREDIT_COSTS.TAROT_FOLLOWUP;
+  switch (spread.cardCount) {
+    case 3: return CREDIT_COSTS.TAROT;
+    case 5: return CREDIT_COSTS.TAROT_5_CARD;
+    case 10: return CREDIT_COSTS.TAROT_10_CARD;
+    case 12: return CREDIT_COSTS.TAROT_12_CARD;
+    default: return CREDIT_COSTS.TAROT;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,6 +52,10 @@ export async function POST(request: NextRequest) {
       // 衍伸問題繼續占卜(跟 /api/divine 同樣的機制)
       previousContext,
       chatHistory,
+      // 新增 — 預設 three-card 維持向後相容
+      spreadId,
+      personaId,
+      depth,
     }: {
       cards: DrawnCardRequest[];
       question: string;
@@ -42,26 +63,38 @@ export async function POST(request: NextRequest) {
       locale: "zh" | "en";
       previousContext?: string | null;
       chatHistory?: { role: "user" | "assistant"; content: string }[] | null;
+      spreadId?: string;
+      personaId?: string;
+      depth?: "quick" | "deep";
     } = body;
 
-    if (!Array.isArray(cards) || cards.length !== 3) {
-      return new Response(JSON.stringify({ error: "Must provide exactly 3 cards" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const spread = getSpread(spreadId);
+    const isDeep = depth === "deep";
+
+    if (!Array.isArray(cards) || cards.length !== spread.cardCount) {
+      return new Response(
+        JSON.stringify({
+          error: `Spread ${spread.id} requires exactly ${spread.cardCount} cards (got ${
+            Array.isArray(cards) ? cards.length : "non-array"
+          })`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // 把每張卡的 id 查回完整資料(避免信任客戶端自己帶的牌義)
+    // 把每張卡的 id + position 查回完整資料(不信任客戶端帶的牌義)
     const enriched = cards.map((c) => {
       const card = getCardById(c.cardId);
-      const posMeta = THREE_CARD_POSITIONS.find((p) => p.key === c.position);
+      const posMeta = spread.positions.find((p) => p.key === c.position);
       return { ...c, card, posMeta };
     });
 
     for (const e of enriched) {
       if (!e.card || !e.posMeta) {
         return new Response(
-          JSON.stringify({ error: `Unknown card id or position: ${e.cardId} / ${e.position}` }),
+          JSON.stringify({
+            error: `Unknown card id or position for spread ${spread.id}: ${e.cardId} / ${e.position}`,
+          }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
@@ -78,7 +111,26 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const cost = isFollowUp ? CREDIT_COSTS.TAROT_FOLLOWUP : CREDIT_COSTS.TAROT;
+    // 訂閱判定 — 給 persona 解鎖 + Deep Insight 解鎖判斷用
+    let isActiveSubscriber = false;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", user.id)
+        .maybeSingle();
+      isActiveSubscriber = Boolean(profile?.is_active);
+    }
+
+    // Deep Insight 限訂閱戶 — 非訂閱戶傳 deep 自動降級為 quick
+    const effectiveDepth: "quick" | "deep" =
+      isDeep && isActiveSubscriber ? "deep" : "quick";
+
+    // Persona — premium 人格在非訂閱戶會自動退回 default
+    const persona = resolvePersona(personaId, isActiveSubscriber);
+
+    let cost = tarotCostFor(spread, isFollowUp);
+    if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;
     const reason = isFollowUp ? "spend_tarot_followup" : "spend_tarot";
 
     if (user) {
@@ -91,6 +143,9 @@ export async function POST(request: NextRequest) {
             category,
             isFollowUp,
             locale,
+            spreadId: spread.id,
+            personaId: persona.id,
+            depth: effectiveDepth,
             cards: cards.map((c) => ({ id: c.cardId, pos: c.position, rev: c.isReversed })),
           },
         });
@@ -115,15 +170,30 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in to continue" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
+    } else if (spread.cardCount > 3) {
+      // 訪客不能跑大牌陣(避免吃資源 + 引導註冊)
+      return new Response(
+        JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in to use larger spreads" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const systemPrompt = isZh
-      ? (isFollowUp
-        ? `你是一位深諳塔羅的占卜師。這是問事者就同一件事所做的「衍伸占卜」——你已經幫他做過前一輪(易經或塔羅)的解盤,也跟他在聊天框裡對話過。現在他針對同件事提出更深入的問題,又抽了三張牌(過去-現在-未來)。請把「前一輪結果 + 先前對話 + 新三張牌」串成連貫的延伸解說,直接呼應前面講過的脈絡(例如「承接剛才我們談到的...」、「相較先前那卦/那次抽牌,這三張牌...」),約300字。每張牌的牌義系統已提供,不要逐張複述。使用繁體中文,用段落書寫,不要列點。`
-        : `你是一位深諳塔羅的占卜師。使用者用三張牌陣(過去-現在-未來)針對一個問題占卜。每張牌的牌義(正位/逆位)已由系統提供,你**不需要重複牌義**,而是要把三張牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。語氣溫暖、貼近生活。約 300 字,用段落書寫,不要列點。使用繁體中文。`)
-      : (isFollowUp
-        ? `You are a skilled tarot reader. This is a FOLLOW-UP reading on the same matter — you've already read a prior reading for this querent (I Ching or tarot) and chatted with them. They're asking a deeper question on the same topic and drew three new cards (past-present-future). Weave "prior result + earlier conversation + new three cards" into a coherent continuation, explicitly referencing the prior context ("Building on what we discussed...", "Compared to the earlier reading, these three cards..."). Around 150 words. Card meanings are already provided — don't restate each one. Warm flowing paragraphs, no bullets.`
-        : `You are a skilled tarot reader. The querent drew three cards in a past-present-future spread for a specific question. The card meanings (upright/reversed) are provided by the system — do NOT simply repeat them. Instead, weave the three cards into a coherent narrative about the querent's actual question and give practical, concrete advice. Warm tone, around 150 words, flowing paragraphs (no bullets).`);
+    // 字數規格:Quick 約 200 字 / Deep 約 500 字
+    const wordTargetZh = effectiveDepth === "deep" ? "約 500 字" : "約 200 字";
+    const wordTargetEn = effectiveDepth === "deep" ? "around 350 words" : "around 150 words";
+    const spreadNameZh = spread.nameZh;
+    const spreadNameEn = spread.nameEn;
+
+    const baseSystemZh = isFollowUp
+      ? `你是一位深諳塔羅的占卜師。這是問事者就同一件事所做的「衍伸占卜」——你已經幫他做過前一輪(易經或塔羅)的解盤,也跟他在聊天框裡對話過。現在他針對同件事提出更深入的問題,又抽了「${spreadNameZh}」(${spread.cardCount} 張)。請把「前一輪結果 + 先前對話 + 新牌陣」串成連貫的延伸解說,直接呼應前面講過的脈絡(例如「承接剛才我們談到的...」),${wordTargetZh}。每張牌的牌義系統已提供,不要逐張複述,而是把整個牌陣串成回應問題的故事。使用繁體中文,用段落書寫,不要列點。`
+      : `你是一位深諳塔羅的占卜師。使用者用「${spreadNameZh}」(${spread.cardCount} 張)針對一個問題占卜。每張牌的牌義(正位/逆位)以及它在牌陣中對應的位置與意義已由系統提供,你不需要重複牌義,而是要把所有牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。${effectiveDepth === "deep" ? "Deep Insight 模式 — 請特別交叉比對牌之間的關係(例如哪兩張牌互相呼應、哪一張在拖後腿)、揭示牌組合背後的潛在模式,並給出具體可執行的下一步。" : ""}語氣溫暖、貼近生活。${wordTargetZh},用段落書寫,不要列點。使用繁體中文。`;
+
+    const baseSystemEn = isFollowUp
+      ? `You are a skilled tarot reader. This is a FOLLOW-UP reading on the same matter — you've already done a prior reading (I Ching or tarot) for this querent and chatted with them. They're asking a deeper question and drew the "${spreadNameEn}" (${spread.cardCount} cards). Weave "prior result + earlier conversation + new spread" into a coherent continuation, explicitly referencing the prior context. ${wordTargetEn}. Card meanings are already provided — don't restate; weave the whole spread into a story answering their question. Warm flowing paragraphs, no bullets.`
+      : `You are a skilled tarot reader. The querent drew the "${spreadNameEn}" (${spread.cardCount} cards) for a specific question. Card meanings (upright/reversed) and each position's significance are provided by the system — do NOT simply repeat them. Weave the entire spread into a coherent narrative about the querent's actual question and give practical, concrete advice. ${effectiveDepth === "deep" ? "Deep Insight mode — cross-reference relationships between cards (which echo each other, which holds back), reveal latent patterns, and give specific actionable next steps." : ""}Warm tone, ${wordTargetEn}, flowing paragraphs (no bullets).`;
+
+    const baseSystemPrompt = isZh ? baseSystemZh : baseSystemEn;
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
 
     const chatExcerpt = (chatHistory ?? [])
       .slice(-6)
@@ -141,7 +211,7 @@ export async function POST(request: NextRequest) {
         : `[PRIOR CONTEXT — earlier reading & chat on the same matter]\n${previousContext}\n${chatExcerpt ? `\n[EARLIER CHAT (excerpt)]\n${chatExcerpt}\n` : ""}\n`)
       : "";
 
-    // 組裝 user message — 含問題 + 三張牌各自位置/名稱/正逆位/牌義
+    // 組裝 user message — 含問題 + 每張牌的位置/名稱/正逆位/牌義/位置意義
     const cardDescriptions = enriched
       .map((e) => {
         const card = e.card!;
@@ -154,9 +224,9 @@ export async function POST(request: NextRequest) {
         const orientationZh = e.isReversed ? "逆位" : "正位";
         const orientationEn = e.isReversed ? "Reversed" : "Upright";
         if (isZh) {
-          return `【${pos.labelZh}】${card.nameZh}(${suitZh}・${orientationZh})\n牌義:${meaning}`;
+          return `【${pos.labelZh} — ${pos.descZh}】\n${card.nameZh}(${suitZh}・${orientationZh})\n牌義:${meaning}`;
         }
-        return `[${pos.labelEn}] ${card.nameEn} (${suitEn}, ${orientationEn})\nMeaning: ${meaning}`;
+        return `[${pos.labelEn} — ${pos.descEn}]\n${card.nameEn} (${suitEn}, ${orientationEn})\nMeaning: ${meaning}`;
       })
       .join("\n\n");
 
@@ -165,8 +235,10 @@ export async function POST(request: NextRequest) {
       : (isFollowUp ? `New question (${category}): ${question}` : `Question (${category}): ${question}`);
 
     const userMessage = isZh
-      ? `${contextBlock}${newQuestionLine}\n\n這次抽到的三張牌:\n\n${cardDescriptions}\n\n${isFollowUp ? "請承接前面的脈絡,針對我這次的新問題與這三張新牌,給出連貫的延伸解說,約 300 字。" : "請把這三張牌串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,約 300 字。"}`
-      : `${contextBlock}${newQuestionLine}\n\nThree cards drawn this round:\n\n${cardDescriptions}\n\n${isFollowUp ? "Continue from the prior context; weave a coherent follow-up reading from these three new cards for my new question. Around 150 words." : "Weave these three cards into a coherent narrative addressing my specific question, with practical advice. Around 150 words."}`;
+      ? `${contextBlock}${newQuestionLine}\n\n本次牌陣:${spreadNameZh}(共 ${spread.cardCount} 張)\n\n${cardDescriptions}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與這個牌陣,給出連貫的延伸解說,${wordTargetZh}。` : `請把整個牌陣串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,${wordTargetZh}。`}`
+      : `${contextBlock}${newQuestionLine}\n\nSpread: ${spreadNameEn} (${spread.cardCount} cards)\n\n${cardDescriptions}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading from this new spread for my new question. ${wordTargetEn}.` : `Weave the whole spread into a coherent narrative addressing my specific question, with practical advice. ${wordTargetEn}.`}`;
+
+    const maxTokens = effectiveDepth === "deep" ? 1400 : 600;
 
     // DeepSeek API is OpenAI-compatible
     const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -184,7 +256,7 @@ export async function POST(request: NextRequest) {
           },
           { role: "user", content: userMessage },
         ],
-        max_tokens: 600,
+        max_tokens: maxTokens,
         stream: true,
       }),
     });

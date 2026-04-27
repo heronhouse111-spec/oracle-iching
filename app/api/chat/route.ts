@@ -8,6 +8,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { resolvePersona, appendPersonaPrompt } from "@/lib/personas";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
       divineType,
       locale,
       divinationId,
+      personaId,
     }: {
       messages: { role: "user" | "assistant"; content: string }[];
       hexagramContext?: string;
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
       divineType?: "iching" | "tarot";
       locale: "zh" | "en";
       divinationId?: string; // 有此欄位 + 已登入 → 聊完會把這輪 user+assistant 訊息 append 到這筆占卜的 chat_messages
+      personaId?: string;
     } = body;
 
     // 新版欄位 readingContext 優先,舊版 hexagramContext 保留相容
@@ -50,6 +53,18 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // 訂閱判定 — 解鎖 premium persona
+    let isActiveSubscriber = false;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", user.id)
+        .maybeSingle();
+      isActiveSubscriber = Boolean(profile?.is_active);
+    }
+    const persona = resolvePersona(personaId, isActiveSubscriber);
+
     const cost = CREDIT_COSTS.CHAT;
 
     if (user) {
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           amount: cost,
           reason: "spend_chat",
-          metadata: { divineType: type, locale },
+          metadata: { divineType: type, locale, personaId: persona.id },
         });
       } catch (err) {
         if (err instanceof InsufficientCreditsError) {
@@ -78,36 +93,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemPrompt = isZh
+    const baseSystemPrompt = isZh
       ? (type === "tarot"
-          ? `你是一位親切的塔羅牌占卜師,正在為客人做諮詢。以下是剛才的三張牌占卜結果作為背景:
+          ? `你是一位親切的塔羅牌占卜師,正在為客人做諮詢。以下是剛才的塔羅占卜結果作為背景:
 ${context}
 
 規則:
 - 每次回覆控制在200個字以內,簡短精要
 - 語氣溫暖親切,像面對面聊天一樣
 - 用繁體中文,口語化但帶有智慧感
-- 根據三張牌(過去/現在/未來)的訊息回答客人的追問
+- 根據牌陣的訊息回答客人的追問
 - 適時給予鼓勵和正面引導
 - 不要用列點或編號,用自然對話的方式`
-          : `你是一位親切的易經算命老師，正在為客人做諮詢。以下是剛才的占卜結果作為背景：
+          : `你是一位親切的易經算命老師,正在為客人做諮詢。以下是剛才的占卜結果作為背景:
 ${context}
 
-規則：
-- 每次回覆控制在200個字以內，簡短精要
-- 語氣溫暖親切，像面對面聊天一樣
-- 用繁體中文，口語化但帶有智慧感
+規則:
+- 每次回覆控制在200個字以內,簡短精要
+- 語氣溫暖親切,像面對面聊天一樣
+- 用繁體中文,口語化但帶有智慧感
 - 根據卦象回答客人的追問
 - 適時給予鼓勵和正面引導
-- 不要用列點或編號，用自然對話的方式`)
+- 不要用列點或編號,用自然對話的方式`)
       : (type === "tarot"
-          ? `You are a warm, wise tarot reader giving a consultation. Here is the three-card reading context:
+          ? `You are a warm, wise tarot reader giving a consultation. Here is the reading context:
 ${context}
 
 Rules:
 - Keep each reply around 100 words, concise and insightful
 - Be warm and conversational, like a face-to-face chat
-- Answer follow-up questions based on the past/present/future cards
+- Answer follow-up questions based on the spread
 - Offer encouragement and positive guidance
 - Use natural flowing sentences, no bullet points`
           : `You are a warm, wise I Ching fortune-telling master giving a consultation. Here is the reading context:
@@ -119,6 +134,8 @@ Rules:
 - Answer follow-up questions based on the hexagram
 - Offer encouragement and positive guidance
 - Use natural flowing sentences, no bullet points`);
+
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
 
     const apiMessages = [
       { role: "system", content: withSafetyPreamble(systemPrompt, locale) },
