@@ -6,13 +6,16 @@
  * 在 step="question" 的 textarea 下方顯示 6 大類 + 子標題 + 問句小卡。
  * 點問句 → onPickQuestion(text, categoryId) 由父層 setUserQuestion + 同步 selectedCategory。
  *
+ * 資料來源:
+ *   - 掛載時打 GET /api/inspirations(由 admin 後台維護,DB 沒值會 fallback 到 static)
+ *   - fetch 失敗或還沒回來時 → 直接用 static data,不阻擋使用者
+ *
  * UX 細節:
  * - tab 預設高亮父層傳入的 selectedCategoryId,使用者也可切到別類瀏覽
  * - tab 列橫向可滾(類別超出 640px 時)
- * - 問句卡點下去視覺上 ripple 一下,讓人知道有反應
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { questionCategories } from "@/lib/divination";
 import {
@@ -20,6 +23,8 @@ import {
   type InspirationGroup,
   type InspirationQuestion,
 } from "@/data/questionInspirations";
+
+type InspirationsTree = Record<string, InspirationGroup[]>;
 
 interface Props {
   selectedCategoryId: string;
@@ -32,8 +37,28 @@ export default function QuestionInspirations({
 }: Props) {
   const { locale, t } = useLanguage();
   const [activeCat, setActiveCat] = useState(selectedCategoryId || "love");
+  const [tree, setTree] = useState<InspirationsTree>(QUESTION_INSPIRATIONS);
 
-  const groups = QUESTION_INSPIRATIONS[activeCat] ?? [];
+  // Fetch DB-backed inspirations on mount;失敗就維持 static fallback
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/inspirations", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { inspirations?: InspirationsTree };
+        if (cancelled || !data.inspirations) return;
+        setTree(data.inspirations);
+      } catch {
+        // 網路錯 → 沿用 static
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const groups = tree[activeCat] ?? [];
 
   const localizedQuestion = (q: InspirationQuestion): string => {
     if (locale === "en") return q.en;
