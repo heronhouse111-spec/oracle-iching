@@ -18,6 +18,41 @@ export const revalidate = 0;
 // 後台介面先固定為中文 (創作者自己看),需要雙語可再切換。
 const LOCALE: "zh" | "en" = "zh";
 
+// ──────── 後台導覽連結卡片 ────────
+function AdminLinkCard({
+  href,
+  icon,
+  title,
+  desc,
+}: {
+  href: string;
+  icon: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "block",
+        padding: 14,
+        borderRadius: 10,
+        border: "1px solid #dbe3ee",
+        background: "#fafcfe",
+        textDecoration: "none",
+        color: "#0f2748",
+        transition: "border-color 0.15s, background 0.15s",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <span style={{ fontSize: 20 }}>{icon}</span>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{title}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "#5a6a82", lineHeight: 1.5 }}>{desc}</div>
+    </Link>
+  );
+}
+
 // ──────── 平台收益條形 ────────
 function PlatformBar({
   label,
@@ -357,6 +392,31 @@ export default async function AdminDashboardPage() {
             </div>
             <div>
               <RecentUsers rows={stats.recentUsers} locale={LOCALE} />
+            </div>
+          </section>
+
+          {/* ── 管理工具導覽 ── */}
+          <section className="mystic-card" style={{ padding: 20 }}>
+            <h2 style={{ fontSize: 16, color: "#1e4272", margin: 0, marginBottom: 14, fontWeight: 600 }}>
+              管理工具
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gap: 10,
+              }}
+            >
+              <AdminLinkCard href="/admin/personas" icon="🧙" title="占卜師" desc="新增 / 編輯人格,設鎖定權限,上傳大頭照" />
+              <AdminLinkCard href="/admin/inspirations" icon="✦" title="問題靈感" desc="6 大類問題題庫,4 語版本" />
+              <AdminLinkCard href="/admin/ui-images" icon="🖼️" title="首頁 icon" desc="CTAs / 類別 / 免費工具 / 雙系統圖像" />
+              <AdminLinkCard href="/admin/announcements" icon="📢" title="公告" desc="首頁 banner / 跑馬燈" />
+              <AdminLinkCard href="/admin/users" icon="👥" title="使用者" desc="搜尋 / 補點 / 停權" />
+              <AdminLinkCard href="/admin/pricing" icon="💰" title="方案 / 點數" desc="加購包與訂閱方案" />
+              <AdminLinkCard href="/admin/promo-codes" icon="🎟️" title="優惠碼" desc="折扣 / 贈點代碼" />
+              <AdminLinkCard href="/admin/flags" icon="🚦" title="功能開關" desc="Feature flags" />
+              <AdminLinkCard href="/admin/admins" icon="🔑" title="管理員" desc="後台帳號權限(super admin only)" />
+              <AdminLinkCard href="/admin/audit-log" icon="📜" title="稽核紀錄" desc="所有後台操作的歷史" />
             </div>
           </section>
 
