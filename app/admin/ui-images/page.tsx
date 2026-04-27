@@ -215,9 +215,9 @@ export default function AdminUiImagesPage() {
                           src={url}
                           alt=""
                           style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 10,
+                            width: 168,
+                            height: 168,
+                            borderRadius: 14,
                             objectFit: "cover",
                             background: "rgba(255,255,255,0.04)",
                             border: "1px solid rgba(212,168,85,0.3)",
@@ -226,13 +226,13 @@ export default function AdminUiImagesPage() {
                       ) : (
                         <div
                           style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 10,
+                            width: 168,
+                            height: 168,
+                            borderRadius: 14,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 28,
+                            fontSize: 84,
                             background: "rgba(255,255,255,0.02)",
                             border: "1px dashed rgba(212,168,85,0.25)",
                           }}

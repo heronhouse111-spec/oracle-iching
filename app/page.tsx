@@ -88,6 +88,50 @@ function SlotIcon({
   );
 }
 
+/**
+ * 大圖 hero 卡片用的圖片區塊 —— 全寬 + 預設 16:10 比例,沒上傳就把 emoji 放大置中。
+ * 卡片 wrapper 在外層處理 borderRadius / overflow,這裡只負責圖片本體。
+ */
+function HeroImage({
+  url,
+  emoji,
+  aspectRatio = "16/10",
+  emojiSize = 96,
+}: {
+  url: string | undefined;
+  emoji: React.ReactNode;
+  aspectRatio?: string;
+  emojiSize?: number;
+}) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        aspectRatio,
+        background:
+          "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.45))",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
+    >
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <span style={{ fontSize: emojiSize, lineHeight: 1, opacity: 0.85 }}>
+          {emoji}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const { locale, t } = useLanguage();
   const uiImages = useUiImages();
@@ -1985,10 +2029,10 @@ export default function Home() {
                   "선호하는 방식이 있나요? 바로 선택"
                 )}
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setDivineType("iching");
                     if (typeof window !== "undefined") {
@@ -1996,11 +2040,13 @@ export default function Home() {
                       el?.scrollIntoView({ behavior: "smooth", block: "center" });
                     }
                   }}
-                  className="mystic-card"
                   style={{
-                    padding: 14,
-                    textAlign: "center",
+                    display: "block",
+                    padding: 0,
+                    textAlign: "left",
                     cursor: "pointer",
+                    borderRadius: 14,
+                    overflow: "hidden",
                     border:
                       divineType === "iching"
                         ? "1.5px solid rgba(212,168,85,0.85)"
@@ -2013,24 +2059,27 @@ export default function Home() {
                       divineType === "iching"
                         ? "0 0 24px rgba(212,168,85,0.25)"
                         : "none",
+                    fontFamily: "inherit",
                   }}
                 >
-                  <SlotIcon url={uiImages["cta.iching"]} emoji="☯" size={30} marginBottom={6} />
-                  <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                    {t("易經占卜", "I Ching", "易経占い", "주역 점")}
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
-                    {t(
-                      "擲銅錢成卦",
-                      "Cast hexagram coins",
-                      "コインを投げて卦を作る",
-                      "동전을 던져 괘 만들기"
-                    )}
+                  <HeroImage url={uiImages["cta.iching"]} emoji="☯" aspectRatio="4/3" emojiSize={88} />
+                  <div style={{ padding: "12px 14px 14px" }}>
+                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
+                      {t("易經占卜", "I Ching", "易経占い", "주역 점")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                      {t(
+                        "擲銅錢成卦",
+                        "Cast hexagram coins",
+                        "コインを投げて卦を作る",
+                        "동전을 던져 괘 만들기"
+                      )}
+                    </div>
                   </div>
                 </motion.button>
                 <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setDivineType("tarot");
                     if (typeof window !== "undefined") {
@@ -2038,11 +2087,13 @@ export default function Home() {
                       el?.scrollIntoView({ behavior: "smooth", block: "center" });
                     }
                   }}
-                  className="mystic-card"
                   style={{
-                    padding: 14,
-                    textAlign: "center",
+                    display: "block",
+                    padding: 0,
+                    textAlign: "left",
                     cursor: "pointer",
+                    borderRadius: 14,
+                    overflow: "hidden",
                     border:
                       divineType === "tarot"
                         ? "1.5px solid rgba(212,168,85,0.85)"
@@ -2055,19 +2106,22 @@ export default function Home() {
                       divineType === "tarot"
                         ? "0 0 24px rgba(212,168,85,0.25)"
                         : "none",
+                    fontFamily: "inherit",
                   }}
                 >
-                  <SlotIcon url={uiImages["cta.tarot"]} emoji="🎴" size={30} marginBottom={6} />
-                  <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                    {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
-                    {t(
-                      "抽三張牌解讀",
-                      "Three-card reading",
-                      "3枚引きリーディング",
-                      "세 장 카드 리딩"
-                    )}
+                  <HeroImage url={uiImages["cta.tarot"]} emoji="🎴" aspectRatio="4/3" emojiSize={88} />
+                  <div style={{ padding: "12px 14px 14px" }}>
+                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
+                      {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                      {t(
+                        "抽三張牌解讀",
+                        "Three-card reading",
+                        "3枚引きリーディング",
+                        "세 장 카드 리딩"
+                      )}
+                    </div>
                   </div>
                 </motion.button>
               </div>
@@ -2196,24 +2250,28 @@ export default function Home() {
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => handleCategorySelect(cat.id)}
-                      className="mystic-card"
                       style={{
-                        padding: 16,
+                        padding: 0,
                         textAlign: "center",
                         cursor: "pointer",
+                        borderRadius: 12,
+                        overflow: "hidden",
                         border: "1px solid rgba(212,168,85,0.2)",
                         background: "rgba(13,13,43,0.8)",
+                        fontFamily: "inherit",
                       }}
                     >
-                      <SlotIcon
+                      <HeroImage
                         url={uiImages[`category.${cat.id}`]}
                         emoji={cat.icon}
-                        size={28}
-                        marginBottom={8}
+                        aspectRatio="4/3"
+                        emojiSize={72}
                       />
-                      <span style={{ color: "#d4a855", fontWeight: 500, fontSize: 14 }}>
-                        {locale === "zh" ? cat.nameZh : cat.nameEn}
-                      </span>
+                      <div style={{ padding: "10px 8px 12px" }}>
+                        <span style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
+                          {locale === "zh" ? cat.nameZh : cat.nameEn}
+                        </span>
+                      </div>
                     </motion.button>
                   ))}
                 </div>
@@ -2236,111 +2294,131 @@ export default function Home() {
                     {t("不用註冊也能使用", "No sign-up required", "登録不要", "가입 없이 이용")}
                   </p>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <Link
                     href="/yes-no"
-                    className="mystic-card"
                     style={{
-                      padding: 14,
                       textDecoration: "none",
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
                       display: "block",
                     }}
                   >
-                    <SlotIcon url={uiImages["freeTool.yes-no"]} emoji="✦" size={22} marginBottom={4} />
-                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t(
-                        "Yes / No 速答",
-                        "Yes / No Quick Answer",
-                        "Yes / No 即答",
-                        "Yes / No 즉답"
-                      )}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t(
-                        "簡單問題秒回",
-                        "Single-card answer",
-                        "シンプルな質問に即答",
-                        "간단 질문 즉답"
-                      )}
+                    <HeroImage url={uiImages["freeTool.yes-no"]} emoji="✦" />
+                    <div style={{ padding: "12px 14px 14px" }}>
+                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
+                        {t(
+                          "Yes / No 速答",
+                          "Yes / No Quick Answer",
+                          "Yes / No 即答",
+                          "Yes / No 즉답"
+                        )}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                        {t(
+                          "簡單問題秒回",
+                          "Single-card answer",
+                          "シンプルな質問に即答",
+                          "간단 질문 즉답"
+                        )}
+                      </div>
+                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
+                        {t("來問問看", "Try it", "試してみる", "물어보기")} →
+                      </div>
                     </div>
                   </Link>
                   <Link
                     href="/daily"
-                    className="mystic-card"
                     style={{
-                      padding: 14,
                       textDecoration: "none",
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
                       display: "block",
                     }}
                   >
-                    <SlotIcon url={uiImages["freeTool.daily"]} emoji="☀" size={22} marginBottom={4} />
-                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t(
-                        "今日能量指引",
-                        "Today's energy",
-                        "今日のエネルギー",
-                        "오늘의 에너지"
-                      )}
+                    <HeroImage url={uiImages["freeTool.daily"]} emoji="☀" />
+                    <div style={{ padding: "12px 14px 14px" }}>
+                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
+                        {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                        {t(
+                          "今日能量指引",
+                          "Today's energy",
+                          "今日のエネルギー",
+                          "오늘의 에너지"
+                        )}
+                      </div>
+                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
+                        {t("看今天的", "Today", "今日を見る", "오늘 보기")} →
+                      </div>
                     </div>
                   </Link>
                   <Link
                     href="/tarot/cards"
-                    className="mystic-card"
                     style={{
-                      padding: 14,
                       textDecoration: "none",
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
                       display: "block",
                     }}
                   >
-                    <SlotIcon url={uiImages["freeTool.cards"]} emoji="📖" size={22} marginBottom={4} />
-                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t(
-                        "塔羅百科",
-                        "Tarot Encyclopedia",
-                        "タロット百科",
-                        "타로 백과"
-                      )}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t(
-                        "78 張牌完整查詢",
-                        "All 78 cards",
-                        "78枚すべて検索",
-                        "78장 모두 검색"
-                      )}
+                    <HeroImage url={uiImages["freeTool.cards"]} emoji="📖" />
+                    <div style={{ padding: "12px 14px 14px" }}>
+                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
+                        {t(
+                          "塔羅百科",
+                          "Tarot Encyclopedia",
+                          "タロット百科",
+                          "타로 백과"
+                        )}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                        {t(
+                          "78 張牌完整查詢",
+                          "All 78 cards",
+                          "78枚すべて検索",
+                          "78장 모두 검색"
+                        )}
+                      </div>
+                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
+                        {t("查牌義", "Browse", "意味を見る", "찾아보기")} →
+                      </div>
                     </div>
                   </Link>
                   <Link
                     href="/tarot-spread"
-                    className="mystic-card"
                     style={{
-                      padding: 14,
                       textDecoration: "none",
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
                       display: "block",
                     }}
                   >
-                    <SlotIcon url={uiImages["freeTool.spreads"]} emoji="🃏" size={22} marginBottom={4} />
-                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t(
-                        "認識經典牌陣",
-                        "Classic spreads",
-                        "定番スプレッドを学ぶ",
-                        "대표 스프레드 익히기"
-                      )}
+                    <HeroImage url={uiImages["freeTool.spreads"]} emoji="🃏" />
+                    <div style={{ padding: "12px 14px 14px" }}>
+                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
+                        {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                        {t(
+                          "認識經典牌陣",
+                          "Classic spreads",
+                          "定番スプレッドを学ぶ",
+                          "대표 스프레드 익히기"
+                        )}
+                      </div>
+                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
+                        {t("看牌陣", "Browse", "スプレッドを見る", "스프레드 보기")} →
+                      </div>
                     </div>
                   </Link>
                 </div>
@@ -2399,95 +2477,97 @@ export default function Home() {
                     )}
                   </p>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div
-                    className="mystic-card"
                     style={{
-                      padding: 16,
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
-                      textAlign: "center",
                     }}
                   >
                     {uiImages["dualSystem.iching"] ? (
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={uiImages["dualSystem.iching"]}
-                          alt=""
-                          style={{ width: 88, height: 88, objectFit: "contain" }}
-                        />
-                      </div>
+                      <HeroImage url={uiImages["dualSystem.iching"]} emoji="☰" aspectRatio="1" />
                     ) : (
                       <div
                         style={{
-                          fontFamily: "monospace",
-                          fontSize: 14,
-                          color: "#d4a855",
-                          lineHeight: 1.55,
-                          marginBottom: 8,
-                          letterSpacing: 1,
+                          width: "100%",
+                          aspectRatio: "1",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background:
+                            "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.45))",
                         }}
                       >
-                        <div>━━━ ━━━</div>
-                        <div>━━━━━━━</div>
-                        <div>━━━ ━━━</div>
-                        <div>━━━━━━━</div>
-                        <div>━━━━━━━</div>
-                        <div>━━━ ━━━</div>
+                        <div
+                          style={{
+                            fontFamily: "monospace",
+                            fontSize: 28,
+                            color: "#d4a855",
+                            lineHeight: 1.55,
+                            letterSpacing: 1,
+                            textAlign: "center",
+                          }}
+                        >
+                          <div>━━━ ━━━</div>
+                          <div>━━━━━━━</div>
+                          <div>━━━ ━━━</div>
+                          <div>━━━━━━━</div>
+                          <div>━━━━━━━</div>
+                          <div>━━━ ━━━</div>
+                        </div>
                       </div>
                     )}
-                    <div
-                      style={{
-                        color: "#d4a855",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: "'Noto Serif TC', serif",
-                      }}
-                    >
-                      {t("易經", "I Ching", "易経", "주역")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
-                      {t(
-                        "結構 · 時機 · 變化",
-                        "Structure · Timing · Change",
-                        "構造 · 時機 · 変化",
-                        "구조 · 시기 · 변화"
-                      )}
+                    <div style={{ padding: "12px 14px 14px", textAlign: "center" }}>
+                      <div
+                        style={{
+                          color: "#d4a855",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          fontFamily: "'Noto Serif TC', serif",
+                        }}
+                      >
+                        {t("易經", "I Ching", "易経", "주역")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4 }}>
+                        {t(
+                          "結構 · 時機 · 變化",
+                          "Structure · Timing · Change",
+                          "構造 · 時機 · 変化",
+                          "구조 · 시기 · 변화"
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div
-                    className="mystic-card"
                     style={{
-                      padding: 16,
+                      borderRadius: 14,
+                      overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
-                      textAlign: "center",
                     }}
                   >
-                    <SlotIcon
-                      url={uiImages["dualSystem.tarot"]}
-                      emoji="🎴"
-                      size={44}
-                      marginBottom={8}
-                    />
-                    <div
-                      style={{
-                        color: "#d4a855",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily: "'Noto Serif TC', serif",
-                      }}
-                    >
-                      {t("塔羅", "Tarot", "タロット", "타로")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
-                      {t(
-                        "情緒 · 象徵 · 故事",
-                        "Emotion · Symbol · Story",
-                        "感情 · 象徴 · 物語",
-                        "감정 · 상징 · 이야기"
-                      )}
+                    <HeroImage url={uiImages["dualSystem.tarot"]} emoji="🎴" aspectRatio="1" />
+                    <div style={{ padding: "12px 14px 14px", textAlign: "center" }}>
+                      <div
+                        style={{
+                          color: "#d4a855",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          fontFamily: "'Noto Serif TC', serif",
+                        }}
+                      >
+                        {t("塔羅", "Tarot", "タロット", "타로")}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4 }}>
+                        {t(
+                          "情緒 · 象徵 · 故事",
+                          "Emotion · Symbol · Story",
+                          "感情 · 象徴 · 物語",
+                          "감정 · 상징 · 이야기"
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
