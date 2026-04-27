@@ -33,6 +33,8 @@ import {
 } from "@/lib/clientCredits";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
+import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
+import { DEFAULT_PERSONA_ID } from "@/lib/personas";
 
 // Line 目前尚未在 Supabase 後台啟用(需 Pro plan + Custom OIDC),用 env 開關
 const LINE_LOGIN_ENABLED =
@@ -108,6 +110,12 @@ export default function Home() {
 
   // 占卜類型(易經 / 塔羅)
   const [divineType, setDivineType] = useState<DivineType | null>(null);
+
+  // ── 占卜師人格 + 解讀深度 ────────────────────────────
+  // localStorage 記住上次選擇 — 預設 lunar-sister + quick(免費版)。
+  // 訂閱戶才能用 premium persona / deep,API route 會再驗一次,前端 picker 也會擋。
+  const [personaId, setPersonaId] = useState<string>(DEFAULT_PERSONA_ID);
+  const [readingDepth, setReadingDepth] = useState<ReadingDepth>("quick");
 
   // 塔羅 state:抽到的三張牌 + 已翻開幾張
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
@@ -208,6 +216,36 @@ export default function Home() {
       // storage disabled / SSR — no-op
     }
   }, []);
+
+  // 占卜師人格 / Deep mode — 從 localStorage 復原
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const p = window.localStorage.getItem("tarogram:persona");
+      if (p) setPersonaId(p);
+      const d = window.localStorage.getItem("tarogram:depth");
+      if (d === "deep" || d === "quick") setReadingDepth(d);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  /** Picker 改變時統一寫 localStorage + state */
+  const handlePersonaDepthChange = useCallback(
+    (p: string, d: ReadingDepth) => {
+      setPersonaId(p);
+      setReadingDepth(d);
+      try {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("tarogram:persona", p);
+          window.localStorage.setItem("tarogram:depth", d);
+        }
+      } catch {
+        // ignore
+      }
+    },
+    []
+  );
 
   // Mount 時確認登入狀態(給訪客 2 次占卜 gate 使用),順便把本機 localStorage
   // 占卜紀錄一次性搬進 Supabase — 訪客登入後所有過去的占卜會自動跟雲端同步。
@@ -1082,6 +1120,8 @@ export default function Home() {
           locale,
           previousContext: followUpCtx,
           chatHistory: followUpChat,
+          personaId,
+          depth: readingDepth,
         }),
         signal: controller.signal,
       });
@@ -1215,6 +1255,8 @@ export default function Home() {
         locale,
         previousContext: followUpCtx,
         chatHistory: followUpChat,
+        personaId,
+        depth: readingDepth,
       };
 
       const response = await fetch("/api/tarot", {
@@ -1411,6 +1453,7 @@ export default function Home() {
           divineType: divineType ?? "iching",
           locale,
           divinationId, // 帶上讓後端 append chat_messages 到這筆 divination
+          personaId,
         }),
         signal: controller.signal,
       });
@@ -1886,10 +1929,24 @@ export default function Home() {
                   style={{
                     width: "100%", height: 128, background: "rgba(10,10,26,0.5)",
                     border: "1px solid rgba(212,168,85,0.2)", borderRadius: 12,
-                    padding: 16, color: "white", resize: "none", fontSize: 14,
+                    padding: 16, color: "white", resize: "none", fontSize: 16,
                     outline: "none", fontFamily: "'Noto Sans TC', sans-serif",
                   }}
                 />
+
+                {/* 占卜師人格 + Quick/Deep 模式選擇 */}
+                <PersonaDepthPicker
+                  isSubscriber={isActive}
+                  personaId={personaId}
+                  depth={readingDepth}
+                  onChange={handlePersonaDepthChange}
+                  onUpgrade={() => {
+                    if (typeof window !== "undefined") {
+                      window.location.assign("/account/upgrade");
+                    }
+                  }}
+                />
+
                 <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
                   <button onClick={() => setStep("category")}
                     style={{

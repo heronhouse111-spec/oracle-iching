@@ -42,6 +42,39 @@ export default function Footer() {
           )}
         </p>
 
+        {/* 站內探索連結 — 牌陣大全、牌意百科、輕量入口、Blog */}
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            justifyContent: "center",
+            fontSize: 11,
+            marginTop: 4,
+            marginBottom: 4,
+          }}
+        >
+          <Link href="/yes-no" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
+            {t("Yes/No 占卜", "Yes/No")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          <Link href="/daily" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
+            {t("每日一卡", "Daily Card")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          <Link href="/tarot/cards" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
+            {t("78 張牌意", "78 Cards")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          <Link href="/tarot-spread" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
+            {t("牌陣大全", "Spreads")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          <Link href="/blog" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
+            {t("部落格", "Blog")}
+          </Link>
+        </div>
+
         <div
           style={{
             display: "flex",
@@ -51,7 +84,7 @@ export default function Footer() {
           }}
         >
           {/*
-            ⚠ TWA(Google Play 上架的 Android app)內絕對不顯示「加入主畫面」連結。
+            注意:TWA(Google Play 上架的 Android app)內絕對不顯示「加入主畫面」連結。
             Play 政策(anti-steering)禁止 app 內出現引導用戶到 web 版本 / 外部安裝管道的內容。
             isTwa = true 時連連結跟分隔點都隱藏。
           */}
