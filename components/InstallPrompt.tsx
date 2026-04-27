@@ -21,6 +21,7 @@
 
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useIsTWA } from "@/lib/env/useIsTWA";
 
 // Chrome 自訂事件型別 —— TS lib.dom 沒內建
 interface BeforeInstallPromptEvent extends Event {
@@ -84,6 +85,7 @@ function wasInstalled(): boolean {
 
 export default function InstallPrompt() {
   const { t } = useLanguage();
+  const isTwa = useIsTWA();
   const [show, setShow] = useState(false);
   const [iosMode, setIosMode] = useState(false);
   const [deferredEvent, setDeferredEvent] =
@@ -91,6 +93,11 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // ⚠ TWA(Google Play 上架的 Android app)內絕對不顯示「加入主畫面」提示。
+    // Play 政策(anti-steering)禁止 app 內出現引導用戶到 web 版本 / 外部安裝管道的內容。
+    // 雖然 isStandalone() 會擋掉大部分 TWA 情境,但保險起見再加一層。
+    if (isTwa) return;
 
     // 已安裝 / 已 standalone / 之前裝過 → 完全不顯示
     if (isStandalone() || wasInstalled()) return;
@@ -161,6 +168,9 @@ export default function InstallPrompt() {
     setShow(false);
   };
 
+  // 雙重保險:即使 useEffect 那邊邏輯有漏,render 前再 TWA guard 一次,
+  // 確保 TWA 內絕對不會顯示安裝 banner(Play anti-steering 合規)
+  if (isTwa) return null;
   if (!show) return null;
 
   return (
