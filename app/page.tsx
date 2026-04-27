@@ -34,6 +34,7 @@ import {
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
+import QuestionInspirations from "@/components/QuestionInspirations";
 import {
   DEFAULT_PERSONA_ID,
   getPersonasForSystem,
@@ -2463,14 +2464,38 @@ export default function Home() {
 
               <div className="mystic-card" style={{ padding: 24 }}>
                 <textarea
+                  id="question-textarea"
                   value={userQuestion}
                   onChange={(e) => setUserQuestion(e.target.value)}
-                  placeholder={t("例如：我近期的感情運勢如何？", "e.g., What does my love life look like?")}
+                  placeholder={t(
+                    "例如：我近期的感情運勢如何？",
+                    "e.g., What does my love life look like?",
+                    "例:最近の恋愛運はどう?",
+                    "예: 최근 나의 연애운은?"
+                  )}
                   style={{
                     width: "100%", height: 128, background: "rgba(10,10,26,0.5)",
                     border: "1px solid rgba(212,168,85,0.2)", borderRadius: 12,
                     padding: 16, color: "white", resize: "none", fontSize: 16,
                     outline: "none", fontFamily: "'Noto Sans TC', sans-serif",
+                  }}
+                />
+
+                {/* 問題靈感 — 點問句自動帶入 textarea */}
+                <QuestionInspirations
+                  selectedCategoryId={selectedCategory}
+                  onPickQuestion={(text, catId) => {
+                    setUserQuestion(text);
+                    if (catId !== selectedCategory) setSelectedCategory(catId);
+                    if (typeof window !== "undefined") {
+                      requestAnimationFrame(() => {
+                        const ta = document.getElementById(
+                          "question-textarea"
+                        ) as HTMLTextAreaElement | null;
+                        ta?.focus();
+                        ta?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      });
+                    }
                   }}
                 />
 
