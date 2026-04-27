@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useIsTWA } from "@/lib/env/useIsTWA";
 
 export default function Footer() {
   const { t } = useLanguage();
+  const isTwa = useIsTWA();
 
   return (
     <footer
@@ -48,17 +50,26 @@ export default function Footer() {
             fontSize: 11,
           }}
         >
-          <Link
-            href="/install"
-            style={{
-              color: "rgba(212,168,85,0.85)",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            ✦ {t("加入主畫面", "Install app")}
-          </Link>
-          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+          {/*
+            ⚠ TWA(Google Play 上架的 Android app)內絕對不顯示「加入主畫面」連結。
+            Play 政策(anti-steering)禁止 app 內出現引導用戶到 web 版本 / 外部安裝管道的內容。
+            isTwa = true 時連連結跟分隔點都隱藏。
+          */}
+          {!isTwa && (
+            <>
+              <Link
+                href="/install"
+                style={{
+                  color: "rgba(212,168,85,0.85)",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                ✦ {t("加入主畫面", "Install app")}
+              </Link>
+              <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
+            </>
+          )}
           <Link
             href="/terms"
             style={{
