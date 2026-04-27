@@ -2481,7 +2481,23 @@ export default function Home() {
                   }}
                 />
 
-                {/* 問題靈感 — 點問句自動帶入 textarea */}
+                {/* 占卜師人格 + Quick/Deep 模式選擇 — 易經 / 塔羅 各自有不同的人格清單 */}
+                <PersonaDepthPicker
+                  isSubscriber={isActive}
+                  personaId={personaId}
+                  depth={readingDepth}
+                  onChange={handlePersonaDepthChange}
+                  personas={getPersonasForSystem(
+                    divineType === "iching" ? "iching" : "tarot"
+                  )}
+                  onUpgrade={() => {
+                    if (typeof window !== "undefined") {
+                      window.location.assign("/account/upgrade");
+                    }
+                  }}
+                />
+
+                {/* 問題靈感 — 點問句自動帶入 textarea(放在占卜師 + 解讀深度之下) */}
                 <QuestionInspirations
                   selectedCategoryId={selectedCategory}
                   onPickQuestion={(text, catId) => {
@@ -2495,22 +2511,6 @@ export default function Home() {
                         ta?.focus();
                         ta?.scrollIntoView({ behavior: "smooth", block: "center" });
                       });
-                    }
-                  }}
-                />
-
-                {/* 占卜師人格 + Quick/Deep 模式選擇 — 易經 / 塔羅 各自有不同的人格清單 */}
-                <PersonaDepthPicker
-                  isSubscriber={isActive}
-                  personaId={personaId}
-                  depth={readingDepth}
-                  onChange={handlePersonaDepthChange}
-                  personas={getPersonasForSystem(
-                    divineType === "iching" ? "iching" : "tarot"
-                  )}
-                  onUpgrade={() => {
-                    if (typeof window !== "undefined") {
-                      window.location.assign("/account/upgrade");
                     }
                   }}
                 />
