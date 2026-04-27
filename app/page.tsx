@@ -35,6 +35,7 @@ import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
 import QuestionInspirations from "@/components/QuestionInspirations";
+import { useUiImages } from "@/hooks/useUiImages";
 import {
   DEFAULT_PERSONA_ID,
   getPersonasForSystem,
@@ -62,8 +63,34 @@ const isSupabaseConfigured =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_url_here";
 
+// Inline icon / emoji helper —— 給首頁多處 icon slot 用
+function SlotIcon({
+  url,
+  emoji,
+  size = 30,
+  marginBottom = 0,
+}: {
+  url: string | undefined;
+  emoji: React.ReactNode;
+  size?: number;
+  marginBottom?: number;
+}) {
+  if (url) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", marginBottom }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" style={{ width: size, height: size, objectFit: "contain" }} />
+      </div>
+    );
+  }
+  return (
+    <div style={{ fontSize: size, marginBottom, textAlign: "center" }}>{emoji}</div>
+  );
+}
+
 export default function Home() {
   const { locale, t } = useLanguage();
+  const uiImages = useUiImages();
 
   const [step, setStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -1988,7 +2015,7 @@ export default function Home() {
                         : "none",
                   }}
                 >
-                  <div style={{ fontSize: 30, marginBottom: 6 }}>☯</div>
+                  <SlotIcon url={uiImages["cta.iching"]} emoji="☯" size={30} marginBottom={6} />
                   <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
                     {t("易經占卜", "I Ching", "易経占い", "주역 점")}
                   </div>
@@ -2030,7 +2057,7 @@ export default function Home() {
                         : "none",
                   }}
                 >
-                  <div style={{ fontSize: 30, marginBottom: 6 }}>🎴</div>
+                  <SlotIcon url={uiImages["cta.tarot"]} emoji="🎴" size={30} marginBottom={6} />
                   <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
                     {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
                   </div>
@@ -2178,9 +2205,12 @@ export default function Home() {
                         background: "rgba(13,13,43,0.8)",
                       }}
                     >
-                      <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>
-                        {cat.icon}
-                      </span>
+                      <SlotIcon
+                        url={uiImages[`category.${cat.id}`]}
+                        emoji={cat.icon}
+                        size={28}
+                        marginBottom={8}
+                      />
                       <span style={{ color: "#d4a855", fontWeight: 500, fontSize: 14 }}>
                         {locale === "zh" ? cat.nameZh : cat.nameEn}
                       </span>
@@ -2218,7 +2248,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>✦</div>
+                    <SlotIcon url={uiImages["freeTool.yes-no"]} emoji="✦" size={22} marginBottom={4} />
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
                       {t(
                         "Yes / No 速答",
@@ -2247,7 +2277,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>☀</div>
+                    <SlotIcon url={uiImages["freeTool.daily"]} emoji="☀" size={22} marginBottom={4} />
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
                       {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
                     </div>
@@ -2271,7 +2301,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>📖</div>
+                    <SlotIcon url={uiImages["freeTool.cards"]} emoji="📖" size={22} marginBottom={4} />
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
                       {t(
                         "塔羅百科",
@@ -2300,7 +2330,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <div style={{ fontSize: 22, marginBottom: 4 }}>🃏</div>
+                    <SlotIcon url={uiImages["freeTool.spreads"]} emoji="🃏" size={22} marginBottom={4} />
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
                       {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
                     </div>
@@ -2379,23 +2409,34 @@ export default function Home() {
                       textAlign: "center",
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: "monospace",
-                        fontSize: 14,
-                        color: "#d4a855",
-                        lineHeight: 1.55,
-                        marginBottom: 8,
-                        letterSpacing: 1,
-                      }}
-                    >
-                      <div>━━━ ━━━</div>
-                      <div>━━━━━━━</div>
-                      <div>━━━ ━━━</div>
-                      <div>━━━━━━━</div>
-                      <div>━━━━━━━</div>
-                      <div>━━━ ━━━</div>
-                    </div>
+                    {uiImages["dualSystem.iching"] ? (
+                      <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={uiImages["dualSystem.iching"]}
+                          alt=""
+                          style={{ width: 88, height: 88, objectFit: "contain" }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          fontFamily: "monospace",
+                          fontSize: 14,
+                          color: "#d4a855",
+                          lineHeight: 1.55,
+                          marginBottom: 8,
+                          letterSpacing: 1,
+                        }}
+                      >
+                        <div>━━━ ━━━</div>
+                        <div>━━━━━━━</div>
+                        <div>━━━ ━━━</div>
+                        <div>━━━━━━━</div>
+                        <div>━━━━━━━</div>
+                        <div>━━━ ━━━</div>
+                      </div>
+                    )}
                     <div
                       style={{
                         color: "#d4a855",
@@ -2424,7 +2465,12 @@ export default function Home() {
                       textAlign: "center",
                     }}
                   >
-                    <div style={{ fontSize: 44, lineHeight: 1.3, marginBottom: 8 }}>🎴</div>
+                    <SlotIcon
+                      url={uiImages["dualSystem.tarot"]}
+                      emoji="🎴"
+                      size={44}
+                      marginBottom={8}
+                    />
                     <div
                       style={{
                         color: "#d4a855",
