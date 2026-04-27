@@ -985,12 +985,21 @@ export default function Home() {
         /* localStorage 讀取失敗就當作還沒占過,放行 */
       }
     }
-    setStep("divine-type");
     setCurrentThrow(0);
     setThrows([]);
     setCurrentCoins(null);
-    setDrawnCards([]);
     setRevealedCount(0);
+
+    if (divineType === "iching") {
+      setDrawnCards([]);
+      setStep("mode-select");
+    } else if (divineType === "tarot") {
+      setDrawnCards(drawThreeCards());
+      setStep("tarot-reveal");
+    } else {
+      setDrawnCards([]);
+      setStep("divine-type");
+    }
   };
 
   const handleDivineTypeSelect = (type: DivineType) => {
@@ -1843,14 +1852,13 @@ export default function Home() {
           {/* ===== STEP 1: Category ===== */}
           {step === "category" && (
             <motion.div key="cat" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 32 }}>
+              {/* ===== HERO ===== */}
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 28 }}>
                 <motion.div
-                  // Delphic Oracle 主 logo:呼吸式光暈 + 微幅上下浮動,不搶下方字
                   animate={{ y: [0, -6, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   style={{ display: "inline-block", position: "relative" }}
                 >
-                  {/* 背後呼吸光暈(pulse) */}
                   <motion.div
                     aria-hidden
                     animate={{ opacity: [0.35, 0.7, 0.35], scale: [0.95, 1.05, 0.95] }}
@@ -1881,29 +1889,464 @@ export default function Home() {
                     }}
                   />
                 </motion.div>
-                <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 14, maxWidth: 400, margin: "20px auto 0", lineHeight: 1.6 }}>
+                <h1
+                  className="text-gold-gradient"
+                  style={{
+                    fontFamily: "'Noto Serif TC', serif",
+                    fontSize: 26,
+                    marginTop: 20,
+                    lineHeight: 1.4,
+                    letterSpacing: 1,
+                  }}
+                >
+                  {t("一個問題,兩種千年智慧", "One Question · Two Ancient Wisdoms")}
+                </h1>
+                <p
+                  style={{
+                    color: "rgba(192,192,208,0.8)",
+                    fontSize: 14,
+                    maxWidth: 420,
+                    margin: "12px auto 0",
+                    lineHeight: 1.7,
+                  }}
+                >
                   {t(
-                    "東方易經 · 西方塔羅",
-                    "Eastern I Ching · Western Tarot"
+                    "AI 同時為你解讀「易經卦象」與「塔羅牌陣」 — 東方哲思 × 西方象徵,看見更立體的答案。",
+                    "AI reads both an I Ching hexagram and a Tarot spread for the same question — Eastern philosophy meets Western symbolism for a richer answer."
                   )}
                 </p>
               </div>
 
-              <p style={{ textAlign: "center", color: "#c0c0d0", fontSize: 14, marginBottom: 12 }}>
-                {t("請選擇問事類別", "Choose your question category")}
+              {/* ===== 直接入口 CTA ===== */}
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "rgba(212,168,85,0.85)",
+                  fontSize: 13,
+                  marginBottom: 10,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {t("已有偏好?直接選擇占卜方式", "Have a preference? Pick a method")}
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {questionCategories.map((cat) => (
-                  <motion.button key={cat.id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    onClick={() => handleCategorySelect(cat.id)}
-                    className="mystic-card"
-                    style={{ padding: 16, textAlign: "center", cursor: "pointer", border: "1px solid rgba(212,168,85,0.2)", background: "rgba(13,13,43,0.8)" }}>
-                    <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>{cat.icon}</span>
-                    <span style={{ color: "#d4a855", fontWeight: 500, fontSize: 14 }}>
-                      {locale === "zh" ? cat.nameZh : cat.nameEn}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setDivineType("iching");
+                    if (typeof window !== "undefined") {
+                      const el = document.getElementById("category-grid");
+                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }}
+                  className="mystic-card"
+                  style={{
+                    padding: 14,
+                    textAlign: "center",
+                    cursor: "pointer",
+                    border:
+                      divineType === "iching"
+                        ? "1.5px solid rgba(212,168,85,0.85)"
+                        : "1px solid rgba(212,168,85,0.25)",
+                    background:
+                      divineType === "iching"
+                        ? "rgba(212,168,85,0.12)"
+                        : "rgba(13,13,43,0.8)",
+                    boxShadow:
+                      divineType === "iching"
+                        ? "0 0 24px rgba(212,168,85,0.25)"
+                        : "none",
+                  }}
+                >
+                  <div style={{ fontSize: 30, marginBottom: 6 }}>☯</div>
+                  <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
+                    {t("易經占卜", "I Ching")}
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
+                    {t("擲銅錢成卦", "Cast hexagram coins")}
+                  </div>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setDivineType("tarot");
+                    if (typeof window !== "undefined") {
+                      const el = document.getElementById("category-grid");
+                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                  }}
+                  className="mystic-card"
+                  style={{
+                    padding: 14,
+                    textAlign: "center",
+                    cursor: "pointer",
+                    border:
+                      divineType === "tarot"
+                        ? "1.5px solid rgba(212,168,85,0.85)"
+                        : "1px solid rgba(212,168,85,0.25)",
+                    background:
+                      divineType === "tarot"
+                        ? "rgba(212,168,85,0.12)"
+                        : "rgba(13,13,43,0.8)",
+                    boxShadow:
+                      divineType === "tarot"
+                        ? "0 0 24px rgba(212,168,85,0.25)"
+                        : "none",
+                  }}
+                >
+                  <div style={{ fontSize: 30, marginBottom: 6 }}>🎴</div>
+                  <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
+                    {t("塔羅占卜", "Tarot")}
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
+                    {t("抽三張牌解讀", "Three-card reading")}
+                  </div>
+                </motion.button>
+              </div>
+
+              {/* ===== Trust signal strip ===== */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 8,
+                  padding: "12px 8px",
+                  marginBottom: 24,
+                  borderTop: "1px solid rgba(212,168,85,0.15)",
+                  borderBottom: "1px solid rgba(212,168,85,0.15)",
+                }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    64
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("卦完整解析", "Hexagrams")}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    borderLeft: "1px solid rgba(212,168,85,0.12)",
+                    borderRight: "1px solid rgba(212,168,85,0.12)",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    78
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("塔羅牌百科", "Tarot cards")}
+                  </div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    5+
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("經典牌陣", "Classic spreads")}
+                  </div>
+                </div>
+              </div>
+
+              {/* ===== Category picker ===== */}
+              <div id="category-grid">
+                {divineType && (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      marginBottom: 10,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      background: "rgba(212,168,85,0.08)",
+                      border: "1px dashed rgba(212,168,85,0.3)",
+                    }}
+                  >
+                    <span style={{ color: "rgba(192,192,208,0.85)", fontSize: 12 }}>
+                      {t("已選:", "Selected: ")}
+                      <strong style={{ color: "#d4a855" }}>
+                        {divineType === "iching"
+                          ? t("易經占卜", "I Ching")
+                          : t("塔羅占卜", "Tarot")}
+                      </strong>
                     </span>
-                  </motion.button>
-                ))}
+                    <button
+                      onClick={() => setDivineType(null)}
+                      style={{
+                        marginLeft: 10,
+                        background: "none",
+                        border: "none",
+                        color: "rgba(212,168,85,0.7)",
+                        fontSize: 11,
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {t("清除", "Clear")}
+                    </button>
+                  </div>
+                )}
+                <p style={{ textAlign: "center", color: "#c0c0d0", fontSize: 14, marginBottom: 12 }}>
+                  {divineType
+                    ? t("挑一個你想問的方向", "Pick a topic to ask about")
+                    : t(
+                        "請選擇問事類別,稍後再選占卜工具",
+                        "Pick a topic — choose your method next"
+                      )}
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  {questionCategories.map((cat) => (
+                    <motion.button
+                      key={cat.id}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleCategorySelect(cat.id)}
+                      className="mystic-card"
+                      style={{
+                        padding: 16,
+                        textAlign: "center",
+                        cursor: "pointer",
+                        border: "1px solid rgba(212,168,85,0.2)",
+                        background: "rgba(13,13,43,0.8)",
+                      }}
+                    >
+                      <span style={{ fontSize: 28, display: "block", marginBottom: 8 }}>
+                        {cat.icon}
+                      </span>
+                      <span style={{ color: "#d4a855", fontWeight: 500, fontSize: 14 }}>
+                        {locale === "zh" ? cat.nameZh : cat.nameEn}
+                      </span>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ===== Free tools ===== */}
+              <div style={{ marginTop: 36 }}>
+                <div style={{ textAlign: "center", marginBottom: 14 }}>
+                  <h3
+                    className="text-gold-gradient"
+                    style={{
+                      fontFamily: "'Noto Serif TC', serif",
+                      fontSize: 17,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("免費先試試看", "Try For Free")}
+                  </h3>
+                  <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12 }}>
+                    {t("不用註冊也能使用", "No sign-up required")}
+                  </p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <Link
+                    href="/yes-no"
+                    className="mystic-card"
+                    style={{
+                      padding: 14,
+                      textDecoration: "none",
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      display: "block",
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>✦</div>
+                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
+                      {t("Yes / No 速答", "Yes / No Quick Answer")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
+                      {t("簡單問題秒回", "Single-card answer")}
+                    </div>
+                  </Link>
+                  <Link
+                    href="/daily"
+                    className="mystic-card"
+                    style={{
+                      padding: 14,
+                      textDecoration: "none",
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      display: "block",
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>☀</div>
+                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
+                      {t("每日一卡", "Daily Card")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
+                      {t("今日能量指引", "Today's energy")}
+                    </div>
+                  </Link>
+                  <Link
+                    href="/tarot/cards"
+                    className="mystic-card"
+                    style={{
+                      padding: 14,
+                      textDecoration: "none",
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      display: "block",
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>📖</div>
+                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
+                      {t("塔羅百科", "Tarot Encyclopedia")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
+                      {t("78 張牌完整查詢", "All 78 cards")}
+                    </div>
+                  </Link>
+                  <Link
+                    href="/tarot-spread"
+                    className="mystic-card"
+                    style={{
+                      padding: 14,
+                      textDecoration: "none",
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      display: "block",
+                    }}
+                  >
+                    <div style={{ fontSize: 22, marginBottom: 4 }}>🃏</div>
+                    <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
+                      {t("牌陣介紹", "Spreads Guide")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
+                      {t("認識經典牌陣", "Classic spreads")}
+                    </div>
+                  </Link>
+                </div>
+                <div style={{ textAlign: "center", marginTop: 12 }}>
+                  <Link
+                    href="/blog"
+                    style={{
+                      color: "rgba(212,168,85,0.85)",
+                      fontSize: 12,
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                    }}
+                  >
+                    {t("閱讀更多占卜知識文章 →", "Read more articles →")}
+                  </Link>
+                </div>
+              </div>
+
+              {/* ===== Dual system showcase ===== */}
+              <div style={{ marginTop: 36, marginBottom: 8 }}>
+                <div style={{ textAlign: "center", marginBottom: 14 }}>
+                  <h3
+                    className="text-gold-gradient"
+                    style={{
+                      fontFamily: "'Noto Serif TC', serif",
+                      fontSize: 17,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {t("為什麼是雙系統?", "Why Both Systems?")}
+                  </h3>
+                  <p
+                    style={{
+                      color: "rgba(192,192,208,0.6)",
+                      fontSize: 12,
+                      lineHeight: 1.6,
+                      maxWidth: 360,
+                      margin: "0 auto",
+                    }}
+                  >
+                    {t(
+                      "易經給你「結構與時機」,塔羅給你「情緒與象徵」 — 兩面相互印證,答案更全面。",
+                      "I Ching reveals structure and timing; Tarot reveals emotion and symbol — two angles validate one another."
+                    )}
+                  </p>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div
+                    className="mystic-card"
+                    style={{
+                      padding: 16,
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: 14,
+                        color: "#d4a855",
+                        lineHeight: 1.55,
+                        marginBottom: 8,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      <div>━━━ ━━━</div>
+                      <div>━━━━━━━</div>
+                      <div>━━━ ━━━</div>
+                      <div>━━━━━━━</div>
+                      <div>━━━━━━━</div>
+                      <div>━━━ ━━━</div>
+                    </div>
+                    <div
+                      style={{
+                        color: "#d4a855",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        fontFamily: "'Noto Serif TC', serif",
+                      }}
+                    >
+                      {t("易經", "I Ching")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
+                      {t("結構 · 時機 · 變化", "Structure · Timing · Change")}
+                    </div>
+                  </div>
+                  <div
+                    className="mystic-card"
+                    style={{
+                      padding: 16,
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      background: "rgba(13,13,43,0.65)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: 44, lineHeight: 1.3, marginBottom: 8 }}>🎴</div>
+                    <div
+                      style={{
+                        color: "#d4a855",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        fontFamily: "'Noto Serif TC', serif",
+                      }}
+                    >
+                      {t("塔羅", "Tarot")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
+                      {t("情緒 · 象徵 · 故事", "Emotion · Symbol · Story")}
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
