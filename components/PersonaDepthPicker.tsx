@@ -18,8 +18,8 @@
  *   - Quick / Deep toggle —— Deep 對非訂閱戶 disabled
  */
 
-import { PERSONAS, type Persona } from "@/lib/personas";
-import { useLanguage } from "@/i18n/LanguageContext";
+import { TAROT_PERSONAS, type Persona } from "@/lib/personas";
+import { useLanguage, type Locale } from "@/i18n/LanguageContext";
 
 export type ReadingDepth = "quick" | "deep";
 
@@ -29,6 +29,23 @@ interface Props {
   depth: ReadingDepth;
   onChange: (personaId: string, depth: ReadingDepth) => void;
   onUpgrade?: () => void;
+  /** 顯示哪一組 personas;不傳則用塔羅 / 通用清單 */
+  personas?: Persona[];
+}
+
+/** Locale-aware 取 persona 顯示名;ja/ko 缺值 fallback en */
+function personaName(p: Persona, locale: Locale): string {
+  if (locale === "en") return p.nameEn;
+  if (locale === "ja") return p.nameJa ?? p.nameEn;
+  if (locale === "ko") return p.nameKo ?? p.nameEn;
+  return p.nameZh;
+}
+
+function personaTagline(p: Persona, locale: Locale): string {
+  if (locale === "en") return p.taglineEn;
+  if (locale === "ja") return p.taglineJa ?? p.taglineEn;
+  if (locale === "ko") return p.taglineKo ?? p.taglineEn;
+  return p.taglineZh;
 }
 
 export default function PersonaDepthPicker({
@@ -37,6 +54,7 @@ export default function PersonaDepthPicker({
   depth,
   onChange,
   onUpgrade,
+  personas = TAROT_PERSONAS,
 }: Props) {
   const { locale, t } = useLanguage();
 
@@ -69,7 +87,7 @@ export default function PersonaDepthPicker({
     >
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 8, letterSpacing: 0.5 }}>
-          {t("✦ 占卜師", "✦ Reader")}
+          {t("✦ 占卜師", "✦ Reader", "✦ 占い師", "✦ 점술사")}
         </div>
         <div
           style={{
@@ -78,7 +96,7 @@ export default function PersonaDepthPicker({
             gap: 6,
           }}
         >
-          {PERSONAS.map((p) => {
+          {personas.map((p) => {
             const isActive = p.id === personaId;
             const isLocked = p.tier === "premium" && !isSubscriber;
             return (
@@ -101,11 +119,11 @@ export default function PersonaDepthPicker({
                   position: "relative",
                   opacity: isLocked ? 0.7 : 1,
                 }}
-                title={locale === "zh" ? p.taglineZh : p.taglineEn}
+                title={personaTagline(p, locale)}
               >
                 <div style={{ fontSize: 18, marginBottom: 2 }}>{p.emoji}</div>
                 <div style={{ fontSize: 11, fontWeight: 600 }}>
-                  {locale === "zh" ? p.nameZh : p.nameEn}
+                  {personaName(p, locale)}
                   {isLocked && <span style={{ marginLeft: 4, fontSize: 10 }}>🔒</span>}
                 </div>
               </button>
@@ -116,7 +134,7 @@ export default function PersonaDepthPicker({
 
       <div>
         <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 6, letterSpacing: 0.5 }}>
-          {t("✦ 解讀深度", "✦ Reading Depth")}
+          {t("✦ 解讀深度", "✦ Reading Depth", "✦ 解読の深さ", "✦ 해석 깊이")}
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <button
@@ -138,7 +156,7 @@ export default function PersonaDepthPicker({
               fontWeight: 600,
             }}
           >
-            ⚡ {t("快速解讀", "Quick")}
+            ⚡ {t("快速解讀", "Quick", "クイック", "빠른")}
           </button>
           <button
             onClick={() => handleDepthClick("deep")}
@@ -161,11 +179,21 @@ export default function PersonaDepthPicker({
             }}
             title={
               isSubscriber
-                ? t("Deep Insight — 約 500 字深度解析(+3 點)", "Deep Insight — ~350-word deep read (+3 credits)")
-                : t("Deep Insight 為訂閱戶限定", "Deep Insight is for subscribers")
+                ? t(
+                    "Deep Insight — 約 500 字深度解析(+3 點)",
+                    "Deep Insight — ~350-word deep read (+3 credits)",
+                    "Deep Insight — 約500字の深い解読(+3クレジット)",
+                    "Deep Insight — 약 500자 심층 해석 (+3 크레딧)"
+                  )
+                : t(
+                    "Deep Insight 為訂閱戶限定",
+                    "Deep Insight is for subscribers",
+                    "Deep Insight は有料会員限定",
+                    "Deep Insight 은 구독자 전용"
+                  )
             }
           >
-            🔮 {t("深度洞察", "Deep")}
+            🔮 {t("深度洞察", "Deep", "深い", "심층")}
             {!isSubscriber && <span style={{ marginLeft: 4, fontSize: 10 }}>🔒</span>}
             {depth === "deep" && isSubscriber && (
               <span style={{ fontSize: 9, marginLeft: 4, color: "rgba(212,168,85,0.8)" }}>+3</span>

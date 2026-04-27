@@ -11,15 +11,27 @@ export default function Header() {
   const { locale, zhVariant, cycleLocale, t } = useLanguage();
   const pathname = usePathname();
 
-  // 三段循環顯示:繁 → 简 → EN → 繁
+  // 五段循環顯示:繁 → 简 → EN → 日 → 한 → 繁
   const localeBadge =
-    locale === "en" ? "EN" : zhVariant === "CN" ? "简" : "繁";
+    locale === "ja"
+      ? "日"
+      : locale === "ko"
+        ? "한"
+        : locale === "en"
+          ? "EN"
+          : zhVariant === "CN"
+            ? "简"
+            : "繁";
   const localeTitle =
-    locale === "en"
-      ? "English · click to switch (→ 繁體)"
-      : zhVariant === "CN"
-        ? "简体中文 · 点击切换 (→ English)"
-        : "繁體中文 · 點擊切換 (→ 简体)";
+    locale === "ja"
+      ? "日本語 · クリックで切替 (→ 한국어)"
+      : locale === "ko"
+        ? "한국어 · 클릭으로 전환 (→ 繁體)"
+        : locale === "en"
+          ? "English · click to switch (→ 日本語)"
+          : zhVariant === "CN"
+            ? "简体中文 · 点击切换 (→ English)"
+            : "繁體中文 · 點擊切換 (→ 简体)";
 
   // 已在首頁時點 logo,Link 不會 remount app/page.tsx,
   // 占卜過程的 step / userQuestion 等 state 會留著 → 看起來像沒反應。
@@ -64,14 +76,14 @@ export default function Header() {
             }}
           />
           <span className="text-gold-gradient" style={{ fontFamily: "'Noto Serif TC', serif", fontWeight: 700, fontSize: 18 }}>
-            {t("易問", "Tarogram")}
+            {t("易問", "Tarogram", "易問", "타로그램")}
           </span>
         </Link>
 
         <nav style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <CreditsBadge />
           <Link href="/history" style={{ color: "#c0c0d0", fontSize: 14, textDecoration: "none" }}>
-            {t("占卜紀錄", "History")}
+            {t("占卜紀錄", "History", "占い履歴", "점 기록")}
           </Link>
           <button
             onClick={cycleLocale}

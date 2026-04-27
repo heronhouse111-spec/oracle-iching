@@ -34,7 +34,11 @@ import {
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
-import { DEFAULT_PERSONA_ID } from "@/lib/personas";
+import {
+  DEFAULT_PERSONA_ID,
+  getPersonasForSystem,
+  getDefaultPersonaIdForSystem,
+} from "@/lib/personas";
 
 // Line 目前尚未在 Supabase 後台啟用(需 Pro plan + Custom OIDC),用 env 開關
 const LINE_LOGIN_ENABLED =
@@ -229,6 +233,18 @@ export default function Home() {
       // ignore
     }
   }, []);
+
+  // 切換占卜系統(易經 / 塔羅)時,若目前 persona 不在新系統的清單裡,自動切到該系統預設
+  // 解決「先選塔羅人格、再切去易經,picker 找不到 active card」的情況
+  useEffect(() => {
+    const targetSystem: "iching" | "tarot" = divineType === "iching" ? "iching" : "tarot";
+    const validIds = getPersonasForSystem(targetSystem).map((p) => p.id);
+    if (!validIds.includes(personaId)) {
+      setPersonaId(getDefaultPersonaIdForSystem(targetSystem));
+    }
+    // personaId 不放進 deps —— 否則 picker 每次改 persona 都會被這個 effect 又拉回去
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [divineType]);
 
   /** Picker 改變時統一寫 localStorage + state */
   const handlePersonaDepthChange = useCallback(
@@ -1899,7 +1915,12 @@ export default function Home() {
                     letterSpacing: 1,
                   }}
                 >
-                  {t("一個問題,兩種千年智慧", "One Question · Two Ancient Wisdoms")}
+                  {t(
+                    "一個問題,兩種千年智慧",
+                    "One Question · Two Ancient Wisdoms",
+                    "一つの問い、二つの古の知恵",
+                    "하나의 질문, 두 천년의 지혜"
+                  )}
                 </h1>
                 <p
                   style={{
@@ -1912,7 +1933,9 @@ export default function Home() {
                 >
                   {t(
                     "AI 同時為你解讀「易經卦象」與「塔羅牌陣」 — 東方哲思 × 西方象徵,看見更立體的答案。",
-                    "AI reads both an I Ching hexagram and a Tarot spread for the same question — Eastern philosophy meets Western symbolism for a richer answer."
+                    "AI reads both an I Ching hexagram and a Tarot spread for the same question — Eastern philosophy meets Western symbolism for a richer answer.",
+                    "AIが「易経の卦」と「タロットの配置」を同時に読み解く — 東洋の哲学 × 西洋の象徴で、より立体的な答えを。",
+                    "AI가 '주역의 괘'와 '타로 배열'을 동시에 해석합니다 — 동양 철학 × 서양 상징으로 더 입체적인 답을."
                   )}
                 </p>
               </div>
@@ -1927,7 +1950,12 @@ export default function Home() {
                   letterSpacing: 0.5,
                 }}
               >
-                {t("已有偏好?直接選擇占卜方式", "Have a preference? Pick a method")}
+                {t(
+                  "已有偏好?直接選擇占卜方式",
+                  "Have a preference? Pick a method",
+                  "好みが決まっていますか?方法を直接選択",
+                  "선호하는 방식이 있나요? 바로 선택"
+                )}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
                 <motion.button
@@ -1961,10 +1989,15 @@ export default function Home() {
                 >
                   <div style={{ fontSize: 30, marginBottom: 6 }}>☯</div>
                   <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                    {t("易經占卜", "I Ching")}
+                    {t("易經占卜", "I Ching", "易経占い", "주역 점")}
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
-                    {t("擲銅錢成卦", "Cast hexagram coins")}
+                    {t(
+                      "擲銅錢成卦",
+                      "Cast hexagram coins",
+                      "コインを投げて卦を作る",
+                      "동전을 던져 괘 만들기"
+                    )}
                   </div>
                 </motion.button>
                 <motion.button
@@ -1998,10 +2031,15 @@ export default function Home() {
                 >
                   <div style={{ fontSize: 30, marginBottom: 6 }}>🎴</div>
                   <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                    {t("塔羅占卜", "Tarot")}
+                    {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 11, marginTop: 4 }}>
-                    {t("抽三張牌解讀", "Three-card reading")}
+                    {t(
+                      "抽三張牌解讀",
+                      "Three-card reading",
+                      "3枚引きリーディング",
+                      "세 장 카드 리딩"
+                    )}
                   </div>
                 </motion.button>
               </div>
@@ -2030,7 +2068,7 @@ export default function Home() {
                     64
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("卦完整解析", "Hexagrams")}
+                    {t("卦完整解析", "Hexagrams", "卦の完全解析", "괘 완전 해석")}
                   </div>
                 </div>
                 <div
@@ -2051,7 +2089,7 @@ export default function Home() {
                     78
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("塔羅牌百科", "Tarot cards")}
+                    {t("塔羅牌百科", "Tarot cards", "タロット百科", "타로 백과")}
                   </div>
                 </div>
                 <div style={{ textAlign: "center" }}>
@@ -2066,7 +2104,7 @@ export default function Home() {
                     5+
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("經典牌陣", "Classic spreads")}
+                    {t("經典牌陣", "Classic spreads", "定番スプレッド", "대표 스프레드")}
                   </div>
                 </div>
               </div>
@@ -2085,11 +2123,11 @@ export default function Home() {
                     }}
                   >
                     <span style={{ color: "rgba(192,192,208,0.85)", fontSize: 12 }}>
-                      {t("已選:", "Selected: ")}
+                      {t("已選:", "Selected: ", "選択中:", "선택됨: ")}
                       <strong style={{ color: "#d4a855" }}>
                         {divineType === "iching"
-                          ? t("易經占卜", "I Ching")
-                          : t("塔羅占卜", "Tarot")}
+                          ? t("易經占卜", "I Ching", "易経占い", "주역 점")
+                          : t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
                       </strong>
                     </span>
                     <button
@@ -2104,16 +2142,23 @@ export default function Home() {
                         cursor: "pointer",
                       }}
                     >
-                      {t("清除", "Clear")}
+                      {t("清除", "Clear", "クリア", "지우기")}
                     </button>
                   </div>
                 )}
                 <p style={{ textAlign: "center", color: "#c0c0d0", fontSize: 14, marginBottom: 12 }}>
                   {divineType
-                    ? t("挑一個你想問的方向", "Pick a topic to ask about")
+                    ? t(
+                        "挑一個你想問的方向",
+                        "Pick a topic to ask about",
+                        "聞きたいテーマを一つ選ぶ",
+                        "묻고 싶은 주제 하나 선택"
+                      )
                     : t(
                         "請選擇問事類別,稍後再選占卜工具",
-                        "Pick a topic — choose your method next"
+                        "Pick a topic — choose your method next",
+                        "テーマを選んでから方法を選択",
+                        "주제를 먼저, 방법은 다음에"
                       )}
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -2154,10 +2199,10 @@ export default function Home() {
                       marginBottom: 4,
                     }}
                   >
-                    {t("免費先試試看", "Try For Free")}
+                    {t("免費先試試看", "Try For Free", "まずは無料でお試し", "무료로 먼저 체험")}
                   </h3>
                   <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12 }}>
-                    {t("不用註冊也能使用", "No sign-up required")}
+                    {t("不用註冊也能使用", "No sign-up required", "登録不要", "가입 없이 이용")}
                   </p>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -2174,10 +2219,20 @@ export default function Home() {
                   >
                     <div style={{ fontSize: 22, marginBottom: 4 }}>✦</div>
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("Yes / No 速答", "Yes / No Quick Answer")}
+                      {t(
+                        "Yes / No 速答",
+                        "Yes / No Quick Answer",
+                        "Yes / No 即答",
+                        "Yes / No 즉답"
+                      )}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t("簡單問題秒回", "Single-card answer")}
+                      {t(
+                        "簡單問題秒回",
+                        "Single-card answer",
+                        "シンプルな質問に即答",
+                        "간단 질문 즉답"
+                      )}
                     </div>
                   </Link>
                   <Link
@@ -2193,10 +2248,15 @@ export default function Home() {
                   >
                     <div style={{ fontSize: 22, marginBottom: 4 }}>☀</div>
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("每日一卡", "Daily Card")}
+                      {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t("今日能量指引", "Today's energy")}
+                      {t(
+                        "今日能量指引",
+                        "Today's energy",
+                        "今日のエネルギー",
+                        "오늘의 에너지"
+                      )}
                     </div>
                   </Link>
                   <Link
@@ -2212,10 +2272,20 @@ export default function Home() {
                   >
                     <div style={{ fontSize: 22, marginBottom: 4 }}>📖</div>
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("塔羅百科", "Tarot Encyclopedia")}
+                      {t(
+                        "塔羅百科",
+                        "Tarot Encyclopedia",
+                        "タロット百科",
+                        "타로 백과"
+                      )}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t("78 張牌完整查詢", "All 78 cards")}
+                      {t(
+                        "78 張牌完整查詢",
+                        "All 78 cards",
+                        "78枚すべて検索",
+                        "78장 모두 검색"
+                      )}
                     </div>
                   </Link>
                   <Link
@@ -2231,10 +2301,15 @@ export default function Home() {
                   >
                     <div style={{ fontSize: 22, marginBottom: 4 }}>🃏</div>
                     <div style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                      {t("牌陣介紹", "Spreads Guide")}
+                      {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 2 }}>
-                      {t("認識經典牌陣", "Classic spreads")}
+                      {t(
+                        "認識經典牌陣",
+                        "Classic spreads",
+                        "定番スプレッドを学ぶ",
+                        "대표 스프레드 익히기"
+                      )}
                     </div>
                   </Link>
                 </div>
@@ -2248,7 +2323,12 @@ export default function Home() {
                       textUnderlineOffset: 3,
                     }}
                   >
-                    {t("閱讀更多占卜知識文章 →", "Read more articles →")}
+                    {t(
+                      "閱讀更多占卜知識文章 →",
+                      "Read more articles →",
+                      "占いの記事をもっと読む →",
+                      "점술 글 더 읽기 →"
+                    )}
                   </Link>
                 </div>
               </div>
@@ -2264,7 +2344,12 @@ export default function Home() {
                       marginBottom: 4,
                     }}
                   >
-                    {t("為什麼是雙系統?", "Why Both Systems?")}
+                    {t(
+                      "為什麼是雙系統?",
+                      "Why Both Systems?",
+                      "なぜ2つのシステム?",
+                      "왜 두 시스템인가?"
+                    )}
                   </h3>
                   <p
                     style={{
@@ -2277,7 +2362,9 @@ export default function Home() {
                   >
                     {t(
                       "易經給你「結構與時機」,塔羅給你「情緒與象徵」 — 兩面相互印證,答案更全面。",
-                      "I Ching reveals structure and timing; Tarot reveals emotion and symbol — two angles validate one another."
+                      "I Ching reveals structure and timing; Tarot reveals emotion and symbol — two angles validate one another.",
+                      "易経は「構造と時機」を、タロットは「感情と象徴」を — 二つの視点が答えをより立体的に。",
+                      "주역은 '구조와 시기'를, 타로는 '감정과 상징'을 — 두 시각이 서로를 비춰 답이 입체적으로."
                     )}
                   </p>
                 </div>
@@ -2316,10 +2403,15 @@ export default function Home() {
                         fontFamily: "'Noto Serif TC', serif",
                       }}
                     >
-                      {t("易經", "I Ching")}
+                      {t("易經", "I Ching", "易経", "주역")}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
-                      {t("結構 · 時機 · 變化", "Structure · Timing · Change")}
+                      {t(
+                        "結構 · 時機 · 變化",
+                        "Structure · Timing · Change",
+                        "構造 · 時機 · 変化",
+                        "구조 · 시기 · 변화"
+                      )}
                     </div>
                   </div>
                   <div
@@ -2340,10 +2432,15 @@ export default function Home() {
                         fontFamily: "'Noto Serif TC', serif",
                       }}
                     >
-                      {t("塔羅", "Tarot")}
+                      {t("塔羅", "Tarot", "タロット", "타로")}
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 4 }}>
-                      {t("情緒 · 象徵 · 故事", "Emotion · Symbol · Story")}
+                      {t(
+                        "情緒 · 象徵 · 故事",
+                        "Emotion · Symbol · Story",
+                        "感情 · 象徴 · 物語",
+                        "감정 · 상징 · 이야기"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2377,12 +2474,15 @@ export default function Home() {
                   }}
                 />
 
-                {/* 占卜師人格 + Quick/Deep 模式選擇 */}
+                {/* 占卜師人格 + Quick/Deep 模式選擇 — 易經 / 塔羅 各自有不同的人格清單 */}
                 <PersonaDepthPicker
                   isSubscriber={isActive}
                   personaId={personaId}
                   depth={readingDepth}
                   onChange={handlePersonaDepthChange}
+                  personas={getPersonasForSystem(
+                    divineType === "iching" ? "iching" : "tarot"
+                  )}
                   onUpgrade={() => {
                     if (typeof window !== "undefined") {
                       window.location.assign("/account/upgrade");
