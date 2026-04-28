@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import { SPREADS, getSpread, spreadImageSlot } from "@/data/spreads";
 import { getUiImages } from "@/lib/uiImages";
+import { getServerLocale, getServerT } from "@/lib/serverLocale";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!found) return { title: "Spread not found" };
 
   return {
-    title: `${found.nameZh}(${found.nameEn})· 塔羅牌陣解析 | Tarogram`,
+    title: `${found.nameZh}（${found.nameEn}）· 塔羅牌陣解析 | Tarogram`,
     description: `${found.taglineZh} ${found.whenZh.slice(0, 80)}…`,
     alternates: { canonical: `/tarot-spread/${found.id}` },
     openGraph: {
@@ -32,10 +33,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function TarotSpreadSlugPage({ params }: Props) {
   const { slug } = await params;
   const spread = getSpread(slug);
-  if (spread.id !== slug) notFound(); // getSpread fallback to first if not found — guard
+  if (spread.id !== slug) notFound();
 
   const uiImages = await getUiImages();
   const heroImage = uiImages[spreadImageSlot(spread.id)];
+  const t = await getServerT();
+  const { locale } = await getServerLocale();
+  const isZh = locale === "zh";
+
+  const sName = isZh ? spread.nameZh : spread.nameEn;
+  const sTagline = isZh ? spread.taglineZh : spread.taglineEn;
+  const sWhen = isZh ? spread.whenZh : spread.whenEn;
 
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
@@ -43,11 +51,10 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
         <nav style={{ fontSize: 12, color: "rgba(192,192,208,0.6)", marginBottom: 16 }}>
           <Link href="/tarot-spread" style={{ color: "rgba(212,168,85,0.7)", textDecoration: "none" }}>
-            ← 牌陣大全
+            ← {t("牌陣大全", "All Spreads", "スプレッド一覧", "스프레드 백과")}
           </Link>
         </nav>
 
-        {/* Hero image — 從 admin/ui-images 上傳，沒上傳就降回純文字 header */}
         {heroImage && (
           <div
             style={{
@@ -64,7 +71,7 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={heroImage}
-              alt={`${spread.nameZh} · ${spread.nameEn}`}
+              alt={sName}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
           </div>
@@ -72,7 +79,7 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
 
         <header style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 8, letterSpacing: 1 }}>
-            塔羅牌陣 · TAROT SPREAD
+            {t("塔羅牌陣", "TAROT SPREAD", "タロット スプレッド", "타로 스프레드")}
           </div>
           <h1
             className="text-gold-gradient"
@@ -84,16 +91,10 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               lineHeight: 1.3,
             }}
           >
-            {spread.nameZh}
+            {sName}
           </h1>
-          <p style={{ color: "#c0c0d0", fontSize: 18, fontStyle: "italic", marginTop: 4 }}>
-            {spread.nameEn}
-          </p>
           <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8, marginTop: 16 }}>
-            {spread.taglineZh}
-          </p>
-          <p style={{ color: "rgba(232,232,240,0.65)", fontSize: 14, lineHeight: 1.7, fontStyle: "italic" }}>
-            {spread.taglineEn}
+            {sTagline}
           </p>
         </header>
 
@@ -109,20 +110,9 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            什麼時候用 · When to use
+            {t("什麼時候用", "When to Use", "使うタイミング", "사용 시기")}
           </h2>
-          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>{spread.whenZh}</p>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.65)",
-              fontSize: 14,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-              marginTop: 8,
-            }}
-          >
-            {spread.whenEn}
-          </p>
+          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>{sWhen}</p>
         </section>
 
         {/* Positions */}
@@ -137,7 +127,12 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            牌位意義 · {spread.cardCount} positions
+            {t(
+              `牌位意義（${spread.cardCount} 個位置）`,
+              `Positions (${spread.cardCount})`,
+              `カード位置（${spread.cardCount} 箇所）`,
+              `카드 위치 (${spread.cardCount}개)`
+            )}
           </h2>
           <ol
             style={{
@@ -149,63 +144,53 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               gap: 12,
             }}
           >
-            {spread.positions.map((p, idx) => (
-              <li
-                key={p.key}
-                style={{
-                  background: "rgba(13,13,43,0.5)",
-                  border: "1px solid rgba(212,168,85,0.2)",
-                  borderRadius: 10,
-                  padding: 14,
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "rgba(212,168,85,0.15)",
-                      color: "#d4a855",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {idx + 1}
-                  </span>
-                  <strong
-                    style={{
-                      fontSize: 15,
-                      color: "#e8e8f0",
-                      fontFamily: "'Noto Serif TC', serif",
-                    }}
-                  >
-                    {p.labelZh}
-                    <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginLeft: 6, fontStyle: "italic" }}>
-                      {p.labelEn}
-                    </span>
-                  </strong>
-                </div>
-                <p style={{ color: "#c0c0d0", fontSize: 13, lineHeight: 1.6, margin: "0 0 4px 36px" }}>
-                  {p.descZh}
-                </p>
-                <p
+            {spread.positions.map((p, idx) => {
+              const pLabel = isZh ? p.labelZh : p.labelEn;
+              const pDesc = isZh ? p.descZh : p.descEn;
+              return (
+                <li
+                  key={p.key}
                   style={{
-                    color: "rgba(192,192,208,0.55)",
-                    fontSize: 12,
-                    lineHeight: 1.5,
-                    margin: "0 0 0 36px",
-                    fontStyle: "italic",
+                    background: "rgba(13,13,43,0.5)",
+                    border: "1px solid rgba(212,168,85,0.2)",
+                    borderRadius: 10,
+                    padding: 14,
                   }}
                 >
-                  {p.descEn}
-                </p>
-              </li>
-            ))}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+                    <span
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "rgba(212,168,85,0.15)",
+                        color: "#d4a855",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <strong
+                      style={{
+                        fontSize: 15,
+                        color: "#e8e8f0",
+                        fontFamily: "'Noto Serif TC', serif",
+                      }}
+                    >
+                      {pLabel}
+                    </strong>
+                  </div>
+                  <p style={{ color: "#c0c0d0", fontSize: 13, lineHeight: 1.6, margin: "0 0 0 36px" }}>
+                    {pDesc}
+                  </p>
+                </li>
+              );
+            })}
           </ol>
         </section>
 
@@ -228,14 +213,20 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               marginBottom: 10,
             }}
           >
-            開始用「{spread.nameZh}」做一次占卜
+            {t(
+              `開始用「${sName}」做一次占卜`,
+              `Start a reading with ${sName}`,
+              `「${sName}」で占いを始める`,
+              `「${sName}」으로 점쳐 보기`
+            )}
           </h3>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-            從主流程選擇此牌陣 → 描述你的問題 → AI 解牌
-            <br />
-            <span style={{ opacity: 0.7 }}>
-              Pick this spread in the main flow → describe your question → AI reads
-            </span>
+            {t(
+              "從主流程選擇此牌陣 → 描述你的問題 → AI 解牌",
+              "Pick this spread in the main flow → describe your question → AI reads",
+              "メイン画面でこのスプレッドを選択 → 質問を入力 → AI が解読",
+              "메인 플로우에서 이 스프레드 선택 → 질문 입력 → AI 해석"
+            )}
           </p>
           <Link
             href={`/?spread=${spread.id}`}
@@ -250,14 +241,14 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
               display: "inline-block",
             }}
           >
-            ✦ 用這個牌陣占卜
+            ✦ {t("用這個牌陣占卜", "Use this spread", "このスプレッドで占う", "이 스프레드로 점치기")}
           </Link>
         </section>
 
         {/* Other spreads */}
         <section style={{ marginBottom: 32 }}>
           <h3 style={{ fontSize: 14, color: "rgba(212,168,85,0.7)", marginBottom: 12 }}>
-            其他牌陣 · Other spreads
+            {t("其他牌陣", "Other Spreads", "他のスプレッド", "다른 스프레드")}
           </h3>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {SPREADS.filter((s) => s.id !== spread.id).map((s) => (
@@ -274,7 +265,7 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
                   textDecoration: "none",
                 }}
               >
-                {s.nameZh} · {s.nameEn}
+                {isZh ? s.nameZh : s.nameEn}
               </Link>
             ))}
           </div>

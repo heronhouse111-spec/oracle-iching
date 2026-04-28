@@ -3,6 +3,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { hexagrams, trigramNames } from "@/data/hexagrams";
 import { getIchingImages, hexagramImageKey } from "@/lib/ichingImages";
+import { getServerLocale, getServerT } from "@/lib/serverLocale";
 
 export const metadata: Metadata = {
   title: "易經 64 卦完整介紹 · I Ching Hexagrams Encyclopedia | Tarogram 易問",
@@ -16,27 +17,17 @@ export const metadata: Metadata = {
   },
 };
 
-// 上經 1–30(天道、自然、君子立身)、下經 31–64(人事、家國、變化終始)
-// 是傳統《周易》分卷:把 64 卦切成兩個 section,跟塔羅大/小阿爾克那分組同概念。
+// 上經 1–30、下經 31–64 — 跟傳統《周易》分卷對齊
 const SECTIONS = [
-  {
-    titleZh: "上經",
-    titleEn: "Upper Canon",
-    descZh: "天道與君子立身",
-    descEn: "Heaven, nature, and the foundations of the gentleman",
-    range: [1, 30] as const,
-  },
-  {
-    titleZh: "下經",
-    titleEn: "Lower Canon",
-    descZh: "人事與變化終始",
-    descEn: "Human affairs, change, and final outcomes",
-    range: [31, 64] as const,
-  },
+  { titleKey: "upper" as const, range: [1, 30] as const },
+  { titleKey: "lower" as const, range: [31, 64] as const },
 ];
 
 export default async function IChingHexagramsIndexPage() {
   const images = await getIchingImages();
+  const t = await getServerT();
+  const { locale } = await getServerLocale();
+  const isZh = locale === "zh";
 
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
@@ -47,10 +38,20 @@ export default async function IChingHexagramsIndexPage() {
             className="text-gold-gradient"
             style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 32, fontWeight: 700, margin: 0 }}
           >
-            易經 64 卦完整介紹
+            {t(
+              "易經 64 卦完整介紹",
+              "I Ching · 64 Hexagrams",
+              "易経 64卦 完全解説",
+              "주역 64괘 백과"
+            )}
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: 14, marginTop: 8 }}>
-            I Ching · 64 Hexagrams · King Wen Sequence
+            {t(
+              "King Wen 周易序列 · 卦辭 / 象辭 / 白話翻譯",
+              "King Wen sequence · judgments, images, vernacular",
+              "周易順序 · 卦辞 / 象辞 / 現代訳",
+              "주역 순서 · 괘사 / 상사 / 현대 번역"
+            )}
           </p>
           <p
             style={{
@@ -62,12 +63,12 @@ export default async function IChingHexagramsIndexPage() {
               margin: "12px auto 0",
             }}
           >
-            64 卦由八卦兩兩相重而成。每卦皆附原文卦辭、象辭,以及白話翻譯。從乾坤起手,到既濟未濟收尾,層層展開人生與宇宙的結構。
-            <br />
-            <span style={{ opacity: 0.7 }}>
-              The 64 hexagrams emerge from pairs of the 8 trigrams. Each entry includes the
-              classical judgment, image, and a plain-Chinese translation.
-            </span>
+            {t(
+              "64 卦由八卦兩兩相重而成。每卦皆附原文卦辭、象辭,以及白話翻譯。從乾坤起手,到既濟未濟收尾,層層展開人生與宇宙的結構。",
+              "The 64 hexagrams emerge from pairs of the 8 trigrams. Each entry includes the classical judgment, image text, and a plain-language translation — opening from Qian/Kun and closing with Ji-Ji/Wei-Ji.",
+              "64卦は八卦を二つずつ重ねて成り立ちます。各卦には原文の卦辞・象辞と現代訳を併載。乾坤から始まり既済未済まで、人生と宇宙の構造を層を成して描き出します。",
+              "64괘는 8괘를 두 개씩 겹쳐 만들어집니다. 각 괘마다 원문 괘사와 상사, 그리고 현대 번역을 수록했습니다. 건곤에서 기제·미제까지, 인생과 우주의 구조를 단계적으로 펼칩니다."
+            )}
           </p>
         </header>
 
@@ -89,25 +90,15 @@ export default async function IChingHexagramsIndexPage() {
               marginBottom: 12,
             }}
           >
-            如何卜卦 · How to Divine
+            {t("如何卜卦", "How to Divine", "卜卦の方法", "점치는 법")}
           </h2>
-          <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.85, marginBottom: 10 }}>
-            傳統卜卦使用三枚銅錢,連續擲六次,自下而上得六爻成卦。每次三枚錢的正反組合決定爻是
-            <strong style={{ color: "#fde68a" }}> 老陰、少陰、少陽、老陽 </strong>
-            其中之一,老陰 / 老陽即為「變爻」,會由「本卦」變化出「之卦」。
-          </p>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.7)",
-              fontSize: 13,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-            }}
-          >
-            Toss three coins six times; the bottom toss is line one, the top toss is line six.
-            The yin/yang result of each toss determines whether a line is changing — changing
-            lines transform the primary hexagram into a relating hexagram, revealing direction
-            of change.
+          <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.85 }}>
+            {t(
+              "傳統卜卦使用三枚銅錢,連續擲六次,自下而上得六爻成卦。每次三枚錢的正反組合決定爻是「老陰、少陰、少陽、老陽」其中之一,老陰 / 老陽即為「變爻」,會由「本卦」變化出「之卦」。",
+              "Toss three coins six times; the bottom toss is line one, the top toss is line six. Each toss yields one of: Old Yin, Young Yin, Young Yang, Old Yang. Old Yin and Old Yang are 'changing lines' — they transform the primary hexagram into a relating hexagram, revealing direction of change.",
+              "三枚の銅貨を六回投げ、下から順に六爻を作ります。それぞれの組み合わせで「老陰・少陰・少陽・老陽」のいずれかが決まり、老陰と老陽は「変爻」として本卦から之卦を生み出し、変化の方向を示します。",
+              "동전 세 개를 여섯 번 던져 아래에서 위로 여섯 효를 만듭니다. 매번의 조합으로 노음·소음·소양·노양 중 하나가 결정되며, 노음과 노양은 '변효'가 되어 본괘에서 지괘로 변화의 방향을 보여줍니다."
+            )}
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
             <Link
@@ -122,7 +113,7 @@ export default async function IChingHexagramsIndexPage() {
                 fontSize: 13,
               }}
             >
-              ✦ 直接開始易經占卜
+              ✦ {t("直接開始易經占卜", "Start I Ching Reading", "易経占いを始める", "주역 점 시작")}
             </Link>
             <Link
               href="/yes-no"
@@ -136,12 +127,12 @@ export default async function IChingHexagramsIndexPage() {
                 fontSize: 13,
               }}
             >
-              Yes/No 速答
+              {t("Yes/No 速答", "Yes/No Quick", "Yes/No 即答", "Yes/No 즉답")}
             </Link>
           </div>
         </section>
 
-        {/* 八卦對照 — 上下八個三爻卦組成 64 卦,先給使用者建一個 mental model */}
+        {/* 八卦對照 */}
         <section style={{ marginBottom: 36 }}>
           <h2
             style={{
@@ -153,7 +144,7 @@ export default async function IChingHexagramsIndexPage() {
               paddingLeft: 12,
             }}
           >
-            八卦速覽 · The Eight Trigrams
+            {t("八卦速覽", "The Eight Trigrams", "八卦速見表", "팔괘 속람")}
           </h2>
           <div
             style={{
@@ -162,7 +153,7 @@ export default async function IChingHexagramsIndexPage() {
               gap: 10,
             }}
           >
-            {Object.entries(trigramNames).map(([code, t]) => (
+            {Object.entries(trigramNames).map(([code, tg]) => (
               <div
                 key={code}
                 style={{
@@ -173,12 +164,9 @@ export default async function IChingHexagramsIndexPage() {
                   textAlign: "center",
                 }}
               >
-                <div style={{ fontSize: 28, color: "#d4a855", lineHeight: 1 }}>{t.symbol}</div>
+                <div style={{ fontSize: 28, color: "#d4a855", lineHeight: 1 }}>{tg.symbol}</div>
                 <div style={{ fontSize: 13, color: "#e8e8f0", marginTop: 6, fontWeight: 600 }}>
-                  {t.zh}
-                </div>
-                <div style={{ fontSize: 11, color: "rgba(192,192,208,0.55)", marginTop: 2 }}>
-                  {t.en}
+                  {isZh ? tg.zh : tg.en}
                 </div>
               </div>
             ))}
@@ -190,8 +178,26 @@ export default async function IChingHexagramsIndexPage() {
           const items = hexagrams.filter(
             (h) => h.number >= sec.range[0] && h.number <= sec.range[1]
           );
+          const title =
+            sec.titleKey === "upper"
+              ? t("上經", "Upper Canon", "上経", "상경")
+              : t("下經", "Lower Canon", "下経", "하경");
+          const desc =
+            sec.titleKey === "upper"
+              ? t(
+                  "天道與君子立身",
+                  "Heaven, nature, and the foundations of the gentleman",
+                  "天道と君子の立身",
+                  "천도와 군자의 입신"
+                )
+              : t(
+                  "人事與變化終始",
+                  "Human affairs, change, and final outcomes",
+                  "人事と変化の終始",
+                  "인사와 변화의 시종"
+                );
           return (
-            <section key={sec.titleZh} style={{ marginBottom: 48 }}>
+            <section key={sec.titleKey} style={{ marginBottom: 48 }}>
               <h2
                 style={{
                   fontFamily: "'Noto Serif TC', serif",
@@ -202,8 +208,7 @@ export default async function IChingHexagramsIndexPage() {
                   paddingLeft: 12,
                 }}
               >
-                {sec.titleZh}{" "}
-                <span style={{ opacity: 0.6, fontSize: 16 }}>· {sec.titleEn}</span>
+                {title}
                 <span style={{ opacity: 0.5, fontSize: 13, marginLeft: 12 }}>
                   ({items.length})
                 </span>
@@ -214,10 +219,9 @@ export default async function IChingHexagramsIndexPage() {
                   fontSize: 12,
                   marginLeft: 14,
                   marginBottom: 18,
-                  fontStyle: "italic",
                 }}
               >
-                {sec.descZh} · {sec.descEn}
+                {desc}
               </p>
 
               <div
@@ -229,6 +233,13 @@ export default async function IChingHexagramsIndexPage() {
               >
                 {items.map((h) => {
                   const url = images[hexagramImageKey(h.number)];
+                  const hName = isZh ? h.nameZh : h.nameEn.split(" ")[0];
+                  const numLabel = t(
+                    `第 ${h.number} 卦`,
+                    `Hexagram ${h.number}`,
+                    `第${h.number}卦`,
+                    `제 ${h.number}괘`
+                  );
                   return (
                     <Link
                       key={h.number}
@@ -263,11 +274,10 @@ export default async function IChingHexagramsIndexPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={url}
-                            alt={`${h.nameZh} · ${h.nameEn}`}
+                            alt={hName}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                           />
                         ) : (
-                          // 沒上傳就顯示卦象 Unicode 字元 — 不會空白,也不會誤導
                           <span
                             style={{
                               fontSize: 52,
@@ -281,7 +291,7 @@ export default async function IChingHexagramsIndexPage() {
                       </div>
                       <div style={{ textAlign: "center" }}>
                         <div style={{ fontSize: 11, color: "rgba(212,168,85,0.7)" }}>
-                          第 {h.number} 卦
+                          {numLabel}
                         </div>
                         <div
                           style={{
@@ -292,17 +302,7 @@ export default async function IChingHexagramsIndexPage() {
                             marginTop: 2,
                           }}
                         >
-                          {h.nameZh}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            color: "rgba(192,192,208,0.55)",
-                            marginTop: 2,
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {h.nameEn.split(" ")[0]}
+                          {hName}
                         </div>
                       </div>
                     </Link>

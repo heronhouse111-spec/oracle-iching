@@ -62,6 +62,21 @@ const LanguageContext = createContext<LanguageContextType | undefined>(
 const STORAGE_LOCALE = "preferred_locale"; // "zh" | "en" | "ja" | "ko"
 const STORAGE_ZH_VARIANT = "preferred_zh_variant"; // "TW" | "CN"
 
+// 同步寫一份到 cookie,讓 server component 也能讀到語系
+// (lib/serverLocale.ts 用 next/headers cookies() 讀這兩個 cookie)
+const COOKIE_LOCALE = "locale";
+const COOKIE_ZH_VARIANT = "zh_variant";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+function writeLocaleCookie(locale: Locale) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${COOKIE_LOCALE}=${locale};path=/;max-age=${COOKIE_MAX_AGE};samesite=lax`;
+}
+function writeZhVariantCookie(v: ZhVariant) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${COOKIE_ZH_VARIANT}=${v};path=/;max-age=${COOKIE_MAX_AGE};samesite=lax`;
+}
+
 /** 依 navigator.languages 推斷訪客預設語系。 */
 function detectFromBrowser(): { locale: Locale; zhVariant: ZhVariant } {
   if (typeof navigator === "undefined") {
@@ -130,6 +145,7 @@ export function LanguageProvider({
   const cnCacheRef = useRef<Map<string, string>>(new Map());
 
   // ---- mount 時決定初始 locale ----
+  // 同步把決定後的 locale / variant 寫進 cookie,讓 server component 下次 nav 就能讀到
   useEffect(() => {
     try {
       const storedLocale = localStorage.getItem(STORAGE_LOCALE);
@@ -138,18 +154,22 @@ export function LanguageProvider({
       ) as ZhVariant | null;
       if (isLocale(storedLocale)) {
         setLocaleState(storedLocale);
+        writeLocaleCookie(storedLocale);
         if (storedVariant === "TW" || storedVariant === "CN") {
           setZhVariantState(storedVariant);
+          writeZhVariantCookie(storedVariant);
         }
         return;
       }
     } catch {
       /* 無 localStorage 存取權,走自動偵測 */
     }
-    // 沒有手動選過 → 按瀏覽器推斷
+    // 沒有手動選過 → 按瀏覽器推斷,並寫 cookie 讓 server SSR 能對齊
     const detected = detectFromBrowser();
     setLocaleState(detected.locale);
     setZhVariantState(detected.zhVariant);
+    writeLocaleCookie(detected.locale);
+    writeZhVariantCookie(detected.zhVariant);
   }, []);
 
   // ---- locale / variant 變動 → 同步 <html lang> + 持久化 ----
@@ -180,7 +200,8 @@ export function LanguageProvider({
     }
   }, [locale, zhVariant, tw2cn]);
 
-  // ---- 對外的 setter,一併寫回 localStorage ----
+  // ---- 對外的 setter,一併寫回 localStorage + cookie ----
+  // localStorage 給 client side 立即恢復用,cookie 給 server component 讀
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     try {
@@ -188,6 +209,7 @@ export function LanguageProvider({
     } catch {
       /* ignore */
     }
+    writeLocaleCookie(l);
   }, []);
 
   const setZhVariant = useCallback((v: ZhVariant) => {
@@ -197,6 +219,7 @@ export function LanguageProvider({
     } catch {
       /* ignore */
     }
+    writeZhVariantCookie(v);
   }, []);
 
   // ---- 5-way cycle: TW → CN → EN → JA → KO → TW ----

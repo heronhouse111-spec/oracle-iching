@@ -9,9 +9,10 @@ import {
   SUIT_NAMES_EN,
 } from "@/data/tarot";
 import Header from "@/components/Header";
+import { getServerLocale, getServerT } from "@/lib/serverLocale";
 
 interface Props {
-  params: Promise<{ slug: string }>; // Next 16: params is async
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const card = getCardById(slug);
   if (!card) return { title: "Card not found" };
 
-  const title = `${card.nameZh}(${card.nameEn})牌意 · ${SUIT_NAMES_ZH[card.suit]}`;
+  const title = `${card.nameZh}（${card.nameEn}）牌意 · ${SUIT_NAMES_ZH[card.suit]}`;
   const description = `${card.nameZh}(${card.nameEn})正逆位牌意、關鍵字、適用情境完整解析。${card.uprightMeaningZh.slice(0, 80)}…`;
 
   return {
@@ -43,15 +44,21 @@ export default async function TarotCardSlugPage({ params }: Props) {
   const card = getCardById(slug);
   if (!card) notFound();
 
+  const t = await getServerT();
+  const { locale } = await getServerLocale();
+  const isZh = locale === "zh";
+
+  const suitName = isZh ? SUIT_NAMES_ZH[card.suit] : SUIT_NAMES_EN[card.suit];
+  const cardName = isZh ? card.nameZh : card.nameEn;
+  const upright = isZh ? card.uprightMeaningZh : card.uprightMeaningEn;
+  const reversed = isZh ? card.reversedMeaningZh : card.reversedMeaningEn;
+  const keywordsUpright = isZh ? card.keywordsUprightZh : card.keywordsUprightEn;
+  const keywordsReversed = isZh ? card.keywordsReversedZh : card.keywordsReversedEn;
+
   // 同花色其他牌(底部相關推薦)
   const sameSuit = tarotDeck
     .filter((c) => c.suit === card.suit && c.id !== card.id)
     .slice(0, 6);
-
-  const orientationLabel = (rev: boolean) => ({
-    titleZh: rev ? "逆位" : "正位",
-    titleEn: rev ? "Reversed" : "Upright",
-  });
 
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
@@ -59,7 +66,7 @@ export default async function TarotCardSlugPage({ params }: Props) {
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
         <nav style={{ fontSize: 12, color: "rgba(192,192,208,0.6)", marginBottom: 16 }}>
           <Link href="/tarot/cards" style={{ color: "rgba(212,168,85,0.7)", textDecoration: "none" }}>
-            ← 78 張牌意百科
+            ← {t("78 張牌意百科", "78 Cards Encyclopedia", "78枚カード百科", "78장 카드 백과")}
           </Link>
         </nav>
 
@@ -82,7 +89,7 @@ export default async function TarotCardSlugPage({ params }: Props) {
           >
             <Image
               src={card.imagePath}
-              alt={`${card.nameZh} · ${card.nameEn}`}
+              alt={cardName}
               width={400}
               height={620}
               style={{ width: "100%", height: "auto", display: "block" }}
@@ -90,19 +97,15 @@ export default async function TarotCardSlugPage({ params }: Props) {
           </div>
           <div>
             <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 6 }}>
-              {SUIT_NAMES_ZH[card.suit]} · {SUIT_NAMES_EN[card.suit]}
-              {card.suit !== "major" && ` · ${card.number}`}
-              {card.suit === "major" && ` · ${card.number}`}
+              {suitName}
+              {` · ${card.number}`}
             </div>
             <h1
               className="text-gold-gradient"
               style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 32, fontWeight: 700, margin: 0 }}
             >
-              {card.nameZh}
+              {cardName}
             </h1>
-            <p style={{ color: "#c0c0d0", fontSize: 18, fontStyle: "italic", marginTop: 4 }}>
-              {card.nameEn}
-            </p>
           </div>
         </header>
 
@@ -118,14 +121,16 @@ export default async function TarotCardSlugPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            正位 · Upright
+            {t("正位", "Upright", "正位置", "정방향")}
           </h2>
           <div style={{ marginBottom: 12 }}>
-            <strong style={{ color: "#e8e8f0", fontSize: 13 }}>關鍵字 / Keywords:</strong>
+            <strong style={{ color: "#e8e8f0", fontSize: 13 }}>
+              {t("關鍵字", "Keywords", "キーワード", "키워드")}:
+            </strong>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-              {card.keywordsUprightZh.map((k, i) => (
+              {keywordsUpright.map((k, i) => (
                 <span
-                  key={`zh-${i}`}
+                  key={i}
                   style={{
                     background: "rgba(74,222,128,0.12)",
                     color: "#86efac",
@@ -137,36 +142,9 @@ export default async function TarotCardSlugPage({ params }: Props) {
                   {k}
                 </span>
               ))}
-              {card.keywordsUprightEn.map((k, i) => (
-                <span
-                  key={`en-${i}`}
-                  style={{
-                    background: "rgba(74,222,128,0.06)",
-                    color: "rgba(134,239,172,0.7)",
-                    fontSize: 11,
-                    padding: "4px 10px",
-                    borderRadius: 100,
-                  }}
-                >
-                  {k}
-                </span>
-              ))}
             </div>
           </div>
-          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>
-            {card.uprightMeaningZh}
-          </p>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.7)",
-              fontSize: 14,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-              marginTop: 8,
-            }}
-          >
-            {card.uprightMeaningEn}
-          </p>
+          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>{upright}</p>
         </section>
 
         {/* Reversed */}
@@ -181,14 +159,16 @@ export default async function TarotCardSlugPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            逆位 · Reversed
+            {t("逆位", "Reversed", "逆位置", "역방향")}
           </h2>
           <div style={{ marginBottom: 12 }}>
-            <strong style={{ color: "#e8e8f0", fontSize: 13 }}>關鍵字 / Keywords:</strong>
+            <strong style={{ color: "#e8e8f0", fontSize: 13 }}>
+              {t("關鍵字", "Keywords", "キーワード", "키워드")}:
+            </strong>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-              {card.keywordsReversedZh.map((k, i) => (
+              {keywordsReversed.map((k, i) => (
                 <span
-                  key={`zh-${i}`}
+                  key={i}
                   style={{
                     background: "rgba(248,113,113,0.12)",
                     color: "#fca5a5",
@@ -200,36 +180,9 @@ export default async function TarotCardSlugPage({ params }: Props) {
                   {k}
                 </span>
               ))}
-              {card.keywordsReversedEn.map((k, i) => (
-                <span
-                  key={`en-${i}`}
-                  style={{
-                    background: "rgba(248,113,113,0.06)",
-                    color: "rgba(252,165,165,0.7)",
-                    fontSize: 11,
-                    padding: "4px 10px",
-                    borderRadius: 100,
-                  }}
-                >
-                  {k}
-                </span>
-              ))}
             </div>
           </div>
-          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>
-            {card.reversedMeaningZh}
-          </p>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.7)",
-              fontSize: 14,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-              marginTop: 8,
-            }}
-          >
-            {card.reversedMeaningEn}
-          </p>
+          <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.8 }}>{reversed}</p>
         </section>
 
         {/* CTA */}
@@ -251,14 +204,20 @@ export default async function TarotCardSlugPage({ params }: Props) {
               marginBottom: 10,
             }}
           >
-            想看「這張牌」對你的問題說了什麼?
+            {t(
+              "想看「這張牌」對你的問題說了什麼?",
+              "Want to know what this card says about your question?",
+              "このカードがあなたの質問に何を語るか見てみませんか?",
+              "이 카드가 당신의 질문에 무엇을 말하는지 보고 싶나요?"
+            )}
           </h3>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-            牌意是地圖,真正的占卜要把牌放進你的問題裡才會有意義。
-            <br />
-            <span style={{ opacity: 0.7 }}>
-              Card meanings are maps. A real reading happens when the card meets your question.
-            </span>
+            {t(
+              "牌意是地圖,真正的占卜要把牌放進你的問題裡才會有意義。",
+              "Card meanings are maps. A real reading happens when the card meets your question.",
+              "カードの意味は地図です。真の占いは、カードがあなたの質問と出会ったときに起こります。",
+              "카드의 의미는 지도입니다. 진정한 점은 카드가 당신의 질문과 만날 때 일어납니다."
+            )}
           </p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
             <Link
@@ -273,7 +232,7 @@ export default async function TarotCardSlugPage({ params }: Props) {
                 fontSize: 14,
               }}
             >
-              ✦ 三牌占卜
+              ✦ {t("塔羅占卜", "Tarot Reading", "タロット占い", "타로 점")}
             </Link>
             <Link
               href="/yes-no"
@@ -287,7 +246,7 @@ export default async function TarotCardSlugPage({ params }: Props) {
                 fontSize: 14,
               }}
             >
-              Yes/No 占卜
+              {t("Yes/No 占卜", "Yes/No", "Yes/No 占い", "Yes/No 점")}
             </Link>
           </div>
         </section>
@@ -303,7 +262,12 @@ export default async function TarotCardSlugPage({ params }: Props) {
                 fontFamily: "'Noto Serif TC', serif",
               }}
             >
-              同花色其他牌 · More from {SUIT_NAMES_EN[card.suit]}
+              {t(
+                `同花色其他牌 · ${suitName}`,
+                `More from ${suitName}`,
+                `同じスート · ${suitName}`,
+                `같은 슈트 · ${suitName}`
+              )}
             </h3>
             <div
               style={{
@@ -312,38 +276,41 @@ export default async function TarotCardSlugPage({ params }: Props) {
                 gap: 12,
               }}
             >
-              {sameSuit.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/tarot/cards/${c.id}`}
-                  style={{
-                    display: "block",
-                    textDecoration: "none",
-                    color: "inherit",
-                  }}
-                >
-                  <div
+              {sameSuit.map((c) => {
+                const cName = isZh ? c.nameZh : c.nameEn;
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/tarot/cards/${c.id}`}
                     style={{
-                      borderRadius: 6,
-                      overflow: "hidden",
-                      aspectRatio: "9 / 14",
-                      marginBottom: 4,
-                      border: "1px solid rgba(212,168,85,0.15)",
+                      display: "block",
+                      textDecoration: "none",
+                      color: "inherit",
                     }}
                   >
-                    <Image
-                      src={c.imagePath}
-                      alt={`${c.nameZh} · ${c.nameEn}`}
-                      width={200}
-                      height={310}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 11, color: "#c0c0d0", textAlign: "center" }}>
-                    {c.nameZh}
-                  </div>
-                </Link>
-              ))}
+                    <div
+                      style={{
+                        borderRadius: 6,
+                        overflow: "hidden",
+                        aspectRatio: "9 / 14",
+                        marginBottom: 4,
+                        border: "1px solid rgba(212,168,85,0.15)",
+                      }}
+                    >
+                      <Image
+                        src={c.imagePath}
+                        alt={cName}
+                        width={200}
+                        height={310}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div style={{ fontSize: 11, color: "#c0c0d0", textAlign: "center" }}>
+                      {cName}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

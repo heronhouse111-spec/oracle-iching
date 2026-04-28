@@ -9,6 +9,7 @@ import {
   type Hexagram,
 } from "@/data/hexagrams";
 import { getIchingImages, hexagramImageKey } from "@/lib/ichingImages";
+import { getServerLocale, getServerT } from "@/lib/serverLocale";
 
 interface Props {
   params: Promise<{ number: string }>;
@@ -42,7 +43,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // 純 SVG 風格卦線渲染 — 不依賴 framer-motion / client component。
-// 自下而上 6 條,陽爻一整條,陰爻中間斷開。
 function HexagramLines({ lines, size = "md" }: { lines: number[]; size?: "sm" | "md" | "lg" }) {
   const dim =
     size === "lg"
@@ -50,7 +50,6 @@ function HexagramLines({ lines, size = "md" }: { lines: number[]; size?: "sm" | 
       : size === "md"
         ? { w: 120, h: 10, gap: 10, gapInner: 12 }
         : { w: 80, h: 7, gap: 7, gapInner: 9 };
-  // lines[0] 是最下爻,渲染時要倒過來,最上爻畫在最上面
   const display = [...lines].reverse();
   return (
     <div
@@ -96,8 +95,21 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
   const heroUrl = images[hexagramImageKey(hex.number)];
   const upper = trigramNames[hex.upperTrigram];
   const lower = trigramNames[hex.lowerTrigram];
+  const t = await getServerT();
+  const { locale } = await getServerLocale();
+  const isZh = locale === "zh";
 
-  // 上下相鄰卦(在底部給個「下一卦」的瀏覽錨點)
+  const hName = isZh ? hex.nameZh : hex.nameEn;
+  // 卦辭/象辭非中文使用者:原文當「古文」字段(資產),白話用英譯填(資料就是英譯,沒有對應日韓)。
+  // 這個頁面對非中文使用者實質上仍是 ZH-classical + EN-modern,因為原典無法翻譯成日韓,
+  // 但至少不會強制顯示中英對照。
+  const judgmentClassical = hex.judgmentZh; // 原文不翻譯,維持古文字一致
+  const judgmentTranslated = isZh ? hex.judgmentVernacularZh : hex.judgmentEn;
+  const imageClassical = hex.imageZh;
+  const imageTranslated = isZh ? hex.imageVernacularZh : hex.imageEn;
+  const upperName = upper ? (isZh ? upper.zh : upper.en) : "";
+  const lowerName = lower ? (isZh ? lower.zh : lower.en) : "";
+
   const prev = hex.number > 1 ? getHexagramByNumber(hex.number - 1) : null;
   const next = hex.number < 64 ? getHexagramByNumber(hex.number + 1) : null;
 
@@ -110,11 +122,11 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
             href="/iching/hexagrams"
             style={{ color: "rgba(212,168,85,0.7)", textDecoration: "none" }}
           >
-            ← 64 卦完整介紹
+            ← {t("64 卦完整介紹", "All 64 Hexagrams", "64卦 完全解説", "64괘 백과")}
           </Link>
         </nav>
 
-        {/* Hero — 圖在左、卦象 + 名稱在右 */}
+        {/* Hero */}
         <header
           style={{
             display: "grid",
@@ -141,11 +153,10 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={heroUrl}
-                alt={`${hex.nameZh} · ${hex.nameEn}`}
+                alt={hName}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             ) : (
-              // 圖還沒上傳就用大字卦象 + 卦線占位,版面不空、也不誤導
               <div style={{ textAlign: "center", padding: 16 }}>
                 <div
                   style={{
@@ -164,7 +175,12 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
 
           <div>
             <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 6 }}>
-              第 {hex.number} 卦 · Hexagram {hex.number}
+              {t(
+                `第 ${hex.number} 卦`,
+                `Hexagram ${hex.number}`,
+                `第 ${hex.number} 卦`,
+                `제 ${hex.number} 괘`
+              )}
             </div>
             <h1
               className="text-gold-gradient"
@@ -175,11 +191,8 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 margin: 0,
               }}
             >
-              {hex.nameZh}
+              {hName}
             </h1>
-            <p style={{ color: "#c0c0d0", fontSize: 18, fontStyle: "italic", marginTop: 4 }}>
-              {hex.nameEn}
-            </p>
 
             {/* 上下卦組成 */}
             <div
@@ -196,7 +209,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                   {upper?.symbol}
                 </span>
                 <span style={{ fontSize: 12, color: "rgba(192,192,208,0.7)" }}>
-                  上 {upper?.zh}
+                  {t(`上 ${upperName}`, `Upper · ${upperName}`, `上 ${upperName}`, `상 ${upperName}`)}
                 </span>
               </div>
               <span style={{ color: "rgba(212,168,85,0.4)" }}>／</span>
@@ -205,12 +218,11 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                   {lower?.symbol}
                 </span>
                 <span style={{ fontSize: 12, color: "rgba(192,192,208,0.7)" }}>
-                  下 {lower?.zh}
+                  {t(`下 ${lowerName}`, `Lower · ${lowerName}`, `下 ${lowerName}`, `하 ${lowerName}`)}
                 </span>
               </div>
             </div>
 
-            {/* 卦象大字 + 卦線(若 hero 是圖,這邊保留卦象資訊) */}
             {heroUrl && (
               <div
                 style={{
@@ -231,7 +243,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
           </div>
         </header>
 
-        {/* 卦辭 — 原文 + 白話 */}
+        {/* 卦辭 — 原文 + 翻譯 */}
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -243,7 +255,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            卦辭 · Judgment
+            {t("卦辭", "Judgment", "卦辞", "괘사")}
           </h2>
           <div
             style={{
@@ -262,7 +274,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 marginBottom: 6,
               }}
             >
-              原文
+              {t("原文", "Classical Text", "原文", "원문")}
             </div>
             <p
               style={{
@@ -274,7 +286,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 margin: 0,
               }}
             >
-              {hex.judgmentZh}
+              {judgmentClassical}
             </p>
           </div>
           <div
@@ -283,7 +295,6 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               border: "1px solid rgba(212,168,85,0.12)",
               borderRadius: 10,
               padding: 18,
-              marginBottom: 8,
             }}
           >
             <div
@@ -294,26 +305,15 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 marginBottom: 6,
               }}
             >
-              白話翻譯
+              {t("白話翻譯", "Plain-Language Translation", "現代訳", "현대 번역")}
             </div>
             <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.85, margin: 0 }}>
-              {hex.judgmentVernacularZh}
+              {judgmentTranslated}
             </p>
           </div>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.6)",
-              fontSize: 13,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-              marginTop: 10,
-            }}
-          >
-            EN · {hex.judgmentEn}
-          </p>
         </section>
 
-        {/* 象辭 — 原文 + 白話 */}
+        {/* 象辭 — 原文 + 翻譯 */}
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -325,7 +325,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               paddingLeft: 12,
             }}
           >
-            象辭 · Image
+            {t("象辭", "Image", "象辞", "상사")}
           </h2>
           <div
             style={{
@@ -344,7 +344,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 marginBottom: 6,
               }}
             >
-              原文
+              {t("原文", "Classical Text", "原文", "원문")}
             </div>
             <p
               style={{
@@ -356,7 +356,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 margin: 0,
               }}
             >
-              {hex.imageZh}
+              {imageClassical}
             </p>
           </div>
           <div
@@ -365,7 +365,6 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               border: "1px solid rgba(212,168,85,0.12)",
               borderRadius: 10,
               padding: 18,
-              marginBottom: 8,
             }}
           >
             <div
@@ -376,23 +375,12 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 marginBottom: 6,
               }}
             >
-              白話翻譯
+              {t("白話翻譯", "Plain-Language Translation", "現代訳", "현대 번역")}
             </div>
             <p style={{ color: "#e8e8f0", fontSize: 15, lineHeight: 1.85, margin: 0 }}>
-              {hex.imageVernacularZh}
+              {imageTranslated}
             </p>
           </div>
-          <p
-            style={{
-              color: "rgba(232,232,240,0.6)",
-              fontSize: 13,
-              lineHeight: 1.7,
-              fontStyle: "italic",
-              marginTop: 10,
-            }}
-          >
-            EN · {hex.imageEn}
-          </p>
         </section>
 
         {/* CTA */}
@@ -414,10 +402,20 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               marginBottom: 10,
             }}
           >
-            想看「這一卦」對你的問題說了什麼?
+            {t(
+              "想看「這一卦」對你的問題說了什麼?",
+              "Want to know what this hexagram says about your question?",
+              "この卦があなたの質問に何を語るか見てみませんか?",
+              "이 괘가 당신의 질문에 무엇을 말하는지 보고 싶나요?"
+            )}
           </h3>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
-            卦辭是地圖,真正的占卜要把卦放進你的問題裡才會有意義。
+            {t(
+              "卦辭是地圖,真正的占卜要把卦放進你的問題裡才會有意義。",
+              "Hexagram texts are maps. A real reading happens when the hexagram meets your question.",
+              "卦辞は地図です。真の占いは、卦があなたの質問と出会ったときに起こります。",
+              "괘사는 지도입니다. 진정한 점은 괘가 당신의 질문과 만날 때 일어납니다."
+            )}
           </p>
           <Link
             href="/"
@@ -431,7 +429,7 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
               fontSize: 14,
             }}
           >
-            ✦ 開始易經占卜
+            ✦ {t("開始易經占卜", "Start I Ching Reading", "易経占いを始める", "주역 점 시작")}
           </Link>
         </section>
 
@@ -456,9 +454,16 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 lineHeight: 1.5,
               }}
             >
-              <div style={{ fontSize: 11, opacity: 0.6 }}>← 上一卦</div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>
+                ← {t("上一卦", "Previous", "前の卦", "이전 괘")}
+              </div>
               <div style={{ fontFamily: "'Noto Serif TC', serif" }}>
-                第 {prev.number} 卦 {prev.nameZh}
+                {t(
+                  `第 ${prev.number} 卦 ${prev.nameZh}`,
+                  `${prev.number}. ${prev.nameEn.split(" ")[0]}`,
+                  `第 ${prev.number} 卦 ${prev.nameZh}`,
+                  `${prev.number}. ${prev.nameEn.split(" ")[0]}`
+                )}
               </div>
             </Link>
           ) : (
@@ -475,9 +480,16 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
                 lineHeight: 1.5,
               }}
             >
-              <div style={{ fontSize: 11, opacity: 0.6 }}>下一卦 →</div>
+              <div style={{ fontSize: 11, opacity: 0.6 }}>
+                {t("下一卦", "Next", "次の卦", "다음 괘")} →
+              </div>
               <div style={{ fontFamily: "'Noto Serif TC', serif" }}>
-                第 {next.number} 卦 {next.nameZh}
+                {t(
+                  `第 ${next.number} 卦 ${next.nameZh}`,
+                  `${next.number}. ${next.nameEn.split(" ")[0]}`,
+                  `第 ${next.number} 卦 ${next.nameZh}`,
+                  `${next.number}. ${next.nameEn.split(" ")[0]}`
+                )}
               </div>
             </Link>
           ) : (
