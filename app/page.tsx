@@ -72,46 +72,19 @@ const isSupabaseConfigured =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_url_here";
 
-// Inline icon / emoji helper —— 給首頁多處 icon slot 用
-function SlotIcon({
-  url,
-  emoji,
-  size = 30,
-  marginBottom = 0,
-}: {
-  url: string | undefined;
-  emoji: React.ReactNode;
-  size?: number;
-  marginBottom?: number;
-}) {
-  if (url) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", marginBottom }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" style={{ width: size, height: size, objectFit: "contain" }} />
-      </div>
-    );
-  }
-  return (
-    <div style={{ fontSize: size, marginBottom, textAlign: "center" }}>{emoji}</div>
-  );
-}
-
 /**
- * 大圖 hero 卡片用的圖片區塊 —— 全寬 + 預設 16:10 比例,沒上傳就把 emoji 放大置中。
- * 卡片 wrapper 在外層處理 borderRadius / overflow,這裡只負責圖片本體。
+ * 大圖 hero 卡片用的圖片區塊。
+ * 沒上傳就回 null — 由外層卡片決定要怎麼呈現「無圖」狀態(目前是讓卡片少一個影像區塊,
+ * 文字往上頂)。這樣可以避免「emoji 占位 → 圖片載入後 swap」的閃爍。
  */
 function HeroImage({
   url,
-  emoji,
   aspectRatio = "16/10",
-  emojiSize = 96,
 }: {
   url: string | undefined;
-  emoji: React.ReactNode;
   aspectRatio?: string;
-  emojiSize?: number;
 }) {
+  if (!url) return null;
   return (
     <div
       style={{
@@ -125,18 +98,12 @@ function HeroImage({
         overflow: "hidden",
       }}
     >
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={url}
-          alt=""
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      ) : (
-        <span style={{ fontSize: emojiSize, lineHeight: 1, opacity: 0.85 }}>
-          {emoji}
-        </span>
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
     </div>
   );
 }
@@ -2166,7 +2133,7 @@ export default function Home() {
                     fontFamily: "inherit",
                   }}
                 >
-                  <HeroImage url={uiImages["cta.iching"]} emoji="☯" aspectRatio="4/3" emojiSize={88} />
+                  <HeroImage url={uiImages["cta.iching"]} aspectRatio="4/3" />
                   <div style={{ padding: "12px 14px 14px" }}>
                     <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
                       {t("易經占卜", "I Ching", "易経占い", "주역 점")}
@@ -2213,7 +2180,7 @@ export default function Home() {
                     fontFamily: "inherit",
                   }}
                 >
-                  <HeroImage url={uiImages["cta.tarot"]} emoji="🎴" aspectRatio="4/3" emojiSize={88} />
+                  <HeroImage url={uiImages["cta.tarot"]} aspectRatio="4/3" />
                   <div style={{ padding: "12px 14px 14px" }}>
                     <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
                       {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
@@ -2367,9 +2334,7 @@ export default function Home() {
                     >
                       <HeroImage
                         url={uiImages[`category.${cat.id}`]}
-                        emoji={cat.icon}
                         aspectRatio="4/3"
-                        emojiSize={72}
                       />
                       <div style={{ padding: "10px 8px 12px" }}>
                         <span style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
@@ -2410,7 +2375,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <HeroImage url={uiImages["freeTool.yes-no"]} emoji="✦" />
+                    <HeroImage url={uiImages["freeTool.yes-no"]} />
                     <div style={{ padding: "12px 14px 14px" }}>
                       <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
                         {t(
@@ -2444,7 +2409,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <HeroImage url={uiImages["freeTool.daily"]} emoji="☀" />
+                    <HeroImage url={uiImages["freeTool.daily"]} />
                     <div style={{ padding: "12px 14px 14px" }}>
                       <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
                         {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
@@ -2473,7 +2438,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <HeroImage url={uiImages["freeTool.cards"]} emoji="📖" />
+                    <HeroImage url={uiImages["freeTool.cards"]} />
                     <div style={{ padding: "12px 14px 14px" }}>
                       <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
                         {t(
@@ -2507,7 +2472,7 @@ export default function Home() {
                       display: "block",
                     }}
                   >
-                    <HeroImage url={uiImages["freeTool.spreads"]} emoji="🃏" />
+                    <HeroImage url={uiImages["freeTool.spreads"]} />
                     <div style={{ padding: "12px 14px 14px" }}>
                       <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
                         {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
@@ -2591,7 +2556,7 @@ export default function Home() {
                     }}
                   >
                     {uiImages["dualSystem.iching"] ? (
-                      <HeroImage url={uiImages["dualSystem.iching"]} emoji="☰" aspectRatio="1" />
+                      <HeroImage url={uiImages["dualSystem.iching"]} aspectRatio="1" />
                     ) : (
                       <div
                         style={{
@@ -2652,7 +2617,7 @@ export default function Home() {
                       background: "rgba(13,13,43,0.65)",
                     }}
                   >
-                    <HeroImage url={uiImages["dualSystem.tarot"]} emoji="🎴" aspectRatio="1" />
+                    <HeroImage url={uiImages["dualSystem.tarot"]} aspectRatio="1" />
                     <div style={{ padding: "12px 14px 14px", textAlign: "center" }}>
                       <div
                         style={{
@@ -2923,32 +2888,26 @@ export default function Home() {
                         background: "rgba(13,13,43,0.8)",
                       }}
                     >
-                      <div
-                        style={{
-                          width: 72,
-                          flexShrink: 0,
-                          aspectRatio: "1 / 1",
-                          borderRadius: 10,
-                          overflow: "hidden",
-                          border: "1px solid rgba(212,168,85,0.25)",
-                          background:
-                            "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.5))",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {thumb ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+                      {/* 沒上傳就完全不渲染這個區塊,保持版面乾淨 */}
+                      {thumb && (
+                        <div
+                          style={{
+                            width: 72,
+                            flexShrink: 0,
+                            aspectRatio: "1 / 1",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                            border: "1px solid rgba(212,168,85,0.25)",
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={thumb}
                             alt=""
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                           />
-                        ) : (
-                          <span style={{ fontSize: 30, opacity: 0.7 }}>🎴</span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "baseline" }}>
                           <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 15, fontFamily: "'Noto Serif TC', serif" }}>

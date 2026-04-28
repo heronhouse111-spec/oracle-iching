@@ -68,32 +68,26 @@ export default async function TarotSpreadIndexPage() {
                   transition: "transform 0.2s, border-color 0.2s",
                 }}
               >
-                <div
-                  style={{
-                    width: 96,
-                    flexShrink: 0,
-                    aspectRatio: "1 / 1",
-                    borderRadius: 10,
-                    overflow: "hidden",
-                    border: "1px solid rgba(212,168,85,0.2)",
-                    background:
-                      "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.5))",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {thumb ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
+                {/* 沒上傳就跳過縮圖,文字往左頂滿 — 不放 emoji 占位避免雜訊 */}
+                {thumb && (
+                  <div
+                    style={{
+                      width: 96,
+                      flexShrink: 0,
+                      aspectRatio: "1 / 1",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      border: "1px solid rgba(212,168,85,0.2)",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={thumb}
                       alt=""
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
-                  ) : (
-                    <span style={{ fontSize: 36, opacity: 0.7 }}>🎴</span>
-                  )}
-                </div>
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8, flexWrap: "wrap" }}>
                     <h2

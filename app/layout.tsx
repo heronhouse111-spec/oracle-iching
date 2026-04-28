@@ -6,6 +6,8 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import GoogleOneTap from "@/components/GoogleOneTap";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import { UiImagesProvider } from "@/hooks/useUiImages";
+import { getUiImages } from "@/lib/uiImages";
 
 // metadataBase 讓 OG/twitter 圖路徑可以用相對 URL — Next 16 建議要設
 const siteUrl = (() => {
@@ -63,11 +65,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ui_images 在 server 階段就讀好,經由 UiImagesProvider 注入 React context。
+  // 用意:避免「emoji fallback → 圖片 swap」的視覺閃爍 — SSR 第一次 paint 就有正確 url。
+  const uiImages = await getUiImages();
   return (
     <html lang="zh-Hant">
       <head>
@@ -78,14 +83,16 @@ export default function RootLayout({
       </head>
       <body className="bg-stars" style={{ minHeight: "100vh" }}>
         <LanguageProvider>
-          <AnnouncementBanner />
-          {children}
-          <Footer />
-          {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
-          <ServiceWorkerRegister />
-          <InstallPrompt />
-          {/* Google One Tap — 未登入時自動跳「以 xxx 身份繼續」,iPhone/iPad 也能秒登 */}
-          <GoogleOneTap />
+          <UiImagesProvider images={uiImages}>
+            <AnnouncementBanner />
+            {children}
+            <Footer />
+            {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
+            <ServiceWorkerRegister />
+            <InstallPrompt />
+            {/* Google One Tap — 未登入時自動跳「以 xxx 身份繼續」,iPhone/iPad 也能秒登 */}
+            <GoogleOneTap />
+          </UiImagesProvider>
         </LanguageProvider>
       </body>
     </html>

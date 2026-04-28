@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { assertAdmin } from "@/lib/admin/apiAuth";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -83,6 +84,9 @@ export async function PUT(req: NextRequest) {
     targetId: KEY,
     payload: { slotCount: Object.keys(body.images).length },
   });
+
+  // 戳掉 lib/uiImages.ts 的 unstable_cache,讓使用者下次刷新就看到新圖
+  revalidateTag("ui-images");
 
   return NextResponse.json({ ok: true, updatedAt: data.updated_at });
 }
