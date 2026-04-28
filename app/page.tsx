@@ -108,6 +108,51 @@ function HeroImage({
   );
 }
 
+/**
+ * 免費工具區塊用的小卡片 — 圖(可選)+ 標題 + 副說明 + CTA 文字。
+ * 用元件包起來避免兩欄(易經 / 塔羅)各 3 張卡片的 JSX 重複 ~150 行。
+ */
+function FreeToolCard({
+  href,
+  imageUrl,
+  title,
+  desc,
+  cta,
+}: {
+  href: string;
+  imageUrl: string | undefined;
+  title: string;
+  desc: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(212,168,85,0.18)",
+        background: "rgba(13,13,43,0.65)",
+        display: "block",
+      }}
+    >
+      <HeroImage url={imageUrl} />
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div style={{ color: "#d4a855", fontSize: 14, fontWeight: 700, lineHeight: 1.35 }}>
+          {title}
+        </div>
+        <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+          {desc}
+        </div>
+        <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
+          {cta} →
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function Home() {
   const { locale, t } = useLanguage();
   const uiImages = useUiImages();
@@ -2363,133 +2408,89 @@ export default function Home() {
                     {t("不用註冊也能使用", "No sign-up required", "登録不要", "가입 없이 이용")}
                   </p>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <Link
-                    href="/yes-no"
-                    style={{
-                      textDecoration: "none",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(212,168,85,0.18)",
-                      background: "rgba(13,13,43,0.65)",
-                      display: "block",
-                    }}
-                  >
-                    <HeroImage url={uiImages["freeTool.yes-no"]} />
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
-                        {t(
-                          "Yes / No 速答",
-                          "Yes / No Quick Answer",
-                          "Yes / No 即答",
-                          "Yes / No 즉답"
-                        )}
-                      </div>
-                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                        {t(
-                          "簡單問題秒回",
-                          "Single-card answer",
-                          "シンプルな質問に即答",
-                          "간단 질문 즉답"
-                        )}
-                      </div>
-                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
-                        {t("來問問看", "Try it", "試してみる", "물어보기")} →
-                      </div>
+                {/* 兩欄並排:左=易經系列、右=塔羅系列。各 3 張卡片直排,sub-header 標出系列名 */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                  }}
+                >
+                  {/* ── 左:易經系列 ── */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "6px 0 4px",
+                        color: "#d4a855",
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      ☯ {t("易經系列", "I Ching", "易経シリーズ", "주역 시리즈")}
                     </div>
-                  </Link>
-                  <Link
-                    href="/daily"
-                    style={{
-                      textDecoration: "none",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(212,168,85,0.18)",
-                      background: "rgba(13,13,43,0.65)",
-                      display: "block",
-                    }}
-                  >
-                    <HeroImage url={uiImages["freeTool.daily"]} />
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
-                        {t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
-                      </div>
-                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                        {t(
-                          "今日能量指引",
-                          "Today's energy",
-                          "今日のエネルギー",
-                          "오늘의 에너지"
-                        )}
-                      </div>
-                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
-                        {t("看今天的", "Today", "今日を見る", "오늘 보기")} →
-                      </div>
+                    <FreeToolCard
+                      href="/iching/yes-no"
+                      imageUrl={uiImages["freeTool.iching.yes-no"]}
+                      title={t("Yes / No 一卦速答", "Yes / No I Ching", "Yes / No 一卦速答", "Yes / No 주역")}
+                      desc={t("從 64 卦抽一卦", "Pull one of the 64", "64卦から1卦", "64괘 중 한 괘")}
+                      cta={t("來問問看", "Try it", "試してみる", "물어보기")}
+                    />
+                    <FreeToolCard
+                      href="/iching/daily"
+                      imageUrl={uiImages["freeTool.iching.daily"]}
+                      title={t("每日一卦", "Daily Hexagram", "毎日の卦", "오늘의 괘")}
+                      desc={t("今日能量指引", "Today's energy", "今日のエネルギー", "오늘의 에너지")}
+                      cta={t("看今天的", "Today", "今日を見る", "오늘 보기")}
+                    />
+                    <FreeToolCard
+                      href="/iching/methods"
+                      imageUrl={uiImages["freeTool.iching.methods"]}
+                      title={t("卜卦方式介紹", "Divination Methods", "卜卦の方法", "점치는 법")}
+                      desc={t("五種主流卜卦法", "Five mainstream methods", "5つの主要な方法", "다섯 가지 방법")}
+                      cta={t("看方式", "Browse", "方法を見る", "방법 보기")}
+                    />
+                  </div>
+
+                  {/* ── 右:塔羅系列 ── */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "6px 0 4px",
+                        color: "#d4a855",
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      🎴 {t("塔羅系列", "Tarot", "タロットシリーズ", "타로 시리즈")}
                     </div>
-                  </Link>
-                  <Link
-                    href="/tarot/cards"
-                    style={{
-                      textDecoration: "none",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(212,168,85,0.18)",
-                      background: "rgba(13,13,43,0.65)",
-                      display: "block",
-                    }}
-                  >
-                    <HeroImage url={uiImages["freeTool.cards"]} />
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
-                        {t(
-                          "塔羅百科",
-                          "Tarot Encyclopedia",
-                          "タロット百科",
-                          "타로 백과"
-                        )}
-                      </div>
-                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                        {t(
-                          "78 張牌完整查詢",
-                          "All 78 cards",
-                          "78枚すべて検索",
-                          "78장 모두 검색"
-                        )}
-                      </div>
-                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
-                        {t("查牌義", "Browse", "意味を見る", "찾아보기")} →
-                      </div>
-                    </div>
-                  </Link>
-                  <Link
-                    href="/tarot-spread"
-                    style={{
-                      textDecoration: "none",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      border: "1px solid rgba(212,168,85,0.18)",
-                      background: "rgba(13,13,43,0.65)",
-                      display: "block",
-                    }}
-                  >
-                    <HeroImage url={uiImages["freeTool.spreads"]} />
-                    <div style={{ padding: "12px 14px 14px" }}>
-                      <div style={{ color: "#d4a855", fontSize: 15, fontWeight: 700 }}>
-                        {t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
-                      </div>
-                      <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                        {t(
-                          "認識經典牌陣",
-                          "Classic spreads",
-                          "定番スプレッドを学ぶ",
-                          "대표 스프레드 익히기"
-                        )}
-                      </div>
-                      <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
-                        {t("看牌陣", "Browse", "スプレッドを見る", "스프레드 보기")} →
-                      </div>
-                    </div>
-                  </Link>
+                    <FreeToolCard
+                      href="/yes-no"
+                      imageUrl={uiImages["freeTool.yes-no"]}
+                      title={t("Yes / No 速答", "Yes / No Quick", "Yes / No 即答", "Yes / No 즉답")}
+                      desc={t("簡單問題秒回", "Single-card answer", "シンプルな質問に即答", "간단 질문 즉답")}
+                      cta={t("來問問看", "Try it", "試してみる", "물어보기")}
+                    />
+                    <FreeToolCard
+                      href="/daily"
+                      imageUrl={uiImages["freeTool.daily"]}
+                      title={t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
+                      desc={t("今日能量指引", "Today's energy", "今日のエネルギー", "오늘의 에너지")}
+                      cta={t("看今天的", "Today", "今日を見る", "오늘 보기")}
+                    />
+                    <FreeToolCard
+                      href="/tarot-spread"
+                      imageUrl={uiImages["freeTool.spreads"]}
+                      title={t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
+                      desc={t("認識經典牌陣", "Classic spreads", "定番スプレッド", "대표 스프레드")}
+                      cta={t("看牌陣", "Browse", "スプレッドを見る", "스프레드 보기")}
+                    />
+                  </div>
                 </div>
                 <div style={{ textAlign: "center", marginTop: 12 }}>
                   <Link

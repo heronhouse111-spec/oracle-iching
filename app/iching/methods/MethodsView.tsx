@@ -1,0 +1,446 @@
+"use client";
+
+/**
+ * MethodsView — 易經卜卦方式介紹的 client view。
+ *
+ * 跟 hexagrams 系列頁同一套 server-shell + client-view pattern,讓切語系時
+ * useLanguage() React state 變動就直接 re-render,不必 router.refresh()。
+ */
+
+import Link from "next/link";
+import { useLanguage } from "@/i18n/LanguageContext";
+
+interface Method {
+  id: string;
+  /** 顯示在卡片左上的小編號(中) */
+  numberZh: string;
+  /** 顯示在卡片左上的小編號(英) */
+  numberEn: string;
+  /** 名稱:中 / 英 / 日 / 韓 */
+  nameZh: string;
+  nameEn: string;
+  nameJa?: string;
+  nameKo?: string;
+  /** 一句話 tagline */
+  taglineZh: string;
+  taglineEn: string;
+  taglineJa?: string;
+  taglineKo?: string;
+  /** 詳細說明 */
+  bodyZh: string;
+  bodyEn: string;
+  bodyJa?: string;
+  bodyKo?: string;
+  /** 主要難度:simple / classical / instant */
+  tier: "simple" | "classical" | "instant";
+}
+
+const METHODS: Method[] = [
+  {
+    id: "three-coin",
+    numberZh: "1",
+    numberEn: "1",
+    nameZh: "三錢法",
+    nameEn: "Three-Coin Method",
+    nameJa: "三銭法",
+    nameKo: "삼전법",
+    tier: "simple",
+    taglineZh: "現代最常用的卜卦法,六次擲錢成卦",
+    taglineEn: "The most popular modern method — six tosses form a hexagram",
+    taglineJa: "現代で最も使われる方法 — 6回投げて卦を作る",
+    taglineKo: "현대에서 가장 흔히 쓰는 방법 — 여섯 번 던져 괘를 만듭니다",
+    bodyZh:
+      "準備三枚相同的銅錢(或硬幣),正面為陽(3 點),反面為陰(2 點)。連續擲六次,自下而上得六爻成卦。每次三枚錢的點數總和落在 6 / 7 / 8 / 9:6 是老陰(變)、7 是少陽、8 是少陰、9 是老陽(變)。老陰、老陽即為「變爻」,會由「本卦」變化出「之卦」,代表事件的發展方向。儀式感與精準度的平衡點,本 app 主流程預設用此法。",
+    bodyEn:
+      "Prepare three identical coins. Heads = yang (3 points), tails = yin (2 points). Toss six times; the bottom toss is line 1, the top toss is line 6. The sum of each toss falls on 6/7/8/9: 6 is Old Yin (changing), 7 is Young Yang, 8 is Young Yin, 9 is Old Yang (changing). Old Yin and Old Yang are 'changing lines', transforming the primary hexagram into a relating hexagram, which reveals the direction of change. A balance of ritual feel and precision — this app's main flow uses this method by default.",
+    bodyJa:
+      "同じ硬貨を3枚用意。表が陽(3点)、裏が陰(2点)。6回投げ、下から順に六爻を作ります。3枚の合計が6/7/8/9のいずれかになり、6は老陰(変)、7は少陽、8は少陰、9は老陽(変)。老陰・老陽は「変爻」となり、本卦から之卦を生み、変化の方向を示します。儀式性と精密さのバランスが良く、本アプリのメインフローはこの方法を採用しています。",
+    bodyKo:
+      "동일한 동전 세 개를 준비합니다. 앞면이 양(3점), 뒷면이 음(2점). 여섯 번 던져 아래에서 위로 여섯 효를 만듭니다. 세 동전의 합이 6/7/8/9 중 하나가 되며, 6은 노음(변), 7은 소양, 8은 소음, 9는 노양(변)입니다. 노음과 노양은 '변효'가 되어 본괘에서 지괘를 만들고 변화의 방향을 보여줍니다. 의식성과 정밀성의 균형이 좋아, 본 앱의 메인 플로우가 기본으로 사용하는 방법입니다.",
+  },
+  {
+    id: "yarrow",
+    numberZh: "2",
+    numberEn: "2",
+    nameZh: "蓍草法",
+    nameEn: "Yarrow Stalk Method",
+    nameJa: "筮竹法",
+    nameKo: "시초법",
+    tier: "classical",
+    taglineZh: "周易最古老的卜卦法,儀式繁複但精準",
+    taglineEn: "The oldest classical method — elaborate but precise",
+    taglineJa: "周易で最も古い方法 — 手順は複雑だが精密",
+    taglineKo: "주역에서 가장 오래된 방법 — 절차는 복잡하지만 정밀합니다",
+    bodyZh:
+      "用 50 根蓍草(或竹籤、籌策),取出 1 根置於旁(代表「太極」),其餘 49 根分為兩堆,經過「分二、掛一、揲四、歸奇」四個步驟,得到一爻。整個過程要做十八變才能成一卦(每爻三變)。儀式感最重、精準度最高,但耗時 30 分鐘以上。古代占卜師專用,現代研究易經者偶爾使用。對於人生重大抉擇,值得把心定下來認真做一次。",
+    bodyEn:
+      "Use 50 yarrow stalks (or bamboo sticks). Set 1 aside (the Taiji), then divide the remaining 49 into two piles. Through four steps — 'divide in two, hang one, count by fours, take the remainder' — you derive one line. The full process requires eighteen iterations (three per line) to form a hexagram. The most ritualistic and precise method, taking 30+ minutes. Used by classical diviners; modern I Ching scholars employ it occasionally. Worth the focused stillness for major life decisions.",
+    bodyJa:
+      "筮竹50本(または竹串)を使用。1本を脇に置き(太極を表す)、残り49本を二つの山に分け、「分二・掛一・揲四・帰奇」の4手順で一爻を得ます。全体で18変を経て卦を作ります(各爻3変)。儀式性が最も高く精密ですが、30分以上かかります。古代の占者専用で、現代の易経研究者が時折使用。人生の重大な選択には心を落ち着けて一度真剣に試す価値があります。",
+    bodyKo:
+      "시초 50개(또는 대나무 막대)를 사용합니다. 1개를 옆에 두고(태극 상징), 나머지 49개를 두 더미로 나누어 '분이·괘일·설사·귀기' 네 단계를 거쳐 한 효를 얻습니다. 전체 과정은 18변을 거쳐 괘를 만듭니다(각 효에 3변). 의식성과 정밀도가 가장 높지만 30분 이상 걸립니다. 고대 점술가가 사용했고, 현대의 주역 연구자들이 가끔 사용합니다. 인생의 중대한 선택에는 마음을 가다듬고 한 번 진지하게 해 볼 가치가 있습니다.",
+  },
+  {
+    id: "single-coin",
+    numberZh: "3",
+    numberEn: "3",
+    nameZh: "單錢卜法",
+    nameEn: "Single-Coin Method",
+    nameJa: "単銭法",
+    nameKo: "단전법",
+    tier: "simple",
+    taglineZh: "極簡版:一枚硬幣擲六次,正陽反陰",
+    taglineEn: "Minimal: toss one coin six times — heads yang, tails yin",
+    taglineJa: "シンプル版:硬貨1枚を6回投げる",
+    taglineKo: "최소판: 동전 하나를 여섯 번 던집니다",
+    bodyZh:
+      "只用一枚硬幣,擲六次,自下而上記錄陰陽:正面為陽(——)、反面為陰(— —)。簡化版,沒有變爻。適合手邊只有一枚錢、想快速求個方向的場合。缺點是失去「之卦」這層動態資訊,只能看到當下的「本卦」。本 app 的「Yes / No 一卦速答」邏輯與此類似:不擲變爻,直接抽一卦看方向。",
+    bodyEn:
+      "Use just one coin. Toss six times, recording yin/yang from bottom to top: heads = yang (—), tails = yin (— —). Simplified — no changing lines. Good when you only have one coin and want quick direction. Loses the dynamic information of the relating hexagram. Our app's 'Yes/No One-Hexagram Quick Answer' uses similar logic: no changing lines, just draw one hexagram for direction.",
+    bodyJa:
+      "硬貨1枚のみ使用。6回投げ、下から順に陰陽を記録:表が陽(——)、裏が陰(— —)。簡略版で変爻はありません。手元に1枚しかなくサッと方向性が欲しい時に向いています。短所は之卦という動的情報が得られず、本卦のみであること。本アプリの「Yes/No 一卦速答」も同様の発想です。",
+    bodyKo:
+      "동전 하나만 사용합니다. 여섯 번 던져 아래에서 위로 음양을 기록: 앞면 양(——), 뒷면 음(— —). 단순화한 방법으로 변효는 없습니다. 동전이 하나뿐이거나 빠르게 방향을 보고 싶을 때 적합합니다. 지괘의 동적 정보를 잃는 단점이 있습니다. 본 앱의 'Yes/No 한 괘 속답'도 비슷한 논리입니다.",
+  },
+  {
+    id: "plum-blossom",
+    numberZh: "4",
+    numberEn: "4",
+    nameZh: "梅花易數",
+    nameEn: "Plum Blossom Numerology",
+    nameJa: "梅花易数",
+    nameKo: "매화역수",
+    tier: "instant",
+    taglineZh: "宋代邵雍創,用時間或數字直接起卦",
+    taglineEn: "Founded by Shao Yong; cast a hexagram from time or numbers",
+    taglineJa: "宋代の邵雍が創始 — 時刻や数字から直接卦を立てる",
+    taglineKo: "송대 소옹이 창안 — 시간이나 숫자로 바로 괘를 세웁니다",
+    bodyZh:
+      "宋代邵雍所創,核心是「萬物皆數」。最知名是「時間起卦」:用問事當下的年月日時數字,經模 8 / 模 6 算出上卦、下卦與動爻。也可用任意三個數字(出生日期、隨機數、聲音次數等)起卦。優勢是「不需要工具」,看到突發狀況立刻能起卦,適合即時應對。缺點是依賴運算技巧,需要記住起卦公式。本 app 沒做時間起卦的入口,但你可以把算出來的卦號直接到 64 卦介紹頁查。",
+    bodyEn:
+      "Created by Shao Yong in the Song dynasty; core idea: 'all things are numbers'. The most famous is 'time-based casting': use the date-time of the question, applying mod-8 and mod-6 arithmetic to derive upper trigram, lower trigram, and changing line. You can also use any three numbers (birthday, random, sound counts). The advantage: no tools needed — you can cast for sudden situations immediately. The downside: requires memorizing the formulas. We haven't built a time-casting entry point, but you can look up the resulting hexagram on the 64-Hexagram encyclopedia.",
+    bodyJa:
+      "宋代の邵雍が創始した方法で、「万物は数」を中心思想とします。最も有名なのは「時間起卦」:質問時の年月日時を使い、8で割った余り・6で割った余りで上卦、下卦、動爻を導出します。任意の3つの数字(誕生日、ランダム、音の回数など)でも可能。利点は「道具不要」 — 急な場面で即座に立卦できます。欠点は計算方法を覚える必要があること。本アプリには時間起卦の入口はありませんが、得られた卦番号を64卦解説ページで調べられます。",
+    bodyKo:
+      "송대 소옹이 창안한 방법으로, '만물은 수' 사상을 핵심으로 합니다. 가장 유명한 것은 '시간 기괘': 질문 당시의 연월일시 숫자를 모듈로 8 / 모듈로 6으로 계산해 상괘·하괘·동효를 도출합니다. 임의의 세 숫자(생일·랜덤·소리 횟수 등)도 사용 가능합니다. 장점은 '도구 불필요' — 갑작스런 상황에서 즉시 점칠 수 있습니다. 단점은 공식을 외워야 한다는 점. 본 앱에는 시간 기괘 입구가 없지만, 도출된 괘 번호를 64괘 백과에서 찾아볼 수 있습니다.",
+  },
+  {
+    id: "instant-draw",
+    numberZh: "5",
+    numberEn: "5",
+    nameZh: "抽卦速答法",
+    nameEn: "Instant Draw",
+    nameJa: "即引き法",
+    nameKo: "즉석 뽑기",
+    tier: "instant",
+    taglineZh: "本 app 的 Yes / No 速答,直接抽 64 卦其一",
+    taglineEn: "What our Yes/No Quick Answer uses — pull one of the 64 directly",
+    taglineJa: "本アプリの Yes/No 速答が使う方法 — 64卦から1つを直接引く",
+    taglineKo: "본 앱의 Yes/No 속답이 쓰는 방법 — 64괘 중 하나를 바로 뽑기",
+    bodyZh:
+      "現代簡化版:不擲銅錢、不算變爻,直接從 64 卦中抽一個,以該卦的吉凶傾向作答。儀式感最低、決策時間最短,適合日常生活中「想快速看一眼方向」的小事。本 app 的「Yes / No 一卦速答」與「每日一卦」就是用這種方式 — 後者用「使用者 ID + 今天日期」當亂數種子,確保同一個人同一天看到同一卦,維持每日訊息的儀式感。",
+    bodyEn:
+      "A modern simplification: no coin tossing, no changing lines — pull one of the 64 hexagrams directly and use its auspicious/inauspicious tendency as the answer. Lowest ritual, fastest decision — good for everyday 'quick look at the direction' questions. Our app's 'Yes/No Quick Answer' and 'Daily Hexagram' use this approach — the latter uses 'user ID + today's date' as the random seed, ensuring the same person sees the same hexagram all day, preserving the ritual feel of the daily message.",
+    bodyJa:
+      "現代の簡略版:銭を投げず、変爻も計算せず、64卦から1つを直接引き、その卦の吉凶傾向で回答します。儀式性が最も低く、決断時間が最短で、日常の「ちょっと方向性を見たい」小事に向いています。本アプリの「Yes/No 速答」と「毎日の卦」がこの方式 — 後者は「ユーザID + 今日の日付」を乱数シードにして、同一人物が同日に同じ卦を見るようにし、日々のメッセージの儀式感を保ちます。",
+    bodyKo:
+      "현대의 단순화 버전: 동전을 던지지 않고 변효도 계산하지 않으며, 64괘에서 하나를 바로 뽑아 그 괘의 길흉 경향으로 답합니다. 의식성이 가장 낮고 결정 시간이 가장 짧아 일상의 '방향만 잠깐 보고 싶은' 소소한 일에 적합합니다. 본 앱의 'Yes/No 속답'과 '오늘의 괘'가 이 방식 — 후자는 '사용자 ID + 오늘 날짜'를 난수 씨드로 사용해 같은 사람이 같은 날에 같은 괘를 보도록 하여 매일 메시지의 의식성을 유지합니다.",
+  },
+];
+
+const TIER_LABELS = {
+  simple: { zh: "易上手", en: "Easy", ja: "簡単", ko: "쉬움" },
+  classical: { zh: "古法", en: "Classical", ja: "古典", ko: "고전" },
+  instant: { zh: "即時", en: "Instant", ja: "即時", ko: "즉시" },
+};
+
+const TIER_COLORS = {
+  simple: "rgba(74,222,128,0.15)",
+  classical: "rgba(212,168,85,0.18)",
+  instant: "rgba(139,92,246,0.18)",
+};
+
+const TIER_TEXT_COLORS = {
+  simple: "#86efac",
+  classical: "#fde68a",
+  instant: "#c4b5fd",
+};
+
+export default function MethodsView() {
+  const { t, locale } = useLanguage();
+  const isZh = locale === "zh";
+
+  const pickName = (m: Method) => {
+    if (locale === "ja") return m.nameJa ?? m.nameEn;
+    if (locale === "ko") return m.nameKo ?? m.nameEn;
+    if (locale === "en") return m.nameEn;
+    return m.nameZh;
+  };
+  const pickTagline = (m: Method) => {
+    if (locale === "ja") return m.taglineJa ?? m.taglineEn;
+    if (locale === "ko") return m.taglineKo ?? m.taglineEn;
+    if (locale === "en") return m.taglineEn;
+    return m.taglineZh;
+  };
+  const pickBody = (m: Method) => {
+    if (locale === "ja") return m.bodyJa ?? m.bodyEn;
+    if (locale === "ko") return m.bodyKo ?? m.bodyEn;
+    if (locale === "en") return m.bodyEn;
+    return m.bodyZh;
+  };
+  const pickTierLabel = (tier: Method["tier"]) => {
+    const l = TIER_LABELS[tier];
+    if (locale === "ja") return l.ja;
+    if (locale === "ko") return l.ko;
+    if (locale === "en") return l.en;
+    return l.zh;
+  };
+
+  return (
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
+      <header style={{ textAlign: "center", marginBottom: 32 }}>
+        <h1
+          className="text-gold-gradient"
+          style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 32, fontWeight: 700, margin: 0 }}
+        >
+          {t(
+            "卜卦方式介紹",
+            "I Ching Divination Methods",
+            "卜卦の方法",
+            "주역 점치는 법"
+          )}
+        </h1>
+        <p style={{ color: "#c0c0d0", fontSize: 14, marginTop: 8 }}>
+          {t(
+            "從古法蓍草到現代抽卦,五種主流方法整理",
+            "From classical yarrow stalks to modern instant draw — five mainstream methods",
+            "古典の筮竹から現代の即引きまで、5つの主要な方法",
+            "고전 시초법부터 현대 즉석 뽑기까지, 다섯 가지 주류 방법"
+          )}
+        </p>
+        <p
+          style={{
+            color: "rgba(192,192,208,0.7)",
+            fontSize: 13,
+            marginTop: 12,
+            lineHeight: 1.7,
+            maxWidth: 560,
+            margin: "12px auto 0",
+          }}
+        >
+          {t(
+            "易經卜卦的核心是「讓隨機事件對映出當下心境」 — 不論用銅錢、蓍草、時間、還是直接抽卦,目的都是讓你停下來、把問題想清楚。下面五種方法各有適合的情境,選一個你願意實踐的就好。",
+            "The core of I Ching divination is letting a random event mirror your current state of mind. Whether you use coins, yarrow stalks, time, or direct draw — the goal is to slow down and articulate the question. Each method below fits a different situation; pick one you'll actually use.",
+            "易経の核心は「ランダムな事象を今の心境に映す」こと。銅銭・筮竹・時間・即引きのいずれを使っても、目的は立ち止まって問いを明確にすること。それぞれの方法に合った場面があります。実践したくなる一つを選んでください。",
+            "주역 점의 핵심은 '무작위 사건을 지금의 심경에 비추는 것'입니다. 동전·시초·시간·즉석 뽑기 어느 것을 사용하든, 목적은 멈춰서 질문을 명확히 하는 것입니다. 아래 다섯 가지 방법은 각기 다른 상황에 맞습니다. 실천할 만한 하나를 고르세요."
+          )}
+        </p>
+      </header>
+
+      {/* Methods grid */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, marginBottom: 32 }}>
+        {METHODS.map((m) => (
+          <article
+            key={m.id}
+            style={{
+              background: "rgba(13,13,43,0.55)",
+              border: "1px solid rgba(212,168,85,0.22)",
+              borderRadius: 14,
+              padding: 22,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                marginBottom: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(212,168,85,0.15)",
+                  color: "#d4a855",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'Noto Serif TC', serif",
+                  flexShrink: 0,
+                }}
+              >
+                {isZh ? m.numberZh : m.numberEn}
+              </span>
+              <h2
+                style={{
+                  fontFamily: "'Noto Serif TC', serif",
+                  fontSize: 22,
+                  color: "#d4a855",
+                  margin: 0,
+                  flex: "1 1 auto",
+                  minWidth: 0,
+                }}
+              >
+                {pickName(m)}
+              </h2>
+              <span
+                style={{
+                  background: TIER_COLORS[m.tier],
+                  color: TIER_TEXT_COLORS[m.tier],
+                  fontSize: 11,
+                  padding: "3px 10px",
+                  borderRadius: 100,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {pickTierLabel(m.tier)}
+              </span>
+            </div>
+            <p
+              style={{
+                color: "#e8e8f0",
+                fontSize: 14,
+                fontWeight: 600,
+                lineHeight: 1.7,
+                marginBottom: 8,
+              }}
+            >
+              {pickTagline(m)}
+            </p>
+            <p
+              style={{
+                color: "rgba(192,192,208,0.85)",
+                fontSize: 14,
+                lineHeight: 1.85,
+                margin: 0,
+              }}
+            >
+              {pickBody(m)}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, rgba(212,168,85,0.12), rgba(139,92,246,0.08))",
+          border: "1px solid rgba(212,168,85,0.4)",
+          borderRadius: 14,
+          padding: 24,
+          textAlign: "center",
+          marginBottom: 32,
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: "'Noto Serif TC', serif",
+            fontSize: 20,
+            color: "#d4a855",
+            marginBottom: 10,
+          }}
+        >
+          {t(
+            "想實際試試?",
+            "Want to try it?",
+            "実際に試してみる?",
+            "직접 해 볼까요?"
+          )}
+        </h3>
+        <p style={{ color: "#c0c0d0", fontSize: 13, marginBottom: 16, lineHeight: 1.7 }}>
+          {t(
+            "本 app 主流程預設用「三錢法」(自動或手動)。想要更輕量,可以用「Yes/No 一卦速答」或「每日一卦」。",
+            "This app's main flow uses the Three-Coin Method by default (auto or manual). For something lighter, try Yes/No Quick Answer or Daily Hexagram.",
+            "本アプリのメインフローは「三銭法」(自動 / 手動)を採用。より気軽に試したいなら「Yes/No 一卦速答」や「毎日の卦」を。",
+            "본 앱의 메인 플로우는 기본으로 '삼전법'(자동 또는 수동)을 사용합니다. 가볍게 시도하려면 'Yes/No 한 괘 속답'이나 '오늘의 괘'를 사용하세요."
+          )}
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          <Link
+            href="/"
+            style={{
+              padding: "10px 24px",
+              background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+              color: "#0a0a1a",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            ✦ {t("開始易經占卜", "Start I Ching Reading", "易経占いを始める", "주역 점 시작")}
+          </Link>
+          <Link
+            href="/iching/yes-no"
+            style={{
+              padding: "10px 24px",
+              background: "transparent",
+              color: "#d4a855",
+              border: "1px solid #d4a855",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            {t("Yes/No 速答", "Yes/No Quick", "Yes/No 速答", "Yes/No 속답")}
+          </Link>
+          <Link
+            href="/iching/daily"
+            style={{
+              padding: "10px 24px",
+              background: "transparent",
+              color: "#d4a855",
+              border: "1px solid #d4a855",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            {t("每日一卦", "Daily Hexagram", "毎日の卦", "오늘의 괘")}
+          </Link>
+        </div>
+      </section>
+
+      {/* Link to encyclopedia */}
+      <section
+        style={{
+          textAlign: "center",
+          padding: "20px 16px",
+          background: "rgba(13,13,43,0.4)",
+          borderRadius: 12,
+          border: "1px solid rgba(212,168,85,0.18)",
+        }}
+      >
+        <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 13, marginBottom: 10, lineHeight: 1.6 }}>
+          {t(
+            "想看 64 卦每一卦的卦辭與白話翻譯?",
+            "Want to read each of the 64 hexagrams with their classical and modern translations?",
+            "64卦それぞれの卦辞と現代訳を読みたい?",
+            "64괘 각각의 괘사와 현대 번역을 읽고 싶나요?"
+          )}
+        </p>
+        <Link
+          href="/iching/hexagrams"
+          style={{
+            color: "#d4a855",
+            fontSize: 14,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
+        >
+          {t(
+            "64 卦完整介紹 →",
+            "Visit the 64 Hexagrams Encyclopedia →",
+            "64卦 完全解説 →",
+            "64괘 백과 보기 →"
+          )}
+        </Link>
+      </section>
+    </div>
+  );
+}

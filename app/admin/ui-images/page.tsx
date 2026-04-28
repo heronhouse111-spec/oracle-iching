@@ -31,10 +31,14 @@ const SLOTS: Slot[] = [
   { id: "category.study", group: "問事類別", label: "學業", emoji: "📚" },
   { id: "category.general", group: "問事類別", label: "綜合", emoji: "🔮" },
 
-  { id: "freeTool.yes-no", group: "免費工具", label: "Yes / No 速答", emoji: "✦" },
-  { id: "freeTool.daily", group: "免費工具", label: "每日一卡", emoji: "☀" },
-  { id: "freeTool.cards", group: "免費工具", label: "塔羅百科", emoji: "📖" },
-  { id: "freeTool.spreads", group: "免費工具", label: "牌陣介紹", emoji: "🃏" },
+  { id: "freeTool.yes-no", group: "免費工具(塔羅)", label: "Yes / No 速答", emoji: "✦" },
+  { id: "freeTool.daily", group: "免費工具(塔羅)", label: "每日一卡", emoji: "☀" },
+  { id: "freeTool.cards", group: "免費工具(塔羅)", label: "塔羅百科", emoji: "📖" },
+  { id: "freeTool.spreads", group: "免費工具(塔羅)", label: "牌陣介紹", emoji: "🃏" },
+
+  { id: "freeTool.iching.yes-no", group: "免費工具(易經)", label: "Yes / No 一卦速答", emoji: "✦" },
+  { id: "freeTool.iching.daily", group: "免費工具(易經)", label: "每日一卦", emoji: "☯" },
+  { id: "freeTool.iching.methods", group: "免費工具(易經)", label: "卜卦方式介紹", emoji: "📜" },
 
   { id: "dualSystem.iching", group: "雙系統 showcase", label: "易經", emoji: "☰" },
   { id: "dualSystem.tarot", group: "雙系統 showcase", label: "塔羅", emoji: "🎴" },
