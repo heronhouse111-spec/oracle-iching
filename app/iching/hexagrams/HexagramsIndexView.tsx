@@ -103,7 +103,7 @@ export default function HexagramsIndexView({ images }: Props) {
             ✦ {t("直接開始易經占卜", "Start I Ching Reading", "易経占いを始める", "주역 점 시작")}
           </Link>
           <Link
-            href="/yes-no"
+            href="/iching/yes-no"
             style={{
               padding: "8px 18px",
               background: "transparent",
@@ -114,7 +114,7 @@ export default function HexagramsIndexView({ images }: Props) {
               fontSize: 13,
             }}
           >
-            {t("Yes/No 速答", "Yes/No Quick", "Yes/No 即答", "Yes/No 즉답")}
+            {t("Yes/No 一卦速答", "Yes/No I Ching", "Yes/No 一卦速答", "Yes/No 주역")}
           </Link>
         </div>
       </section>
