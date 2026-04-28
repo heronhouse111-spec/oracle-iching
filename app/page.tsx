@@ -2547,12 +2547,17 @@ export default function Home() {
                   </p>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div
+                  {/* 易經卡 → 64 卦完整介紹 */}
+                  <Link
+                    href="/iching/hexagrams"
                     style={{
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "block",
                     }}
                   >
                     {uiImages["dualSystem.iching"] ? (
@@ -2607,14 +2612,30 @@ export default function Home() {
                           "구조 · 시기 · 변화"
                         )}
                       </div>
+                      <div
+                        style={{
+                          color: "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          marginTop: 8,
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        {t("64 卦完整介紹 →", "64 hexagrams →", "64卦完全解説 →", "64괘 전체 →")}
+                      </div>
                     </div>
-                  </div>
-                  <div
+                  </Link>
+
+                  {/* 塔羅卡 → 78 張塔羅牌百科 */}
+                  <Link
+                    href="/tarot/cards"
                     style={{
                       borderRadius: 14,
                       overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.18)",
                       background: "rgba(13,13,43,0.65)",
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "block",
                     }}
                   >
                     <HeroImage url={uiImages["dualSystem.tarot"]} aspectRatio="1" />
@@ -2637,8 +2658,18 @@ export default function Home() {
                           "감정 · 상징 · 이야기"
                         )}
                       </div>
+                      <div
+                        style={{
+                          color: "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          marginTop: 8,
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        {t("78 張牌意百科 →", "78 cards →", "78枚カード百科 →", "78장 카드 백과 →")}
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
             </motion.div>

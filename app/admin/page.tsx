@@ -410,6 +410,7 @@ export default async function AdminDashboardPage() {
               <AdminLinkCard href="/admin/personas" icon="🧙" title="占卜師" desc="新增 / 編輯人格,設鎖定權限,上傳大頭照" />
               <AdminLinkCard href="/admin/inspirations" icon="✦" title="問題靈感" desc="6 大類問題題庫,4 語版本" />
               <AdminLinkCard href="/admin/ui-images" icon="🖼️" title="首頁 icon" desc="CTAs / 類別 / 免費工具 / 雙系統圖像" />
+              <AdminLinkCard href="/admin/iching-images" icon="☯" title="易經 64 卦圖" desc="易經百科 64 卦插圖,每卦各上傳一張" />
               <AdminLinkCard href="/admin/announcements" icon="📢" title="公告" desc="首頁 banner / 跑馬燈" />
               <AdminLinkCard href="/admin/users" icon="👥" title="使用者" desc="搜尋 / 補點 / 停權" />
               <AdminLinkCard href="/admin/pricing" icon="💰" title="方案 / 點數" desc="加購包與訂閱方案" />
