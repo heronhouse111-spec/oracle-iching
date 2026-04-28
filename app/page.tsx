@@ -3408,10 +3408,6 @@ export default function Home() {
             <motion.div key="res" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               {/* Hexagram card */}
               <div className="mystic-card" style={{ padding: 32, textAlign: "center", marginTop: 16 }}>
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", bounce: 0.4 }}>
-                  <span style={{ fontSize: 64, display: "block", marginBottom: 8 }}>{hexagram.character}</span>
-                </motion.div>
-
                 <h2 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif" }}>
                   {t(`第${hexagram.number}卦 ${hexagram.nameZh}`, `Hexagram ${hexagram.number}: ${hexagram.nameEn}`)}
                 </h2>
@@ -3811,8 +3807,7 @@ export default function Home() {
               {/* 牌組展示 */}
               <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                 <div style={{ textAlign: "center", marginBottom: 16 }}>
-                  <span style={{ fontSize: 40, display: "block" }}>🎴</span>
-                  <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif", marginTop: 4 }}>
+                  <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
                     {locale === "zh" ? spread.nameZh : spread.nameEn}
                   </h2>
                   <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>

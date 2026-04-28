@@ -14,12 +14,14 @@ const LINE_LOGIN_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 import { getHexagramByNumber } from "@/data/hexagrams";
-import { getCardById, THREE_CARD_POSITIONS } from "@/data/tarot";
+import { getCardById } from "@/data/tarot";
+import { getSpread, DEFAULT_SPREAD_ID } from "@/data/spreads";
 import { questionCategories } from "@/lib/divination";
 
 interface TarotCardSlot {
   cardId: string;
-  position: "past" | "present" | "future";
+  /** position key — 對應 data/spreads.ts SpreadPosition.key,任意 string */
+  position: string;
   isReversed: boolean;
 }
 
@@ -37,6 +39,8 @@ interface FollowUpItem {
   relatingHexagramNumber?: number | null;
   // tarot
   tarotCards?: TarotCardSlot[] | null;
+  /** Phase 12 後 tarot follow-up 才開始寫,舊資料無 → default 'three-card' */
+  spreadId?: string | null;
 }
 
 // chat_messages 陣列內單元 — schema 見 supabase/phase6_chat_persistence.sql
@@ -59,6 +63,8 @@ interface Record {
   changing_lines: number[] | null;
   // tarot-only
   tarot_cards: TarotCardSlot[] | null;
+  /** Phase 12 加的塔羅牌陣 id;舊資料 backfill 'three-card' */
+  tarot_spread_id?: string | null;
   // 訂閱者在展開時可看到的延伸鏈 + 聊天紀錄(localStorage 紀錄不會有)
   follow_ups?: FollowUpItem[] | null;
   chat_messages?: ChatMessageItem[] | null;
@@ -147,7 +153,7 @@ export default function HistoryPage() {
           supabase
             .from("divinations")
             .select(
-              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, ai_reading, follow_ups, chat_messages"
+              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages"
             )
             .eq("user_id", user.id)
             .gte("created_at", sinceIso)
@@ -382,9 +388,20 @@ export default function HistoryPage() {
                 divineType === "iching" && record.hexagram_number != null
                   ? getHexagramByNumber(record.hexagram_number)
                   : null;
-              const tarotLabel =
+              // 塔羅 label = 「塔羅 · 牌陣名」(顯示使用者占卜時用的牌陣);
+              // 易經 label = 卦名。
+              const recordSpread =
                 divineType === "tarot"
-                  ? t("塔羅三牌占卜", "Three-Card Tarot")
+                  ? getSpread(record.tarot_spread_id ?? DEFAULT_SPREAD_ID)
+                  : null;
+              const tarotLabel =
+                divineType === "tarot" && recordSpread
+                  ? t(
+                      `塔羅 · ${recordSpread.nameZh}`,
+                      `Tarot · ${recordSpread.nameEn}`,
+                      `タロット · ${recordSpread.nameEn}`,
+                      `타로 · ${recordSpread.nameEn}`
+                    )
                   : locale === "zh"
                   ? hex?.nameZh
                   : hex?.nameEn;
@@ -426,14 +443,17 @@ export default function HistoryPage() {
                             size="sm"
                             animate={false}
                           />
-                        ) : divineType === "tarot" && record.tarot_cards ? (
+                        ) : divineType === "tarot" && record.tarot_cards && recordSpread ? (
                           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-                            {record.tarot_cards.map((tc) => {
+                            {record.tarot_cards.map((tc, ci) => {
                               const card = getCardById(tc.cardId);
-                              const pos = THREE_CARD_POSITIONS.find((p) => p.key === tc.position);
+                              // 用 position key 從 spread.positions 找;找不到 fallback 到 idx 對應位置
+                              const pos =
+                                recordSpread.positions.find((p) => p.key === tc.position) ??
+                                recordSpread.positions[ci];
                               if (!card) return null;
                               return (
-                                <div key={tc.position} style={{ textAlign: "center", width: 72 }}>
+                                <div key={`${tc.position}-${ci}`} style={{ textAlign: "center", width: 72 }}>
                                   <div style={{ fontSize: 10, color: "#d4a855", marginBottom: 4 }}>
                                     {locale === "zh" ? pos?.labelZh : pos?.labelEn}
                                   </div>
@@ -626,6 +646,9 @@ export default function HistoryPage() {
                               isIching && typeof f.hexagramNumber === "number"
                                 ? getHexagramByNumber(f.hexagramNumber)
                                 : null;
+                            const fSpread = !isIching
+                              ? getSpread(f.spreadId ?? DEFAULT_SPREAD_ID)
+                              : null;
                             return (
                               <div
                                 key={f.id ?? fi}
@@ -649,7 +672,14 @@ export default function HistoryPage() {
                                   <span style={{ color: "#d4a855", fontSize: 12, fontFamily: "'Noto Serif TC', serif" }}>
                                     {isIching
                                       ? `${t("第", "#")}${fHex?.number ?? "?"} ${locale === "zh" ? fHex?.nameZh ?? "" : fHex?.nameEn ?? ""}`
-                                      : t("塔羅三牌", "Three-Card Tarot")}
+                                      : fSpread
+                                      ? t(
+                                          `塔羅 · ${fSpread.nameZh}`,
+                                          `Tarot · ${fSpread.nameEn}`,
+                                          `タロット · ${fSpread.nameEn}`,
+                                          `타로 · ${fSpread.nameEn}`
+                                        )
+                                      : t("塔羅", "Tarot", "タロット", "타로")}
                                   </span>
                                   <span style={{ color: "rgba(192,192,208,0.4)", fontSize: 10 }}>
                                     {f.createdAt ? new Date(f.createdAt).toLocaleDateString(locale === "zh" ? "zh-TW" : "en-US") : ""}
@@ -674,14 +704,16 @@ export default function HistoryPage() {
                                       animate={false}
                                     />
                                   </div>
-                                ) : !isIching && Array.isArray(f.tarotCards) ? (
+                                ) : !isIching && Array.isArray(f.tarotCards) && fSpread ? (
                                   <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 10 }}>
-                                    {f.tarotCards.map((tc) => {
+                                    {f.tarotCards.map((tc, fci) => {
                                       const card = getCardById(tc.cardId);
-                                      const pos = THREE_CARD_POSITIONS.find((p) => p.key === tc.position);
+                                      const pos =
+                                        fSpread.positions.find((p) => p.key === tc.position) ??
+                                        fSpread.positions[fci];
                                       if (!card) return null;
                                       return (
-                                        <div key={tc.position} style={{ textAlign: "center", width: 56 }}>
+                                        <div key={`${tc.position}-${fci}`} style={{ textAlign: "center", width: 56 }}>
                                           <div style={{ fontSize: 9, color: "#d4a855", marginBottom: 3 }}>
                                             {locale === "zh" ? pos?.labelZh : pos?.labelEn}
                                           </div>

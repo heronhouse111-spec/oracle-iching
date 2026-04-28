@@ -292,7 +292,6 @@ export default async function PublicDivinationPage({
         {!isTarot && hex && d.primary_lines && (
           <>
             <div className="mystic-card" style={{ padding: 32, textAlign: "center" }}>
-              <div style={{ fontSize: 72, marginBottom: 8 }}>{hex.character}</div>
               <h1
                 className="text-gold-gradient"
                 style={{
@@ -343,13 +342,12 @@ export default async function PublicDivinationPage({
         {isTarot && tarotSpread && drawnForRender.length === tarotSpread.cardCount && (
           <div className="mystic-card" style={{ padding: 24 }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <span style={{ fontSize: 40, display: "block" }}>🎴</span>
               <h1
                 className="text-gold-gradient"
                 style={{
                   fontSize: 24,
                   fontFamily: "'Noto Serif TC', serif",
-                  margin: "4px 0 0",
+                  margin: 0,
                 }}
               >
                 {zh ? tarotSpread.nameZh : tarotSpread.nameEn}
