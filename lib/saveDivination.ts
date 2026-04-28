@@ -24,7 +24,8 @@ export interface SaveIchingDivinationParams {
 
 export interface SavedTarotCard {
   cardId: string;
-  position: "past" | "present" | "future";
+  /** position key — 對應 data/spreads.ts 該牌陣的 SpreadPosition.key,任意 string */
+  position: string;
   isReversed: boolean;
 }
 
@@ -32,6 +33,8 @@ export interface SaveTarotDivinationParams {
   divineType: "tarot";
   question: string;
   category: string;
+  /** 對應 data/spreads.ts 的 Spread.id;舊紀錄沒這欄會在 Phase 12 backfill 為 'three-card' */
+  spreadId: string;
   tarotCards: SavedTarotCard[];
   aiReading: string;
   locale: string;
@@ -66,6 +69,7 @@ export async function saveDivination(params: SaveDivinationParams) {
           changing_lines: null,
           relating_hexagram_number: null,
           tarot_cards: params.tarotCards,
+          tarot_spread_id: params.spreadId,
         }
       : {
           ...base,
@@ -74,6 +78,7 @@ export async function saveDivination(params: SaveDivinationParams) {
           changing_lines: params.changingLines,
           relating_hexagram_number: params.relatingHexagramNumber,
           tarot_cards: null,
+          tarot_spread_id: null,
         };
 
   if (isSupabaseConfigured) {
@@ -132,6 +137,7 @@ export interface FollowUpIchingPayload {
 export interface FollowUpTarotPayload {
   divineType: "tarot";
   question: string;
+  spreadId: string;
   tarotCards: SavedTarotCard[];
   aiReading: string;
 }
@@ -149,6 +155,8 @@ export interface SavedFollowUp {
   changingLines?: number[] | null;
   relatingHexagramNumber?: number | null;
   tarotCards?: SavedTarotCard[] | null;
+  /** tarot 衍伸 follow-up 才有值;舊資料可能沒這欄 — 讀取端要 default 到 'three-card' */
+  spreadId?: string | null;
 }
 
 export async function appendFollowUp(
@@ -164,6 +172,7 @@ export async function appendFollowUp(
           divineType: "tarot",
           aiReading: payload.aiReading,
           tarotCards: payload.tarotCards,
+          spreadId: payload.spreadId,
           hexagramNumber: null,
           primaryLines: null,
           changingLines: null,

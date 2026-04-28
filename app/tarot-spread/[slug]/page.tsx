@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
-import { SPREADS, getSpread } from "@/data/spreads";
+import { SPREADS, getSpread, spreadImageSlot } from "@/data/spreads";
+import { getUiImages } from "@/lib/uiImages";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -33,6 +34,9 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
   const spread = getSpread(slug);
   if (spread.id !== slug) notFound(); // getSpread fallback to first if not found — guard
 
+  const uiImages = await getUiImages();
+  const heroImage = uiImages[spreadImageSlot(spread.id)];
+
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
@@ -42,6 +46,29 @@ export default async function TarotSpreadSlugPage({ params }: Props) {
             ← 牌陣大全
           </Link>
         </nav>
+
+        {/* Hero image — 從 admin/ui-images 上傳，沒上傳就降回純文字 header */}
+        {heroImage && (
+          <div
+            style={{
+              width: "100%",
+              aspectRatio: "16 / 9",
+              borderRadius: 14,
+              overflow: "hidden",
+              border: "1px solid rgba(212,168,85,0.25)",
+              marginBottom: 24,
+              background:
+                "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.45))",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroImage}
+              alt={`${spread.nameZh} · ${spread.nameEn}`}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          </div>
+        )}
 
         <header style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 8, letterSpacing: 1 }}>

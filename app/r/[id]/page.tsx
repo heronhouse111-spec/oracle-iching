@@ -6,10 +6,10 @@ import { getHexagramByNumber } from "@/data/hexagrams";
 import { questionCategories } from "@/lib/divination";
 import {
   getCardById,
-  THREE_CARD_POSITIONS,
   SUIT_NAMES_ZH,
   SUIT_NAMES_EN,
 } from "@/data/tarot";
+import { getSpread, DEFAULT_SPREAD_ID } from "@/data/spreads";
 
 /**
  * 公開分享頁 /r/[id]
@@ -30,7 +30,8 @@ export const revalidate = 0;
 
 interface SavedTarotCard {
   cardId: string;
-  position: "past" | "present" | "future";
+  /** 對應 data/spreads.ts SpreadPosition.key — 任意 string,不限三牌的 past/present/future */
+  position: string;
   isReversed: boolean;
 }
 
@@ -43,6 +44,7 @@ interface PublicDivination {
   changing_lines: number[] | null;
   relating_hexagram_number: number | null;
   tarot_cards: SavedTarotCard[] | null;
+  tarot_spread_id: string | null;
   divine_type: "iching" | "tarot";
   ai_reading: string;
   locale: string;
@@ -57,7 +59,7 @@ async function loadPublic(id: string): Promise<PublicDivination | null> {
   const { data, error } = await supabase
     .from("divinations")
     .select(
-      "id,question,category,hexagram_number,primary_lines,changing_lines,relating_hexagram_number,tarot_cards,divine_type,ai_reading,locale,created_at,is_public"
+      "id,question,category,hexagram_number,primary_lines,changing_lines,relating_hexagram_number,tarot_cards,tarot_spread_id,divine_type,ai_reading,locale,created_at,is_public"
     )
     .eq("id", id)
     .eq("is_public", true)
@@ -84,9 +86,10 @@ export async function generateMetadata({
 
   let title: string;
   if (d.divine_type === "tarot") {
+    const sp = getSpread(d.tarot_spread_id ?? DEFAULT_SPREAD_ID);
     title = zh
-      ? "三牌塔羅占卜 — Tarogram 易問"
-      : "Three-Card Tarot Reading — Tarogram";
+      ? `${sp.nameZh} · 塔羅占卜 — Tarogram 易問`
+      : `${sp.nameEn} · Tarot Reading — Tarogram`;
   } else if (d.hexagram_number !== null) {
     const hex = getHexagramByNumber(d.hexagram_number);
     title = hex
@@ -214,7 +217,10 @@ export default async function PublicDivinationPage({
         )
       : null;
 
-  // ── 塔羅:資料化三張牌 ──
+  // ── 塔羅:資料化牌組(依 spread)──
+  const tarotSpread = isTarot
+    ? getSpread(d.tarot_spread_id ?? DEFAULT_SPREAD_ID)
+    : null;
   const drawnForRender =
     isTarot && d.tarot_cards
       ? d.tarot_cards.map((tc) => ({
@@ -223,6 +229,8 @@ export default async function PublicDivinationPage({
           isReversed: tc.isReversed,
         }))
       : [];
+  const tarotCols =
+    tarotSpread && tarotSpread.cardCount > 3 ? 5 : 3;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -331,8 +339,8 @@ export default async function PublicDivinationPage({
           </>
         )}
 
-        {/* ── 塔羅分支:三張牌 ── */}
-        {isTarot && drawnForRender.length === 3 && (
+        {/* ── 塔羅分支:依 spread 顯示 N 張 ── */}
+        {isTarot && tarotSpread && drawnForRender.length === tarotSpread.cardCount && (
           <div className="mystic-card" style={{ padding: 24 }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <span style={{ fontSize: 40, display: "block" }}>🎴</span>
@@ -344,24 +352,30 @@ export default async function PublicDivinationPage({
                   margin: "4px 0 0",
                 }}
               >
-                {t("三牌占卜", "Three-Card Spread")}
+                {zh ? tarotSpread.nameZh : tarotSpread.nameEn}
               </h1>
               <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>
-                {t("過去 · 現在 · 未來", "Past · Present · Future")}
+                {tarotSpread.positions
+                  .slice(0, 3)
+                  .map((p) => (zh ? p.labelZh : p.labelEn))
+                  .join(" · ") +
+                  (tarotSpread.positions.length > 3 ? "…" : "")}
               </p>
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 10,
+                gridTemplateColumns: `repeat(${tarotCols}, 1fr)`,
+                gap: tarotCols >= 5 ? 6 : 10,
               }}
             >
               {drawnForRender.map((drawn, idx) => {
                 const card = drawn.card;
                 if (!card) return null;
-                const pos = THREE_CARD_POSITIONS.find((p) => p.key === drawn.position) ?? THREE_CARD_POSITIONS[idx];
+                const pos =
+                  tarotSpread.positions.find((p) => p.key === drawn.position) ??
+                  tarotSpread.positions[idx];
                 const suitNames = zh ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
                 const cardName = zh ? card.nameZh : card.nameEn;
                 const orientationLabel = drawn.isReversed
@@ -537,7 +551,7 @@ export default async function PublicDivinationPage({
         )}
 
         {/* ── 塔羅:牌義速覽 ── */}
-        {isTarot && drawnForRender.length === 3 && (
+        {isTarot && tarotSpread && drawnForRender.length === tarotSpread.cardCount && (
           <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
             <h3
               style={{
@@ -552,7 +566,9 @@ export default async function PublicDivinationPage({
             {drawnForRender.map((drawn, idx) => {
               const card = drawn.card;
               if (!card) return null;
-              const pos = THREE_CARD_POSITIONS.find((p) => p.key === drawn.position) ?? THREE_CARD_POSITIONS[idx];
+              const pos =
+                tarotSpread.positions.find((p) => p.key === drawn.position) ??
+                tarotSpread.positions[idx];
               const cardName = zh ? card.nameZh : card.nameEn;
               const meaning = drawn.isReversed
                 ? zh
@@ -564,13 +580,14 @@ export default async function PublicDivinationPage({
               const orientationLabel = drawn.isReversed
                 ? t("逆位", "Reversed")
                 : t("正位", "Upright");
+              const isLast = idx === drawnForRender.length - 1;
               return (
                 <div
                   key={idx}
                   style={{
-                    marginBottom: idx < 2 ? 14 : 0,
-                    paddingBottom: idx < 2 ? 14 : 0,
-                    borderBottom: idx < 2 ? "1px dashed rgba(212,168,85,0.15)" : "none",
+                    marginBottom: isLast ? 0 : 14,
+                    paddingBottom: isLast ? 0 : 14,
+                    borderBottom: isLast ? "none" : "1px dashed rgba(212,168,85,0.15)",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>

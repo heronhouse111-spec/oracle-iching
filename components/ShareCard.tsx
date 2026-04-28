@@ -3,7 +3,8 @@
 import { forwardRef } from "react";
 import type { Hexagram } from "@/data/hexagrams";
 import type { DrawnCard } from "@/data/tarot";
-import { THREE_CARD_POSITIONS, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import { SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import { getSpread } from "@/data/spreads";
 
 /**
  * 分享卡 — 專門給 html-to-image 截圖用。
@@ -30,6 +31,8 @@ interface IchingProps {
 interface TarotProps {
   divineType: "tarot";
   drawnCards: DrawnCard[];
+  /** spread id — 沒給就 fallback 三牌 (向後相容舊呼叫) */
+  spreadId?: string;
 }
 
 type CommonProps = {
@@ -354,8 +357,14 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
           </>
         )}
 
-        {/* ─── 塔羅主體:三張牌 ─── */}
-        {isTarot && (
+        {/* ─── 塔羅主體:N 張牌(依 spread)─── */}
+        {isTarot && (() => {
+          const spread = getSpread(props.spreadId);
+          // 3 張用大網格,5/10/12 張用 5 欄壓小;沒對應位置就降回 spread.positions 第一筆
+          const cols = spread.cardCount <= 3 ? 3 : 5;
+          const headerZh = `${spread.nameZh} · ${spread.cardCount} 張`;
+          const headerEn = `${spread.nameEn} · ${spread.cardCount} cards`;
+          return (
           <>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div
@@ -370,20 +379,20 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
                   marginBottom: 6,
                 }}
               >
-                {t("三牌占卜 · 過去 現在 未來", "Three-Card · Past Present Future")}
+                {t(headerZh, headerEn)}
               </div>
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 20,
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                gap: cols >= 5 ? 12 : 20,
                 marginBottom: 28,
               }}
             >
               {props.drawnCards.map((drawn, idx) => {
-                const pos = THREE_CARD_POSITIONS[idx];
+                const pos = spread.positions[idx] ?? spread.positions[0];
                 const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
                 const suitName =
                   (locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN)[drawn.card.suit];
@@ -461,7 +470,8 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
               })}
             </div>
           </>
-        )}
+          );
+        })()}
 
         {/* 類別 + 問題 */}
         <div

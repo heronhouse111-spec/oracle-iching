@@ -38,6 +38,13 @@ const SLOTS: Slot[] = [
 
   { id: "dualSystem.iching", group: "雙系統 showcase", label: "易經", emoji: "☰" },
   { id: "dualSystem.tarot", group: "雙系統 showcase", label: "塔羅", emoji: "🎴" },
+
+  // ── 塔羅牌陣介紹圖（/tarot-spread/[slug] 詳細頁 + 主流程選牌陣畫面共用）──
+  { id: "spread.three-card", group: "塔羅牌陣介紹圖", label: "三牌時間軸", emoji: "🃏" },
+  { id: "spread.two-options", group: "塔羅牌陣介紹圖", label: "二選一牌陣", emoji: "⚖" },
+  { id: "spread.love-cross", group: "塔羅牌陣介紹圖", label: "愛情十字牌陣", emoji: "💞" },
+  { id: "spread.celtic-cross", group: "塔羅牌陣介紹圖", label: "凱爾特十字", emoji: "✦" },
+  { id: "spread.year-twelve", group: "塔羅牌陣介紹圖", label: "年度十二宮", emoji: "🌙" },
 ];
 
 // 把 slots group 起來

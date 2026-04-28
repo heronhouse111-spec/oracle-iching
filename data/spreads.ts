@@ -306,6 +306,11 @@ export const SPREADS: Spread[] = [
 
 export const DEFAULT_SPREAD_ID = "three-card";
 
+/** ui_images slot id 慣例：spread.<spread.id> — admin/ui-images 也用同一組 key */
+export function spreadImageSlot(spreadId: string): string {
+  return `spread.${spreadId}`;
+}
+
 export function getSpread(id: string | null | undefined): Spread {
   if (!id) return SPREADS[0];
   return SPREADS.find((s) => s.id === id) ?? SPREADS[0];

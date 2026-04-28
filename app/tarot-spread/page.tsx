@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { SPREADS } from "@/data/spreads";
+import { SPREADS, spreadImageSlot } from "@/data/spreads";
+import { getUiImages } from "@/lib/uiImages";
 
 export const metadata: Metadata = {
   title: "塔羅牌陣大全 · Tarot Spreads | Tarogram 易問",
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function TarotSpreadIndexPage() {
+export default async function TarotSpreadIndexPage() {
+  const uiImages = await getUiImages();
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
@@ -48,47 +50,79 @@ export default function TarotSpreadIndexPage() {
         </header>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {SPREADS.map((s) => (
-            <Link
-              key={s.id}
-              href={`/tarot-spread/${s.id}`}
-              style={{
-                display: "block",
-                background: "rgba(13,13,43,0.5)",
-                border: "1px solid rgba(212,168,85,0.2)",
-                borderRadius: 14,
-                padding: 20,
-                textDecoration: "none",
-                color: "inherit",
-                transition: "transform 0.2s, border-color 0.2s",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                <h2
+          {SPREADS.map((s) => {
+            const thumb = uiImages[spreadImageSlot(s.id)];
+            return (
+              <Link
+                key={s.id}
+                href={`/tarot-spread/${s.id}`}
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  background: "rgba(13,13,43,0.5)",
+                  border: "1px solid rgba(212,168,85,0.2)",
+                  borderRadius: 14,
+                  padding: 16,
+                  textDecoration: "none",
+                  color: "inherit",
+                  transition: "transform 0.2s, border-color 0.2s",
+                }}
+              >
+                <div
                   style={{
-                    fontFamily: "'Noto Serif TC', serif",
-                    fontSize: 20,
-                    color: "#d4a855",
-                    margin: 0,
+                    width: 96,
+                    flexShrink: 0,
+                    aspectRatio: "1 / 1",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: "1px solid rgba(212,168,85,0.2)",
+                    background:
+                      "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.5))",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {s.nameZh}
-                  <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginLeft: 8, fontStyle: "italic" }}>
-                    {s.nameEn}
-                  </span>
-                </h2>
-                <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 12 }}>
-                  {s.cardCount} 張 · {s.cardCount} cards
-                </span>
-              </div>
-              <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.7, marginBottom: 6 }}>
-                {s.taglineZh}
-              </p>
-              <p style={{ color: "rgba(232,232,240,0.6)", fontSize: 13, fontStyle: "italic", margin: 0 }}>
-                {s.taglineEn}
-              </p>
-            </Link>
-          ))}
+                  {thumb ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={thumb}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 36, opacity: 0.7 }}>🎴</span>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, gap: 8, flexWrap: "wrap" }}>
+                    <h2
+                      style={{
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontSize: 20,
+                        color: "#d4a855",
+                        margin: 0,
+                      }}
+                    >
+                      {s.nameZh}
+                      <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginLeft: 8, fontStyle: "italic" }}>
+                        {s.nameEn}
+                      </span>
+                    </h2>
+                    <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 12, whiteSpace: "nowrap" }}>
+                      {s.cardCount} 張 · {s.cardCount} cards
+                    </span>
+                  </div>
+                  <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.7, marginBottom: 4 }}>
+                    {s.taglineZh}
+                  </p>
+                  <p style={{ color: "rgba(232,232,240,0.6)", fontSize: 12, fontStyle: "italic", margin: 0 }}>
+                    {s.taglineEn}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
         <footer

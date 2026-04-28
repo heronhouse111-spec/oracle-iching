@@ -22,6 +22,14 @@ import {
   type DrawnCard,
 } from "@/data/tarot";
 import {
+  SPREADS,
+  DEFAULT_SPREAD_ID,
+  drawSpread,
+  getSpread,
+  spreadImageSlot,
+  type Spread,
+} from "@/data/spreads";
+import {
   savePendingDivination,
   loadPendingDivination,
   clearPendingDivination,
@@ -51,6 +59,7 @@ type Step =
   | "category"
   | "question"
   | "divine-type"
+  | "tarot-spread-select"
   | "mode-select"
   | "divination"
   | "tarot-reveal"
@@ -193,7 +202,9 @@ export default function Home() {
   const [personaId, setPersonaId] = useState<string>(DEFAULT_PERSONA_ID);
   const [readingDepth, setReadingDepth] = useState<ReadingDepth>("quick");
 
-  // 塔羅 state:抽到的三張牌 + 已翻開幾張
+  // 塔羅 state:已選的牌陣 + 抽到的牌組 + 已翻開幾張
+  // 預設沒選 — 進塔羅 step 才挑;`?spread=<id>` 也會在 mount effect 寫進來
+  const [selectedSpreadId, setSelectedSpreadId] = useState<string | null>(null);
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
   const [revealedCount, setRevealedCount] = useState(0);
 
@@ -213,6 +224,8 @@ export default function Home() {
     relatingHexagram: Hexagram | null;
     divinationResult: DivinationResult | null;
     drawnCards: DrawnCard[];
+    /** root 塔羅占卜用的牌陣 id;易經為 null */
+    spreadId: string | null;
   } | null>(null);
   const [followUps, setFollowUps] = useState<Array<{
     id: string;
@@ -227,6 +240,7 @@ export default function Home() {
     changingLines?: number[] | null;
     // tarot
     drawnCards?: DrawnCard[] | null;
+    spreadId?: string | null;
   }>>([]);
   const [isFollowUpMode, setIsFollowUpMode] = useState(false);
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
@@ -301,6 +315,28 @@ export default function Home() {
       if (p) setPersonaId(p);
       const d = window.localStorage.getItem("tarogram:depth");
       if (d === "deep" || d === "quick") setReadingDepth(d);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // ── /?spread=<id> deep-link ───────────────────────────
+  // 牌陣詳細頁的 CTA 是 `/?spread=${spread.id}`,讓使用者帶著意圖進主流程;
+  // mount 時讀 query param,把 selectedSpreadId 直接寫進 state(divineType 也定為塔羅),
+  // 之後 question → divine-type 走完就直接抽該牌陣,不再彈牌陣選單。
+  // 為避免反覆觸發,讀完一次就把 query param 清掉。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sp = params.get("spread");
+    if (!sp) return;
+    if (!SPREADS.some((s) => s.id === sp)) return;
+    setSelectedSpreadId(sp);
+    setDivineType("tarot");
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("spread");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
     } catch {
       // ignore
     }
@@ -493,7 +529,8 @@ export default function Home() {
     }));
 
     if (divineType === "tarot") {
-      if (drawnCards.length !== 3) return;
+      const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+      if (drawnCards.length !== spread.cardCount) return;
       savePendingDivination({
         v: 1,
         timestamp: Date.now(),
@@ -507,6 +544,7 @@ export default function Home() {
           cardId: d.card.id,
           isReversed: d.isReversed,
         })),
+        tarotSpreadId: spread.id,
         chatMessages: chatForSnap,
       });
     } else if (divineType === "iching") {
@@ -541,6 +579,7 @@ export default function Home() {
     relatingHexagram,
     divinationResult,
     selectedCategory,
+    selectedSpreadId,
     userQuestion,
     locale,
     isSignedIn,
@@ -582,15 +621,18 @@ export default function Home() {
         relatingLines: snap.iching.relatingLines,
       });
     } else if (snap.divineType === "tarot" && snap.tarot) {
+      const spreadId = snap.tarotSpreadId ?? DEFAULT_SPREAD_ID;
+      const spread = getSpread(spreadId);
+      setSelectedSpreadId(spread.id);
       const cards: DrawnCard[] = snap.tarot
         .map((tc) => {
           const card = getCardById(tc.cardId);
           return card ? { card, isReversed: tc.isReversed } : null;
         })
         .filter((x): x is DrawnCard => x !== null);
-      if (cards.length === 3) {
+      if (cards.length === spread.cardCount) {
         setDrawnCards(cards);
-        setRevealedCount(3);
+        setRevealedCount(spread.cardCount);
       }
     }
 
@@ -610,19 +652,18 @@ export default function Home() {
         } = await supabase.auth.getUser();
         if (!user) return; // 還沒登入就算了,使用者可以再按一次「登入」
 
+        const snapSpread = getSpread(snap.tarotSpreadId ?? DEFAULT_SPREAD_ID);
         const saved =
           snap.divineType === "tarot" && snap.tarot
             ? await saveDivination({
                 divineType: "tarot",
                 question: snap.userQuestion,
                 category: snap.selectedCategory,
+                spreadId: snapSpread.id,
                 tarotCards: snap.tarot.map((tc, i) => ({
                   cardId: tc.cardId,
-                  // 快照裡沒存 position(drawnCards 順序就是 past-present-future)
-                  position: THREE_CARD_POSITIONS[i].key as
-                    | "past"
-                    | "present"
-                    | "future",
+                  // 快照裡沒存 position 列表 — 用順序對應 spread.positions[i].key
+                  position: snapSpread.positions[i]?.key ?? snapSpread.positions[0].key,
                   isReversed: tc.isReversed,
                 })),
                 aiReading: snap.aiReading,
@@ -686,7 +727,7 @@ export default function Home() {
         const { data: row, error } = await supabase
           .from("divinations")
           .select(
-            "id, question, category, divine_type, hexagram_number, primary_lines, changing_lines, relating_hexagram_number, tarot_cards, ai_reading, follow_ups, chat_messages, user_id"
+            "id, question, category, divine_type, hexagram_number, primary_lines, changing_lines, relating_hexagram_number, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages, user_id"
           )
           .eq("id", resumeId)
           .maybeSingle();
@@ -739,15 +780,21 @@ export default function Home() {
           });
         } else if (dt === "tarot" && Array.isArray(row.tarot_cards)) {
           type RawTarotCard = { cardId: string; isReversed: boolean };
+          const spreadId =
+            typeof row.tarot_spread_id === "string" && row.tarot_spread_id
+              ? row.tarot_spread_id
+              : DEFAULT_SPREAD_ID;
+          const spread = getSpread(spreadId);
+          setSelectedSpreadId(spread.id);
           const cards: DrawnCard[] = (row.tarot_cards as RawTarotCard[])
             .map((tc) => {
               const card = getCardById(tc.cardId);
               return card ? { card, isReversed: tc.isReversed } : null;
             })
             .filter((x): x is DrawnCard => x !== null);
-          if (cards.length === 3) {
+          if (cards.length === spread.cardCount) {
             setDrawnCards(cards);
-            setRevealedCount(3);
+            setRevealedCount(spread.cardCount);
           }
         }
 
@@ -763,6 +810,8 @@ export default function Home() {
           changingLines?: number[] | null;
           relatingHexagramNumber?: number | null;
           tarotCards?: { cardId: string; isReversed: boolean }[] | null;
+          /** Phase 12 後 tarot follow-up 才開始寫,舊資料無 → default 'three-card' */
+          spreadId?: string | null;
         };
         const rawFollowUps: RawFollowUp[] = Array.isArray(row.follow_ups)
           ? (row.follow_ups as RawFollowUp[])
@@ -801,6 +850,7 @@ export default function Home() {
                 divineType: "tarot" as const,
                 aiReading: f.aiReading,
                 drawnCards: cards,
+                spreadId: f.spreadId ?? DEFAULT_SPREAD_ID,
               };
             }
             return null;
@@ -903,9 +953,10 @@ export default function Home() {
 
   const handleShare = async () => {
     if (isSharing) return;
-    // 易經需 hexagram + divinationResult;塔羅需三張牌
+    // 易經需 hexagram + divinationResult;塔羅需 spread.cardCount 張牌
     if (divineType === "tarot") {
-      if (drawnCards.length !== 3) return;
+      const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+      if (drawnCards.length !== spread.cardCount) return;
     } else {
       if (!hexagram || !divinationResult) return;
     }
@@ -964,6 +1015,7 @@ export default function Home() {
         relatingHexagram,
         divinationResult,
         drawnCards: [...drawnCards],
+        spreadId: divineType === "tarot" ? selectedSpreadId ?? DEFAULT_SPREAD_ID : null,
       });
     }
 
@@ -1016,15 +1068,23 @@ export default function Home() {
       return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${hex.number} ${name} | ${judgment} | ${cl}${rel ? " | " + rel : ""}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
     };
 
-    const describeTarot = (label: string, cards: DrawnCard[], reading: string) => {
-      if (!cards || cards.length !== 3) return "";
+    const describeTarot = (
+      label: string,
+      cards: DrawnCard[],
+      reading: string,
+      spreadId: string | null | undefined
+    ) => {
+      if (!cards || cards.length === 0) return "";
+      const spread = getSpread(spreadId ?? DEFAULT_SPREAD_ID);
+      if (cards.length !== spread.cardCount) return "";
       const parts = cards.map((d, i) => {
-        const pos = THREE_CARD_POSITIONS[i];
+        const pos = spread.positions[i];
         const nm = isZh ? d.card.nameZh : d.card.nameEn;
         const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
         return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
       }).join(isZh ? " / " : " / ");
-      return `【${label}】${isZh ? "塔羅三牌" : "Tarot 3-card"} | ${parts}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
+      const spreadLabel = isZh ? spread.nameZh : spread.nameEn;
+      return `【${label}】${isZh ? "塔羅" : "Tarot"} ${spreadLabel} | ${parts}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
     };
 
     const rootLabel = isZh ? "原始占卜" : "Original reading";
@@ -1037,14 +1097,14 @@ export default function Home() {
           rootSnapshot.divinationResult?.changingLines,
           rootSnapshot.aiReading
         )
-      : describeTarot(rootLabel, rootSnapshot.drawnCards, rootSnapshot.aiReading);
+      : describeTarot(rootLabel, rootSnapshot.drawnCards, rootSnapshot.aiReading, rootSnapshot.spreadId);
 
     const followBlocks = followUps.map((f, i) => {
       const label = isZh ? `延伸第${i + 1}回合` : `Follow-up #${i + 1}`;
       const q = `${isZh ? "當時問題" : "Question"}: ${f.question}`;
       const body = f.divineType === "iching"
         ? describeIching(label, f.hexagram ?? null, f.relatingHexagram ?? null, f.changingLines, f.aiReading)
-        : describeTarot(label, f.drawnCards ?? [], f.aiReading);
+        : describeTarot(label, f.drawnCards ?? [], f.aiReading, f.spreadId);
       return `${q}\n${body}`;
     });
 
@@ -1082,8 +1142,15 @@ export default function Home() {
       setDrawnCards([]);
       setStep("mode-select");
     } else if (divineType === "tarot") {
-      setDrawnCards(drawThreeCards());
-      setStep("tarot-reveal");
+      // 已從 ?spread=<id> 預選好就直接抽該牌陣;否則進牌陣選單
+      if (selectedSpreadId) {
+        const spread = getSpread(selectedSpreadId);
+        setDrawnCards(drawSpread(spread));
+        setStep("tarot-reveal");
+      } else {
+        setDrawnCards([]);
+        setStep("tarot-spread-select");
+      }
     } else {
       setDrawnCards([]);
       setStep("divine-type");
@@ -1094,12 +1161,25 @@ export default function Home() {
     setDivineType(type);
     if (type === "iching") {
       setStep("mode-select");
-    } else {
-      // 塔羅:直接抽三張,進入 reveal 畫面讓使用者翻牌
-      setDrawnCards(drawThreeCards());
+    } else if (selectedSpreadId) {
+      // 已預選 spread(?spread= deep link 或衍伸佔卜回頭再來一次)→ 直接抽
+      const spread = getSpread(selectedSpreadId);
+      setDrawnCards(drawSpread(spread));
       setRevealedCount(0);
       setStep("tarot-reveal");
+    } else {
+      // 還沒選 spread → 進牌陣選單
+      setStep("tarot-spread-select");
     }
+  };
+
+  /** 從 tarot-spread-select 步驟挑一個牌陣 → 立刻洗牌進翻牌畫面 */
+  const handleSelectSpread = (spreadId: string) => {
+    const spread = getSpread(spreadId);
+    setSelectedSpreadId(spread.id);
+    setDrawnCards(drawSpread(spread));
+    setRevealedCount(0);
+    setStep("tarot-reveal");
   };
 
   const handleRevealCard = (idx: number) => {
@@ -1292,6 +1372,7 @@ export default function Home() {
             setRelatingHexagram(rootSnapshot.relatingHexagram);
             setDivinationResult(rootSnapshot.divinationResult);
             setDrawnCards(rootSnapshot.drawnCards);
+            setSelectedSpreadId(rootSnapshot.spreadId);
           }
           setIsFollowUpMode(false);
           setPendingScrollIdx(newIdx); // 觸發自動捲到這筆新加的衍伸
@@ -1341,10 +1422,11 @@ export default function Home() {
 
     try {
       const category = questionCategories.find((c) => c.id === selectedCategory);
+      const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
       const payload = {
         cards: cards.map((d, i) => ({
           cardId: d.card.id,
-          position: THREE_CARD_POSITIONS[i].key,
+          position: spread.positions[i].key,
           isReversed: d.isReversed,
         })),
         question: userQuestion,
@@ -1352,6 +1434,7 @@ export default function Home() {
         locale,
         previousContext: followUpCtx,
         chatHistory: followUpChat,
+        spreadId: spread.id,
         personaId,
         depth: readingDepth,
       };
@@ -1396,9 +1479,10 @@ export default function Home() {
           await appendFollowUp(divinationId, {
             divineType: "tarot",
             question: userQuestion,
+            spreadId: spread.id,
             tarotCards: cards.map((d, i) => ({
               cardId: d.card.id,
-              position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
+              position: spread.positions[i].key,
               isReversed: d.isReversed,
             })),
             aiReading: fullText,
@@ -1414,10 +1498,11 @@ export default function Home() {
               divineType: "tarot",
               aiReading: fullText,
               drawnCards: cards,
+              spreadId: spread.id,
             },
           ]);
 
-          // 回填 root
+          // 回填 root(包含 root 牌陣 id,讓結果頁顯示原始牌陣的位置標籤)
           if (rootSnapshot) {
             setDivineType(rootSnapshot.divineType);
             setUserQuestion(rootSnapshot.question);
@@ -1427,6 +1512,7 @@ export default function Home() {
             setRelatingHexagram(rootSnapshot.relatingHexagram);
             setDivinationResult(rootSnapshot.divinationResult);
             setDrawnCards(rootSnapshot.drawnCards);
+            setSelectedSpreadId(rootSnapshot.spreadId);
           }
           setIsFollowUpMode(false);
           setPendingScrollIdx(newIdx); // 觸發自動捲到這筆新加的衍伸
@@ -1436,9 +1522,10 @@ export default function Home() {
             divineType: "tarot",
             question: userQuestion,
             category: selectedCategory,
+            spreadId: spread.id,
             tarotCards: cards.map((d, i) => ({
               cardId: d.card.id,
-              position: THREE_CARD_POSITIONS[i].key as "past" | "present" | "future",
+              position: spread.positions[i].key,
               isReversed: d.isReversed,
             })),
             aiReading: fullText,
@@ -1460,11 +1547,13 @@ export default function Home() {
     }
   };
 
-  // 三張塔羅牌全翻開 → 自動進 result 畫面 + 觸發 AI 解讀
+  // 全部塔羅牌翻開 → 自動進 result 畫面 + 觸發 AI 解讀
+  // (cardCount 隨選定的牌陣 3 / 5 / 10 / 12)
   useEffect(() => {
     if (step !== "tarot-reveal") return;
-    if (revealedCount < 3) return;
-    if (drawnCards.length !== 3) return;
+    const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+    if (revealedCount < spread.cardCount) return;
+    if (drawnCards.length !== spread.cardCount) return;
     const timer = setTimeout(() => {
       setStep("result");
       fetchTarotReading(drawnCards);
@@ -1472,13 +1561,14 @@ export default function Home() {
     return () => clearTimeout(timer);
     // fetchTarotReading 故意不放 deps — 新的 render 才產 new ref,會造成重複觸發
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, revealedCount, drawnCards]);
+  }, [step, revealedCount, drawnCards, selectedSpreadId]);
 
   const sendChatMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return;
-    // 易經必須有 hexagram;塔羅必須有三張牌
+    // 易經必須有 hexagram;塔羅必須有 spread.cardCount 張牌
+    const chatSpread = divineType === "tarot" ? getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID) : null;
     if (divineType === "tarot") {
-      if (drawnCards.length !== 3) return;
+      if (!chatSpread || drawnCards.length !== chatSpread.cardCount) return;
     } else {
       if (!hexagram) return;
     }
@@ -1491,9 +1581,9 @@ export default function Home() {
 
     // Build reading context for the AI — 易經 / 塔羅 不同組合
     let readingContext: string;
-    if (divineType === "tarot") {
+    if (divineType === "tarot" && chatSpread) {
       const lines = drawnCards.map((d, i) => {
-        const pos = THREE_CARD_POSITIONS[i];
+        const pos = chatSpread.positions[i];
         const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
         const meaning = d.isReversed
           ? (locale === "zh" ? d.card.reversedMeaningZh : d.card.reversedMeaningEn)
@@ -1503,9 +1593,10 @@ export default function Home() {
         }
         return `[${pos.labelEn}] ${cardName} (${d.isReversed ? "Reversed" : "Upright"}): ${meaning}`;
       }).join("\n");
+      const spreadLabel = locale === "zh" ? chatSpread.nameZh : chatSpread.nameEn;
       readingContext = locale === "zh"
-        ? `問題:${userQuestion}\n\n三張牌:\n${lines}\n\n老師解盤:${aiReading}`
-        : `Question: ${userQuestion}\n\nThree cards:\n${lines}\n\nReading: ${aiReading}`;
+        ? `問題:${userQuestion}\n\n${spreadLabel}(${chatSpread.cardCount} 張):\n${lines}\n\n老師解盤:${aiReading}`
+        : `Question: ${userQuestion}\n\n${spreadLabel} (${chatSpread.cardCount} cards):\n${lines}\n\nReading: ${aiReading}`;
     } else {
       readingContext = locale === "zh"
         ? `本卦：第${hexagram!.number}卦 ${hexagram!.nameZh}\n卦辭：${hexagram!.judgmentZh}\n象辭：${hexagram!.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
@@ -1522,14 +1613,17 @@ export default function Home() {
           const nm = isZh ? f.hexagram.nameZh : f.hexagram.nameEn;
           return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${f.hexagram.number} ${nm}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
         }
-        if (f.divineType === "tarot" && f.drawnCards && f.drawnCards.length === 3) {
+        if (f.divineType === "tarot" && f.drawnCards && f.drawnCards.length > 0) {
+          const fSpread = getSpread(f.spreadId ?? DEFAULT_SPREAD_ID);
+          if (f.drawnCards.length !== fSpread.cardCount) return "";
           const parts = f.drawnCards.map((d, idx) => {
-            const pos = THREE_CARD_POSITIONS[idx];
+            const pos = fSpread.positions[idx];
             const nm = isZh ? d.card.nameZh : d.card.nameEn;
             const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
             return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
           }).join(isZh ? " / " : " / ");
-          return `【${label}】${isZh ? "塔羅三牌" : "Tarot"} | ${parts}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
+          const spreadLabel = isZh ? fSpread.nameZh : fSpread.nameEn;
+          return `【${label}】${isZh ? "塔羅" : "Tarot"} ${spreadLabel} | ${parts}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
         }
         return "";
       }).filter(Boolean).join("\n\n");
@@ -1620,6 +1714,7 @@ export default function Home() {
     setDivinationMode(null);
     // 塔羅 state 也一併清掉
     setDivineType(null);
+    setSelectedSpreadId(null);
     setDrawnCards([]);
     setRevealedCount(0);
     // 衍伸占卜 state
@@ -1663,7 +1758,10 @@ export default function Home() {
                 <span style={{ color: "rgba(192,192,208,0.5)", marginLeft: 8 }}>
                   {isIching
                     ? `· ☯ ${t("易經", "I Ching")} · ${hexName}`
-                    : `· 🎴 ${t("塔羅三牌", "Tarot 3-card")}`}
+                    : (() => {
+                        const sp = getSpread(f.spreadId ?? DEFAULT_SPREAD_ID);
+                        return `· 🎴 ${locale === "zh" ? sp.nameZh : sp.nameEn}`;
+                      })()}
                 </span>
               </div>
               <div style={{ color: "#e8e0d0", fontSize: 14, marginBottom: 6, lineHeight: 1.55 }}>
@@ -1680,16 +1778,21 @@ export default function Home() {
                   />
                 </div>
               )}
-              {!isIching && f.drawnCards && f.drawnCards.length === 3 && (
+              {!isIching && f.drawnCards && f.drawnCards.length > 0 && (() => {
+                const fSpread = getSpread(f.spreadId ?? DEFAULT_SPREAD_ID);
+                if (f.drawnCards!.length !== fSpread.cardCount) return null;
+                // 3 張正常排版,5/10/12 張用 5 欄壓小,避免延伸鏈被一張一張撐滿
+                const cols = fSpread.cardCount <= 3 ? 3 : 5;
+                return (
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
                   gap: 6,
                   marginTop: 6,
                   marginBottom: 8,
                 }}>
-                  {f.drawnCards.map((d, idx) => {
-                    const pos = THREE_CARD_POSITIONS[idx];
+                  {f.drawnCards!.map((d, idx) => {
+                    const pos = fSpread.positions[idx] ?? fSpread.positions[0];
                     const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
                     return (
                       <div key={idx} style={{ textAlign: "center" }}>
@@ -1733,7 +1836,8 @@ export default function Home() {
                     );
                   })}
                 </div>
-              )}
+                );
+              })()}
               <div style={{
                 background: "rgba(10,10,26,0.55)",
                 border: "1px solid rgba(212,168,85,0.15)",
@@ -2116,10 +2220,10 @@ export default function Home() {
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
                       {t(
-                        "抽三張牌解讀",
-                        "Three-card reading",
-                        "3枚引きリーディング",
-                        "세 장 카드 리딩"
+                        "5 種經典牌陣可選",
+                        "5 classic spreads",
+                        "5種類のスプレッド",
+                        "5가지 대표 스프레드"
                       )}
                     </div>
                   </div>
@@ -2748,8 +2852,8 @@ export default function Home() {
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
-                          "抽三張牌(過去・現在・未來),以七十八張塔羅為你解讀",
-                          "Draw three cards (past · present · future) from the 78-card tarot deck"
+                          "從 5 種經典牌陣中挑一個,以七十八張塔羅為你解讀",
+                          "Pick one of 5 classic spreads — read with the 78-card tarot deck"
                         )}
                       </div>
                     </div>
@@ -2771,6 +2875,135 @@ export default function Home() {
                   }}
                 >
                   {t("返回修改問題", "Back to edit question")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== STEP 2.6: Tarot Spread Select (依牌陣抽牌) ===== */}
+          {step === "tarot-spread-select" && (
+            <motion.div key="ssel" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
+                <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
+                  {t("選擇塔羅牌陣", "Choose Your Tarot Spread")}
+                </h2>
+                <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6, lineHeight: 1.7 }}>
+                  {t(
+                    "不同問題適合不同牌陣 — 5 / 10 / 12 張需要會員",
+                    "Different questions, different spreads — 5/10/12-card spreads need sign-in"
+                  )}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {SPREADS.map((s) => {
+                  const thumb = uiImages[spreadImageSlot(s.id)];
+                  const lockedForGuest = !isSignedIn && s.cardCount > 3;
+                  return (
+                    <motion.button
+                      key={s.id}
+                      whileHover={{ scale: lockedForGuest ? 1 : 1.01 }}
+                      whileTap={{ scale: lockedForGuest ? 1 : 0.99 }}
+                      onClick={() => {
+                        if (lockedForGuest) {
+                          setLoginModalOpen(true);
+                          return;
+                        }
+                        handleSelectSpread(s.id);
+                      }}
+                      className="mystic-card"
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        padding: 14,
+                        textAlign: "left",
+                        cursor: lockedForGuest ? "default" : "pointer",
+                        opacity: lockedForGuest ? 0.65 : 1,
+                        border: "1px solid rgba(212,168,85,0.2)",
+                        background: "rgba(13,13,43,0.8)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 72,
+                          flexShrink: 0,
+                          aspectRatio: "1 / 1",
+                          borderRadius: 10,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.25)",
+                          background:
+                            "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.5))",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={thumb}
+                            alt=""
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 30, opacity: 0.7 }}>🎴</span>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "baseline" }}>
+                          <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 15, fontFamily: "'Noto Serif TC', serif" }}>
+                            {locale === "zh" ? s.nameZh : s.nameEn}
+                            <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginLeft: 6, fontStyle: "italic", fontWeight: 400 }}>
+                              {locale === "zh" ? s.nameEn : s.nameZh}
+                            </span>
+                          </div>
+                          <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, whiteSpace: "nowrap" }}>
+                            {t(`${s.cardCount} 張`, `${s.cardCount} cards`)}
+                          </span>
+                        </div>
+                        <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 12, lineHeight: 1.55, margin: "4px 0 0" }}>
+                          {locale === "zh" ? s.taglineZh : s.taglineEn}
+                        </p>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6 }}>
+                          <Link
+                            href={`/tarot-spread/${s.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              color: "rgba(212,168,85,0.85)",
+                              fontSize: 11,
+                              textDecoration: "none",
+                              borderBottom: "1px dashed rgba(212,168,85,0.4)",
+                              paddingBottom: 1,
+                            }}
+                          >
+                            {t("看詳細介紹 →", "Details →")}
+                          </Link>
+                          {lockedForGuest && (
+                            <span style={{ color: "#fde68a", fontSize: 11 }}>
+                              🔒 {t("登入會員可解鎖", "Sign in to unlock")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button
+                  onClick={() => setStep("divine-type")}
+                  style={{
+                    padding: "8px 20px",
+                    borderRadius: 9999,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    color: "#d4a855",
+                    fontSize: 13,
+                    background: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("返回選擇工具", "Back to choose oracle")}
                 </button>
               </div>
             </motion.div>
@@ -2989,32 +3222,45 @@ export default function Home() {
           )}
 
           {/* ===== STEP 3T: Tarot Reveal (抽牌 + 翻牌) ===== */}
-          {step === "tarot-reveal" && drawnCards.length === 3 && (
+          {step === "tarot-reveal" && drawnCards.length > 0 && (() => {
+            const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+            if (drawnCards.length !== spread.cardCount) return null;
+            // 3 張用 3 欄,5/10/12 張用 5 欄壓密(讓 12 張仍能塞進手機螢幕)
+            const cols = spread.cardCount <= 3 ? 3 : 5;
+            const positionsHint =
+              spread.positions
+                .slice(0, 3)
+                .map((p) => (locale === "zh" ? p.labelZh : p.labelEn))
+                .join(" → ") + (spread.positions.length > 3 ? "…" : "");
+            return (
             <motion.div key="tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
+                <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>
+                  {locale === "zh" ? spread.nameZh : spread.nameEn} · {spread.cardCount} {t("張", "cards")}
+                </div>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
                   {t("翻牌揭示", "Reveal Your Cards")}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginTop: 4 }}>
                   {revealedCount === 0
-                    ? t("依序點擊牌卡翻開(過去 → 現在 → 未來)", "Tap each card in order (past → present → future)")
-                    : revealedCount < 3
-                    ? t(`已翻開 ${revealedCount} / 3 張`, `Revealed ${revealedCount} of 3`)
-                    : t("三張牌已揭示,老師正在為你解讀...", "All three cards revealed. Reading now...")}
+                    ? t(`依序點擊牌卡翻開(${positionsHint})`, `Tap each card in order (${positionsHint})`)
+                    : revealedCount < spread.cardCount
+                    ? t(`已翻開 ${revealedCount} / ${spread.cardCount} 張`, `Revealed ${revealedCount} of ${spread.cardCount}`)
+                    : t(`${spread.cardCount} 張牌已揭示,老師正在為你解讀...`, `All ${spread.cardCount} cards revealed. Reading now...`)}
                 </p>
               </div>
 
-              {/* 三張牌 */}
+              {/* 牌組 — 依 spread.cardCount 決定欄數 */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 10,
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                gap: cols >= 5 ? 6 : 10,
                 marginTop: 16,
               }}>
                 {drawnCards.map((drawn, idx) => {
                   const isRevealed = idx < revealedCount;
                   const isNext = idx === revealedCount;
-                  const pos = THREE_CARD_POSITIONS[idx];
+                  const pos = spread.positions[idx];
                   const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
                   const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
                   const orientationLabel = drawn.isReversed
@@ -3144,7 +3390,12 @@ export default function Home() {
 
               <div style={{ textAlign: "center", marginTop: 24 }}>
                 <button
-                  onClick={() => setStep("divine-type")}
+                  onClick={() => {
+                    // 退回上一步:已選 spread → 回牌陣選單;沒選 → 回 divine-type
+                    setDrawnCards([]);
+                    setRevealedCount(0);
+                    setStep("tarot-spread-select");
+                  }}
                   style={{
                     padding: "8px 20px",
                     borderRadius: 9999,
@@ -3155,11 +3406,12 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回選擇工具", "Back to choose oracle")}
+                  {t("返回選擇牌陣", "Back to choose spread")}
                 </button>
               </div>
             </motion.div>
-          )}
+            );
+          })()}
 
           {/* ===== STEP 4a: Result (易經) ===== */}
           {step === "result" && divineType !== "tarot" && hexagram && (
@@ -3556,27 +3808,35 @@ export default function Home() {
           )}
 
           {/* ===== STEP 4b: Result (塔羅) ===== */}
-          {step === "result" && divineType === "tarot" && drawnCards.length === 3 && (
+          {step === "result" && divineType === "tarot" && drawnCards.length > 0 && (() => {
+            const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+            if (drawnCards.length !== spread.cardCount) return null;
+            const cols = spread.cardCount <= 3 ? 3 : 5;
+            const positionsHint = spread.positions
+              .slice(0, 3)
+              .map((p) => (locale === "zh" ? p.labelZh : p.labelEn))
+              .join(" · ") + (spread.positions.length > 3 ? "…" : "");
+            return (
             <motion.div key="res-tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-              {/* 三張牌展示 */}
+              {/* 牌組展示 */}
               <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                 <div style={{ textAlign: "center", marginBottom: 16 }}>
                   <span style={{ fontSize: 40, display: "block" }}>🎴</span>
                   <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif", marginTop: 4 }}>
-                    {t("三牌占卜", "Three-Card Spread")}
+                    {locale === "zh" ? spread.nameZh : spread.nameEn}
                   </h2>
                   <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>
-                    {t("過去 · 現在 · 未來", "Past · Present · Future")}
+                    {positionsHint}
                   </p>
                 </div>
 
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 10,
+                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                  gap: cols >= 5 ? 6 : 10,
                 }}>
                   {drawnCards.map((drawn, idx) => {
-                    const pos = THREE_CARD_POSITIONS[idx];
+                    const pos = spread.positions[idx];
                     const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
                     const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
                     const orientationLabel = drawn.isReversed
@@ -3643,7 +3903,7 @@ export default function Home() {
                   {t("牌義速覽", "Card Meanings")}
                 </h3>
                 {drawnCards.map((drawn, idx) => {
-                  const pos = THREE_CARD_POSITIONS[idx];
+                  const pos = spread.positions[idx];
                   const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
                   const meaning = drawn.isReversed
                     ? (locale === "zh" ? drawn.card.reversedMeaningZh : drawn.card.reversedMeaningEn)
@@ -3651,11 +3911,12 @@ export default function Home() {
                   const orientationLabel = drawn.isReversed
                     ? t("逆位", "Reversed")
                     : t("正位", "Upright");
+                  const isLast = idx === drawnCards.length - 1;
                   return (
                     <div key={idx} style={{
-                      marginBottom: idx < 2 ? 14 : 0,
-                      paddingBottom: idx < 2 ? 14 : 0,
-                      borderBottom: idx < 2 ? "1px dashed rgba(212,168,85,0.15)" : "none",
+                      marginBottom: isLast ? 0 : 14,
+                      paddingBottom: isLast ? 0 : 14,
+                      borderBottom: isLast ? "none" : "1px dashed rgba(212,168,85,0.15)",
                     }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                         <span style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
@@ -4009,7 +4270,8 @@ export default function Home() {
                 </button>
               </div>
             </motion.div>
-          )}
+            );
+          })()}
         </AnimatePresence>
       </main>
 
@@ -4054,9 +4316,11 @@ export default function Home() {
       {/* Hidden off-screen ShareCard (塔羅版) */}
       {step === "result" &&
         divineType === "tarot" &&
-        drawnCards.length === 3 &&
+        drawnCards.length > 0 &&
         (() => {
           const cat = questionCategories.find((c) => c.id === selectedCategory);
+          const spread = getSpread(selectedSpreadId ?? DEFAULT_SPREAD_ID);
+          if (drawnCards.length !== spread.cardCount) return null;
           return (
             <div
               aria-hidden
@@ -4072,6 +4336,7 @@ export default function Home() {
                 ref={shareCardRef}
                 divineType="tarot"
                 drawnCards={drawnCards}
+                spreadId={spread.id}
                 question={userQuestion}
                 categoryIcon={cat?.icon ?? "🔮"}
                 categoryNameZh={cat?.nameZh ?? "綜合"}
