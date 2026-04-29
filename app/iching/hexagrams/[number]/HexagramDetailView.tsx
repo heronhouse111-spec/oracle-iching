@@ -118,40 +118,26 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
           marginBottom: 32,
         }}
       >
+        {/* Hero 圖框 — 沒上傳真圖時刻意留白(不放 Unicode 卦象字 / 卦線),
+            避免日後上傳真圖時的視覺跳動。aspectRatio 1:1 沿用既有上傳圖比例。 */}
         <div
           style={{
             borderRadius: 12,
             overflow: "hidden",
             border: "1px solid rgba(212,168,85,0.4)",
             boxShadow: "0 8px 32px rgba(212,168,85,0.18)",
-            background: "rgba(13,13,43,0.6)",
+            background:
+              "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
             aspectRatio: "1 / 1",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
-          {heroUrl ? (
+          {heroUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={heroUrl}
               alt={hName}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
-          ) : (
-            <div style={{ textAlign: "center", padding: 16 }}>
-              <div
-                style={{
-                  fontSize: 96,
-                  color: "rgba(212,168,85,0.85)",
-                  lineHeight: 1,
-                  marginBottom: 12,
-                }}
-              >
-                {hex.character}
-              </div>
-              <HexagramLines lines={hex.lines} size="sm" />
-            </div>
           )}
         </div>
 

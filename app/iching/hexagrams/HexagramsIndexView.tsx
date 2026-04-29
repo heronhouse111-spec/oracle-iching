@@ -213,8 +213,9 @@ export default function HexagramsIndexView({ images }: Props) {
             <div
               style={{
                 display: "grid",
+                // 跟 /tarot/cards 同 grid 設定:auto-fill 140px、間距 16
                 gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                gap: 14,
+                gap: 16,
               }}
             >
               {items.map((h) => {
@@ -247,48 +248,43 @@ export default function HexagramsIndexView({ images }: Props) {
                       transition: "transform 0.2s, border-color 0.2s",
                     }}
                   >
+                    {/* 圖片框 — 仿塔羅 9:14 直幅。
+                        未上傳圖時刻意留白(不放 Unicode 卦象字 / 卦線),
+                        避免日後上傳真圖時的視覺跳動。 */}
                     <div
                       style={{
                         width: "100%",
-                        aspectRatio: "1 / 1",
-                        borderRadius: 8,
+                        aspectRatio: "9 / 14",
+                        borderRadius: 6,
                         overflow: "hidden",
-                        marginBottom: 8,
+                        marginBottom: 6,
                         border: "1px solid rgba(212,168,85,0.2)",
                         background:
                           "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
                       }}
                     >
-                      {url ? (
+                      {url && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={url}
                           alt={hName}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         />
-                      ) : (
-                        <span
-                          style={{
-                            fontSize: 52,
-                            color: "rgba(212,168,85,0.85)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          {h.character}
-                        </span>
                       )}
                     </div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 11, color: "rgba(212,168,85,0.7)" }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#e8e8f0",
+                        lineHeight: 1.4,
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: 10, color: "rgba(212,168,85,0.7)" }}>
                         {numLabel}
                       </div>
                       <div
                         style={{
-                          fontSize: 14,
-                          color: "#e8e8f0",
                           fontWeight: 600,
                           fontFamily: "'Noto Serif TC', serif",
                           marginTop: 2,
