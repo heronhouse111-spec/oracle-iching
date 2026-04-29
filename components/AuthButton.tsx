@@ -41,9 +41,14 @@ export default function AuthButton() {
           padding: "6px 12px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.2)",
           color: "rgba(212,168,85,0.4)", fontSize: 12, background: "none", cursor: "default",
         }}
-        title={t("請先設定 Supabase", "Configure Supabase first")}
+        title={t(
+          "請先設定 Supabase",
+          "Configure Supabase first",
+          "Supabase の設定が必要です",
+          "Supabase 설정이 필요합니다"
+        )}
       >
-        {t("登入", "Sign In")}
+        {t("登入", "Sign In", "ログイン", "로그인")}
       </button>
     );
   }
@@ -63,7 +68,7 @@ export default function AuthButton() {
           padding: "6px 12px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.3)",
           color: "#d4a855", fontSize: 12, background: "none", cursor: "pointer",
         }}>
-          {t("登入", "Sign In")}
+          {t("登入", "Sign In", "ログイン", "로그인")}
         </button>
         <LoginOptionsModal
           open={loginOpen}
@@ -78,8 +83,13 @@ export default function AuthButton() {
     <div style={{ position: "relative" }}>
       <button
         onClick={() => setShowMenu(!showMenu)}
-        aria-label={t("已登入使用者選單", "Signed-in user menu")}
-        title={user.email ?? t("已登入", "Signed in")}
+        aria-label={t(
+          "已登入使用者選單",
+          "Signed-in user menu",
+          "ログイン中のユーザーメニュー",
+          "로그인된 사용자 메뉴"
+        )}
+        title={user.email ?? t("已登入", "Signed in", "ログイン中", "로그인됨")}
         style={{
           width: 32, height: 32, borderRadius: "50%",
           background: "rgba(212,168,85,0.2)", border: "1px solid rgba(212,168,85,0.3)",
@@ -124,14 +134,14 @@ export default function AuthButton() {
               textDecoration: "none",
             }}
           >
-            {t("我的會員", "My Account")} →
+            {t("我的會員", "My Account", "マイアカウント", "내 계정")} →
           </Link>
           <button onClick={handleLogout} style={{
             color: "#d4a855", fontSize: 12, background: "none", border: "none", cursor: "pointer",
             marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(212,168,85,0.1)",
             width: "100%", textAlign: "left",
           }}>
-            {t("登出", "Sign Out")}
+            {t("登出", "Sign Out", "ログアウト", "로그아웃")}
           </button>
         </div>
       )}

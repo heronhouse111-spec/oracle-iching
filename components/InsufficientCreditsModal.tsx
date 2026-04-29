@@ -70,7 +70,7 @@ export default function InsufficientCreditsModal({
       >
         <button
           onClick={onClose}
-          aria-label={t("關閉", "Close")}
+          aria-label={t("關閉", "Close", "閉じる", "닫기")}
           style={{
             position: "absolute",
             top: 10,
@@ -98,12 +98,14 @@ export default function InsufficientCreditsModal({
             marginBottom: 6,
           }}
         >
-          {t("點數不足", "Out of Credits")}
+          {t("點數不足", "Out of Credits", "ポイント不足", "포인트 부족")}
         </h3>
         <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 13, marginBottom: 20 }}>
           {t(
             `這次占卜需要 ${required} 點,你目前的點數不夠。`,
-            `This reading costs ${required} credits, and you don't have enough.`
+            `This reading costs ${required} credits, and you don't have enough.`,
+            `この占いには ${required} ポイントが必要ですが、現在のポイントが足りません。`,
+            `이 점에는 ${required} 포인트가 필요하지만 현재 포인트가 부족합니다.`
           )}
         </p>
 
@@ -123,7 +125,12 @@ export default function InsufficientCreditsModal({
               textDecoration: "none",
             }}
           >
-            {t("升級訂閱 · 每月補點數", "Upgrade · Monthly Refill")}
+            {t(
+              "升級訂閱 · 每月補點數",
+              "Upgrade · Monthly Refill",
+              "アップグレード · 毎月ポイント補充",
+              "업그레이드 · 월마다 포인트 충전"
+            )}
           </Link>
 
           {/* 購買點數包 —— 次要 */}
@@ -142,14 +149,14 @@ export default function InsufficientCreditsModal({
               background: "none",
             }}
           >
-            {t("購買點數包", "Buy Credit Pack")}
+            {t("購買點數包", "Buy Credit Pack", "ポイントパックを購入", "포인트 팩 구매")}
           </Link>
 
           {/* 看廣告領點 —— Phase D 才接,先灰掉 */}
           <button
             type="button"
             disabled
-            title={t("即將推出", "Coming soon")}
+            title={t("即將推出", "Coming soon", "近日公開", "곧 출시")}
             style={{
               padding: "10px 16px",
               borderRadius: 10,
@@ -162,7 +169,9 @@ export default function InsufficientCreditsModal({
           >
             {t(
               "看廣告領點數(即將推出)",
-              "Watch Ad for Credits (Coming soon)"
+              "Watch Ad for Credits (Coming soon)",
+              "広告を見てポイント獲得(近日公開)",
+              "광고 보고 포인트 받기(곧 출시)"
             )}
           </button>
         </div>

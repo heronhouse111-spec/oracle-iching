@@ -154,7 +154,14 @@ export default function LoginOptionsModal({
     setError(null);
     const addr = email.trim();
     if (!addr || !/.+@.+\..+/.test(addr)) {
-      setError(t("請輸入有效的 Email", "Please enter a valid email"));
+      setError(
+        t(
+          "請輸入有效的 Email",
+          "Please enter a valid email",
+          "有効なメールアドレスを入力してください",
+          "유효한 이메일을 입력하세요"
+        )
+      );
       return;
     }
     setBusy("email");
@@ -220,7 +227,7 @@ export default function LoginOptionsModal({
         >
         <button
           onClick={onClose}
-          aria-label={t("關閉", "Close")}
+          aria-label={t("關閉", "Close", "閉じる", "닫기")}
           style={{
             position: "absolute",
             top: 10,
@@ -248,7 +255,7 @@ export default function LoginOptionsModal({
             marginBottom: 6,
           }}
         >
-          {title ?? t("登入 / 註冊", "Sign in")}
+          {title ?? t("登入 / 註冊", "Sign in", "ログイン / 登録", "로그인 / 가입")}
         </h3>
         <p
           style={{
@@ -261,7 +268,9 @@ export default function LoginOptionsModal({
           {subtitle ??
             t(
               "選擇慣用的登入方式,我們會為你建立會員帳號",
-              "Choose how you'd like to sign in — we'll create your account automatically"
+              "Choose how you'd like to sign in — we'll create your account automatically",
+              "ご希望のログイン方法を選んでください。アカウントは自動で作成されます。",
+              "원하는 로그인 방법을 선택하세요. 계정은 자동으로 생성됩니다."
             )}
         </p>
 
@@ -298,7 +307,12 @@ export default function LoginOptionsModal({
             />
           ) : (
             <ProviderButton
-              label={t("使用 Google 帳號登入", "Continue with Google")}
+              label={t(
+                "使用 Google 帳號登入",
+                "Continue with Google",
+                "Google アカウントでログイン",
+                "Google 계정으로 계속"
+              )}
               iconBg="#fff"
               icon={<GoogleIcon />}
               onClick={() => handleSocial("google")}
@@ -309,7 +323,12 @@ export default function LoginOptionsModal({
           )}
           {APPLE_LOGIN_ENABLED && (
             <ProviderButton
-              label={t("使用 Apple 帳號登入", "Continue with Apple")}
+              label={t(
+                "使用 Apple 帳號登入",
+                "Continue with Apple",
+                "Apple アカウントでログイン",
+                "Apple 계정으로 계속"
+              )}
               iconBg="#000"
               icon={<AppleIcon />}
               labelColor="#fff"
@@ -322,7 +341,12 @@ export default function LoginOptionsModal({
           )}
           {lineEnabled && (
             <ProviderButton
-              label={t("使用 LINE 帳號登入", "Continue with LINE")}
+              label={t(
+                "使用 LINE 帳號登入",
+                "Continue with LINE",
+                "LINE アカウントでログイン",
+                "LINE 계정으로 계속"
+              )}
               iconBg="#06C755"
               icon={<LineIcon />}
               labelColor="#fff"
@@ -347,7 +371,7 @@ export default function LoginOptionsModal({
           }}
         >
           <div style={{ flex: 1, height: 1, background: "rgba(192,192,208,0.15)" }} />
-          <span>{t("或", "or")}</span>
+          <span>{t("或", "or", "または", "또는")}</span>
           <div style={{ flex: 1, height: 1, background: "rgba(192,192,208,0.15)" }} />
         </div>
 
@@ -368,7 +392,12 @@ export default function LoginOptionsModal({
               fontWeight: 600,
             }}
           >
-            {t("✉  用 Email 登入(寄連結給你)", "✉  Email me a magic link")}
+            {t(
+              "✉  用 Email 登入(寄連結給你)",
+              "✉  Email me a magic link",
+              "✉  メールでログイン(リンクを送ります)",
+              "✉  이메일로 로그인(링크 보내드립니다)"
+            )}
           </button>
         ) : emailSent ? (
           <div
@@ -384,7 +413,9 @@ export default function LoginOptionsModal({
           >
             {t(
               `登入連結已寄出至 ${email},請至信箱點擊連結完成登入(若找不到請查看垃圾信件匣)`,
-              `A sign-in link has been sent to ${email}. Click the link in the email to continue. (Check spam if not found.)`
+              `A sign-in link has been sent to ${email}. Click the link in the email to continue. (Check spam if not found.)`,
+              `${email} にログイン用リンクを送信しました。メール内のリンクをクリックして続けてください(届かない場合は迷惑メールをご確認ください)。`,
+              `${email}로 로그인 링크를 보냈습니다. 이메일의 링크를 클릭하여 계속하세요(보이지 않으면 스팸함을 확인하세요).`
             )}
           </div>
         ) : (
@@ -397,7 +428,7 @@ export default function LoginOptionsModal({
                 marginBottom: 6,
               }}
             >
-              {t("Email 地址", "Email address")}
+              {t("Email 地址", "Email address", "メールアドレス", "이메일 주소")}
             </label>
             <input
               type="email"
@@ -433,8 +464,8 @@ export default function LoginOptionsModal({
               }}
             >
               {busy === "email"
-                ? t("寄送中…", "Sending…")
-                : t("寄送登入連結", "Send magic link")}
+                ? t("寄送中…", "Sending…", "送信中…", "전송 중…")
+                : t("寄送登入連結", "Send magic link", "ログインリンクを送る", "로그인 링크 보내기")}
             </button>
             <button
               type="button"
@@ -450,7 +481,7 @@ export default function LoginOptionsModal({
                 cursor: "pointer",
               }}
             >
-              {t("← 回上一頁", "← Back")}
+              {t("← 回上一頁", "← Back", "← 戻る", "← 뒤로")}
             </button>
           </form>
         )}
@@ -483,23 +514,26 @@ export default function LoginOptionsModal({
         >
           {t(
             "登入即表示同意 ",
-            "By signing in you agree to our "
+            "By signing in you agree to our ",
+            "ログインすることで、",
+            "로그인하시면 "
           )}
           <a
             href="/terms"
             target="_blank"
             style={{ color: "rgba(212,168,85,0.7)", textDecoration: "underline" }}
           >
-            {t("服務條款", "Terms")}
+            {t("服務條款", "Terms", "利用規約", "이용약관")}
           </a>
-          {t(" 與 ", " and ")}
+          {t(" 與 ", " and ", " と ", " 및 ")}
           <a
             href="/privacy"
             target="_blank"
             style={{ color: "rgba(212,168,85,0.7)", textDecoration: "underline" }}
           >
-            {t("隱私權政策", "Privacy Policy")}
+            {t("隱私權政策", "Privacy Policy", "プライバシーポリシー", "개인정보처리방침")}
           </a>
+          {t("", "", " に同意したものとみなされます。", "에 동의한 것으로 간주됩니다.")}
         </p>
         </div>
       </div>
@@ -524,7 +558,7 @@ export default function LoginOptionsModal({
  */
 interface InAppBrowserNoticeProps {
   app: InAppBrowserApp | null;
-  t: (zh: string, en: string) => string;
+  t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }
 
 function InAppBrowserNotice({ app, t }: InAppBrowserNoticeProps) {
@@ -538,48 +572,68 @@ function InAppBrowserNotice({ app, t }: InAppBrowserNoticeProps) {
   if (app === "line") {
     heading = t(
       "偵測到你正在 LINE 內開啟,Google 登入會被擋。",
-      "You're inside LINE — Google sign-in won't work here."
+      "You're inside LINE — Google sign-in won't work here.",
+      "LINE 内で開いています。Google ログインはブロックされます。",
+      "LINE 안에서 열고 있습니다. Google 로그인은 차단됩니다."
     );
     body = t(
       "點下方按鈕用預設瀏覽器開啟,登入後再回來。",
-      "Tap below to reopen in your default browser, then sign in."
+      "Tap below to reopen in your default browser, then sign in.",
+      "下のボタンでデフォルトブラウザで開き直してログインしてください。",
+      "아래 버튼으로 기본 브라우저에서 다시 열고 로그인하세요."
     );
   } else if (app === "facebook") {
     heading = t(
       "偵測到你正在 Facebook / Messenger 內開啟,Google 登入會被擋。",
-      "You're inside Facebook / Messenger — Google sign-in won't work here."
+      "You're inside Facebook / Messenger — Google sign-in won't work here.",
+      "Facebook / Messenger 内で開いています。Google ログインはブロックされます。",
+      "Facebook / Messenger 안에서 열고 있습니다. Google 로그인은 차단됩니다."
     );
     body = t(
       "請點右上角 ⋯ 選單,選「在外部瀏覽器中開啟」或「在 Safari/Chrome 中開啟」。",
-      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\" (or Safari / Chrome)."
+      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\" (or Safari / Chrome).",
+      "右上の ⋯ メニューから「外部ブラウザで開く」(または Safari / Chrome)を選んでください。",
+      "오른쪽 상단 ⋯ 메뉴에서 \"외부 브라우저에서 열기\"(또는 Safari / Chrome)를 선택하세요."
     );
   } else if (app === "instagram") {
     heading = t(
       "偵測到你正在 Instagram 內開啟,Google 登入會被擋。",
-      "You're inside Instagram — Google sign-in won't work here."
+      "You're inside Instagram — Google sign-in won't work here.",
+      "Instagram 内で開いています。Google ログインはブロックされます。",
+      "Instagram 안에서 열고 있습니다. Google 로그인은 차단됩니다."
     );
     body = t(
       "請點右上角 ⋯ 選單,選「在外部瀏覽器中開啟」。",
-      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\"."
+      "Tap the ⋯ menu in the top-right and choose \"Open in external browser\".",
+      "右上の ⋯ メニューから「外部ブラウザで開く」を選んでください。",
+      "오른쪽 상단 ⋯ 메뉴에서 \"외부 브라우저에서 열기\"를 선택하세요."
     );
   } else if (app === "wechat") {
     heading = t(
       "偵測到你正在微信內開啟,Google 登入會被擋。",
-      "You're inside WeChat — Google sign-in won't work here."
+      "You're inside WeChat — Google sign-in won't work here.",
+      "WeChat 内で開いています。Google ログインはブロックされます。",
+      "WeChat 안에서 열고 있습니다. Google 로그인은 차단됩니다."
     );
     body = t(
       "請點右上角 ⋯,選「在瀏覽器中打開」。",
-      "Tap the ⋯ menu in the top-right and choose \"Open in browser\"."
+      "Tap the ⋯ menu in the top-right and choose \"Open in browser\".",
+      "右上の ⋯ から「ブラウザで開く」を選んでください。",
+      "오른쪽 상단 ⋯에서 \"브라우저에서 열기\"를 선택하세요."
     );
   } else {
     // tiktok / threads / unknown
     heading = t(
       "偵測到你正在 App 的內嵌瀏覽器中,Google 登入會被擋。",
-      "You're inside an app's in-app browser — Google sign-in won't work here."
+      "You're inside an app's in-app browser — Google sign-in won't work here.",
+      "アプリ内蔵ブラウザで開いています。Google ログインはブロックされます。",
+      "앱 내장 브라우저에서 열고 있습니다. Google 로그인은 차단됩니다."
     );
     body = t(
       "請從 App 選單切換到預設瀏覽器(Safari / Chrome)再登入。",
-      "Please switch to your default browser (Safari / Chrome) and sign in there."
+      "Please switch to your default browser (Safari / Chrome) and sign in there.",
+      "アプリのメニューからデフォルトブラウザ(Safari / Chrome)に切り替えてログインしてください。",
+      "앱 메뉴에서 기본 브라우저(Safari / Chrome)로 전환하여 로그인하세요."
     );
   }
 
@@ -655,7 +709,12 @@ function InAppBrowserNotice({ app, t }: InAppBrowserNoticeProps) {
             cursor: "pointer",
           }}
         >
-          {t("在預設瀏覽器開啟", "Open in default browser")}
+          {t(
+            "在預設瀏覽器開啟",
+            "Open in default browser",
+            "デフォルトブラウザで開く",
+            "기본 브라우저에서 열기"
+          )}
         </button>
       )}
     </div>

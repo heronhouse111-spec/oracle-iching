@@ -47,3 +47,24 @@ export async function getServerT() {
     return zh;
   };
 }
+
+/**
+ * Locale-aware string picker — 給 server component / generateMetadata 用,
+ * 不必先 await getServerT()。傳 Locale + 4 個語系字串,回對應的字串(同樣的
+ * fallback 規則:ja/ko 缺值 → en;zh 永遠回 zh,簡中等 client hydrate)。
+ *
+ * 用 nullish-tolerant 簽名(ja/ko 可能是 undefined / null / "")配合
+ * data 檔的 *Ja?/*Ko? 欄位。
+ */
+export function pickByLocale(
+  locale: Locale,
+  zh: string,
+  en: string,
+  ja?: string | null,
+  ko?: string | null
+): string {
+  if (locale === "en") return en;
+  if (locale === "ja") return ja || en;
+  if (locale === "ko") return ko || en;
+  return zh;
+}

@@ -38,7 +38,9 @@ export default function Footer() {
         >
           {t(
             "占卜結果僅供娛樂與自我參考,請勿作為投資、醫療、法律或重大人生決策之依據。",
-            "Readings are for entertainment and self-reflection only. Not a basis for investment, medical, legal, or major life decisions."
+            "Readings are for entertainment and self-reflection only. Not a basis for investment, medical, legal, or major life decisions.",
+            "占い結果は娯楽と自己省察のためのものです。投資・医療・法律・人生の重要な決断の根拠にしないでください。",
+            "점괘는 오락과 자기 성찰용입니다. 투자·의료·법률·인생의 중대한 결정의 근거로 삼지 마세요."
           )}
         </p>
 
@@ -55,23 +57,23 @@ export default function Footer() {
           }}
         >
           <Link href="/yes-no" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("Yes/No 占卜", "Yes/No")}
+            {t("Yes/No 占卜", "Yes/No", "Yes/No 占い", "Yes/No 점")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link href="/daily" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("每日一卡", "Daily Card")}
+            {t("每日一卡", "Daily Card", "今日の一枚", "오늘의 카드")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link href="/tarot/cards" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("78 張牌意", "78 Cards")}
+            {t("78 張牌意", "78 Cards", "78枚の意味", "78장 카드 의미")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link href="/tarot-spread" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("牌陣大全", "Spreads")}
+            {t("牌陣大全", "Spreads", "スプレッド", "스프레드")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link href="/blog" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("部落格", "Blog")}
+            {t("部落格", "Blog", "ブログ", "블로그")}
           </Link>
         </div>
 
@@ -98,7 +100,7 @@ export default function Footer() {
                   fontWeight: 600,
                 }}
               >
-                ✦ {t("加入主畫面", "Install app")}
+                ✦ {t("加入主畫面", "Install app", "ホーム画面に追加", "홈 화면에 추가")}
               </Link>
               <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
             </>
@@ -110,7 +112,7 @@ export default function Footer() {
               textDecoration: "none",
             }}
           >
-            {t("服務條款", "Terms")}
+            {t("服務條款", "Terms", "利用規約", "이용약관")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link
@@ -120,11 +122,11 @@ export default function Footer() {
               textDecoration: "none",
             }}
           >
-            {t("隱私權政策", "Privacy")}
+            {t("隱私權政策", "Privacy", "プライバシー", "개인정보")}
           </Link>
           <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <span style={{ color: "rgba(192,192,208,0.4)" }}>
-            © {new Date().getFullYear()} {t("鷺居國際", "Heronhouse")}
+            © {new Date().getFullYear()} {t("鷺居國際", "Heronhouse", "鷺居國際", "Heronhouse")}
           </span>
         </div>
       </div>

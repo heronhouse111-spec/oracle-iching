@@ -76,7 +76,12 @@ export default function CreditsBadge() {
   return (
     <Link
       href="/account/credits"
-      title={t("點擊購買或管理點數", "Purchase or manage credits")}
+      title={t(
+        "點擊購買或管理點數",
+        "Purchase or manage credits",
+        "ポイントの購入・管理",
+        "포인트 구매·관리"
+      )}
       style={{
         display: "inline-flex",
         alignItems: "center",

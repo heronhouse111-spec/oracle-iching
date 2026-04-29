@@ -8,6 +8,7 @@ import GoogleOneTap from "@/components/GoogleOneTap";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { UiImagesProvider } from "@/hooks/useUiImages";
 import { getUiImages } from "@/lib/uiImages";
+import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
 
 // metadataBase 讓 OG/twitter 圖路徑可以用相對 URL — Next 16 建議要設
 const siteUrl = (() => {
@@ -19,43 +20,64 @@ const siteUrl = (() => {
   return "https://tarogram.heronhouse.me";
 })();
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "Tarogram 易問 | 易經 × 塔羅 · AI 占卜",
-  description:
-    "東方易經 · 西方塔羅 · AI 即時解盤。Eastern I Ching meets Western Tarot, with AI-powered interpretations.",
-  // PWA manifest —— 讓 Chrome / Android 提示「加到主畫面」,同時也是 Bubblewrap TWA 打包前置
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    title: "Tarogram 易問",
-    statusBarStyle: "black-translucent",
-  },
-  // Next 16 會自動 pick up app/icon.png + app/apple-icon.png,
-  // 但明確寫出來對 SEO crawler 比較保險
-  icons: {
-    icon: [
-      { url: "/icon", type: "image/png" },
-      { url: "/favicon.ico", sizes: "any" },
-    ],
-    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
-  },
-  openGraph: {
-    type: "website",
-    siteName: "Tarogram 易問",
-    title: "Tarogram 易問 | 易經 × 塔羅 · AI 占卜",
-    description:
-      "東方易經 · 西方塔羅 · AI 即時解盤。Ancient wisdom meets AI divination.",
-    url: siteUrl,
-    // app/opengraph-image.tsx 會被 Next 自動掛到這;顯式宣告 width/height 讓社群不抓錯
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Tarogram 易問 | 易經 × 塔羅 · AI 占卜",
-    description: "Ancient wisdom meets AI divination.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale } = await getServerLocale();
+  const title = pickByLocale(
+    locale,
+    "Tarogram 易問 | 易經 × 塔羅 · AI 占卜",
+    "Tarogram | I Ching × Tarot · AI Readings",
+    "Tarogram 易問 | 易経 × タロット · AI 占い",
+    "Tarogram 타로그램 | 주역 × 타로 · AI 점"
+  );
+  const description = pickByLocale(
+    locale,
+    "東方易經 · 西方塔羅 · AI 即時解盤。",
+    "Eastern I Ching meets Western Tarot, with AI-powered interpretations.",
+    "東洋の易経 × 西洋のタロット × AI 即時解読。",
+    "동양의 주역 × 서양의 타로 × AI 즉시 해석."
+  );
+  const appleTitle = pickByLocale(
+    locale,
+    "Tarogram 易問",
+    "Tarogram",
+    "Tarogram 易問",
+    "Tarogram 타로그램"
+  );
+  const siteName = appleTitle;
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title,
+    description,
+    // PWA manifest —— 讓 Chrome / Android 提示「加到主畫面」,同時也是 Bubblewrap TWA 打包前置
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      title: appleTitle,
+      statusBarStyle: "black-translucent",
+    },
+    icons: {
+      icon: [
+        { url: "/icon", type: "image/png" },
+        { url: "/favicon.ico", sizes: "any" },
+      ],
+      apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+      shortcut: ["/favicon.ico"],
+    },
+    openGraph: {
+      type: "website",
+      siteName,
+      title,
+      description,
+      url: siteUrl,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 // Next 16:themeColor / viewport 要獨立 export,寫進 metadata 會被警告
 export const viewport: Viewport = {

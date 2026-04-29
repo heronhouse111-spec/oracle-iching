@@ -5,7 +5,10 @@ import {
   getBlogPostBySlug,
   getPublishedBlogPosts,
   getAllPublishedSlugs,
+  pickTitle,
+  pickExcerpt,
 } from "@/lib/blog";
+import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
 import BlogPostView from "./BlogPostView";
 
 interface Props {
@@ -21,15 +24,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getBlogPostBySlug(slug);
   if (!post) return { title: "Article not found" };
+  const { locale } = await getServerLocale();
+
+  const title = pickTitle(post, locale);
+  const excerpt = pickExcerpt(post, locale);
+  const brandSuffix = pickByLocale(
+    locale,
+    "Tarogram 易問",
+    "Tarogram",
+    "Tarogram 易問",
+    "Tarogram 타로그램"
+  );
 
   return {
-    // metadata 用中英對照(SEO 兩個語系都要看得到)
-    title: `${post.titleZh}${post.titleEn ? ` · ${post.titleEn}` : ""} | Tarogram 易問`,
-    description: post.excerptZh,
+    title: `${title} | ${brandSuffix}`,
+    description: excerpt,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
-      title: post.titleZh,
-      description: post.excerptZh,
+      title,
+      description: excerpt,
       type: "article",
       publishedTime: post.publishedAt,
       images: post.heroImageUrl ? [{ url: post.heroImageUrl }] : undefined,

@@ -6,6 +6,7 @@ import {
   getHexagramByNumber,
 } from "@/data/hexagrams";
 import { getIchingImages, hexagramImageKey } from "@/lib/ichingImages";
+import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
 import HexagramDetailView from "./HexagramDetailView";
 
 interface Props {
@@ -28,13 +29,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!num) return { title: "Hexagram not found" };
   const h = getHexagramByNumber(num);
   if (!h) return { title: "Hexagram not found" };
+  const { locale } = await getServerLocale();
+
+  const name = pickByLocale(locale, h.nameZh, h.nameEn, h.nameJa, h.nameKo);
+  const numLabel = pickByLocale(
+    locale,
+    `第 ${h.number} 卦`,
+    `Hexagram ${h.number}`,
+    `第${h.number}卦`,
+    `제 ${h.number}괘`
+  );
+  const judgmentModern = pickByLocale(
+    locale,
+    h.judgmentVernacularZh,
+    h.judgmentEn,
+    h.judgmentJa,
+    h.judgmentKo
+  );
+  const suffix = pickByLocale(
+    locale,
+    "卦辭解說 | Tarogram",
+    "Hexagram Judgment | Tarogram",
+    "卦辞解説 | Tarogram",
+    "괘사 해설 | Tarogram"
+  );
+
   return {
-    title: `第 ${h.number} 卦 ${h.nameZh}（${h.nameEn}）· 卦辭白話 | Tarogram`,
-    description: `${h.judgmentZh} ${h.judgmentVernacularZh.slice(0, 80)}…`,
+    title: `${numLabel} ${name} · ${suffix}`,
+    description: `${h.judgmentZh} ${judgmentModern.slice(0, 80)}…`,
     alternates: { canonical: `/iching/hexagrams/${h.number}` },
     openGraph: {
-      title: `第 ${h.number} 卦 ${h.nameZh} · ${h.nameEn}`,
-      description: h.judgmentVernacularZh.slice(0, 140),
+      title: `${numLabel} ${name}`,
+      description: judgmentModern.slice(0, 140),
     },
   };
 }

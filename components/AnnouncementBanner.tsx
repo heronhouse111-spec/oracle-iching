@@ -7,6 +7,9 @@
  * 多筆會輪播或疊加;目前先顯示最高優先序的一筆。
  *
  * 使用者可關閉(只記在當前 tab 的 sessionStorage,重整還會出來,符合「重要訊息」設計)。
+ *
+ * 多語系:目前 schema 僅有 zh_text / en_text,ja/ko 使用者 fallback 到 en_text。
+ * TODO:加 ja_text / ko_text columns + admin 後台支援(已開 task)。
  */
 
 import { useEffect, useState } from "react";
@@ -16,15 +19,27 @@ interface Announcement {
   id: number;
   zh_text: string | null;
   en_text: string | null;
+  ja_text?: string | null;
+  ko_text?: string | null;
   link_url: string | null;
   severity: "info" | "warn" | "critical";
   display_order: number;
 }
 
+function pickAnnouncementText(
+  a: Announcement,
+  locale: "zh" | "en" | "ja" | "ko"
+): string | null {
+  if (locale === "zh") return a.zh_text;
+  if (locale === "ja") return a.ja_text || a.en_text || a.zh_text;
+  if (locale === "ko") return a.ko_text || a.en_text || a.zh_text;
+  return a.en_text || a.zh_text;
+}
+
 const DISMISS_KEY_PREFIX = "tarogram_dismissed_announcement_";
 
 export default function AnnouncementBanner() {
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -34,9 +49,9 @@ export default function AnnouncementBanner() {
         const res = await fetch("/api/announcements", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as { announcements: Announcement[] };
-        // 取符合當前語系的第一筆
+        // 取目前語系有顯示文字的第一筆(走 pickAnnouncementText 的 fallback 鏈)
         const list = data.announcements.filter((a) =>
-          locale === "zh" ? a.zh_text : a.en_text,
+          pickAnnouncementText(a, locale),
         );
         if (list.length === 0) return;
         const first = list[0];
@@ -57,7 +72,7 @@ export default function AnnouncementBanner() {
 
   if (!announcement || dismissed) return null;
 
-  const text = locale === "zh" ? announcement.zh_text : announcement.en_text;
+  const text = pickAnnouncementText(announcement, locale);
   if (!text) return null;
 
   // 嚴重性配色
@@ -129,7 +144,7 @@ export default function AnnouncementBanner() {
       )}
       <button
         onClick={handleDismiss}
-        aria-label="關閉公告"
+        aria-label={t("關閉公告", "Dismiss announcement", "お知らせを閉じる", "공지 닫기")}
         style={{
           background: "none",
           border: "none",

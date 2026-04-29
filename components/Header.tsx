@@ -42,7 +42,7 @@ export default function Header() {
         <Link href="/" onClick={handleHomeClick} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
           <Image
             src="/logo-64.png"
-            alt={t("易問", "Tarogram")}
+            alt={t("易問", "Tarogram", "易問", "타로그램")}
             width={36}
             height={36}
             priority

@@ -176,7 +176,7 @@ export default function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label={t("加入主畫面", "Install app")}
+      aria-label={t("加入主畫面", "Install app", "ホーム画面に追加", "홈 화면에 추가")}
       style={{
         position: "fixed",
         left: 12,
@@ -197,7 +197,7 @@ export default function InstallPrompt() {
       <button
         type="button"
         onClick={handleDismiss}
-        aria-label={t("關閉", "Close")}
+        aria-label={t("關閉", "Close", "閉じる", "닫기")}
         style={{
           position: "absolute",
           top: 6,
@@ -236,7 +236,12 @@ export default function InstallPrompt() {
               marginBottom: 4,
             }}
           >
-            {t("把 Tarogram 加到主畫面", "Add Tarogram to home screen")}
+            {t(
+              "把 Tarogram 加到主畫面",
+              "Add Tarogram to home screen",
+              "Tarogram をホーム画面に追加",
+              "Tarogram을 홈 화면에 추가"
+            )}
           </div>
 
           {iosMode ? (
@@ -251,7 +256,9 @@ export default function InstallPrompt() {
               >
                 {t(
                   "點下方 Safari 的「分享」→ 捲下來選「加入主畫面」",
-                  "Tap Safari's Share button below → scroll down → \"Add to Home Screen\""
+                  "Tap Safari's Share button below → scroll down → \"Add to Home Screen\"",
+                  "Safari 下部の「共有」をタップ → 下にスクロールして「ホーム画面に追加」を選択",
+                  "Safari 하단의 \"공유\"를 탭 → 아래로 스크롤 → \"홈 화면에 추가\" 선택"
                 )}
               </p>
               <div
@@ -262,9 +269,9 @@ export default function InstallPrompt() {
                   color: "rgba(212,168,85,0.9)",
                 }}
               >
-                <span>⬆ {t("分享", "Share")}</span>
+                <span>⬆ {t("分享", "Share", "共有", "공유")}</span>
                 <span style={{ color: "rgba(192,192,208,0.4)" }}>→</span>
-                <span>➕ {t("加入主畫面", "Add to Home Screen")}</span>
+                <span>➕ {t("加入主畫面", "Add to Home Screen", "ホーム画面に追加", "홈 화면에 추가")}</span>
               </div>
             </>
           ) : (
@@ -279,7 +286,9 @@ export default function InstallPrompt() {
               >
                 {t(
                   "安裝後像 app 一樣全螢幕開啟,下次不用再打網址。",
-                  "Install to open fullscreen like a native app — no URL needed."
+                  "Install to open fullscreen like a native app — no URL needed.",
+                  "インストールすると、ネイティブアプリのようにフルスクリーンで起動できます。URL の入力は不要です。",
+                  "설치하면 네이티브 앱처럼 전체 화면으로 실행됩니다. URL 입력이 필요 없습니다."
                 )}
               </p>
               <div style={{ display: "flex", gap: 8 }}>
@@ -294,7 +303,7 @@ export default function InstallPrompt() {
                     borderRadius: 9999,
                   }}
                 >
-                  {t("立即加入", "Install")}
+                  {t("立即加入", "Install", "今すぐ追加", "지금 추가")}
                 </button>
                 <button
                   type="button"
@@ -309,7 +318,7 @@ export default function InstallPrompt() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("下次再說", "Later")}
+                  {t("下次再說", "Later", "あとで", "나중에")}
                 </button>
               </div>
             </>
