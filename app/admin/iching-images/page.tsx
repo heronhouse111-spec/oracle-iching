@@ -179,10 +179,12 @@ export default function AdminIchingImagesPage() {
                 const isBusy = busySlot === slotId;
                 return (
                   <div key={h.number} className="mystic-card" style={{ padding: 10 }}>
+                    {/* 9:14 直幅,跟前台 /iching/hexagrams 一致;contain 確保上傳圖不被裁。
+                        未上傳時 placeholder 留白(顯示 hexagram unicode 字方便 admin 辨識), */}
                     <div
                       style={{
                         width: "100%",
-                        aspectRatio: "1 / 1",
+                        aspectRatio: "9 / 14",
                         borderRadius: 8,
                         overflow: "hidden",
                         marginBottom: 8,
@@ -198,9 +200,11 @@ export default function AdminIchingImagesPage() {
                         <img
                           src={url}
                           alt={h.nameZh}
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
                         />
                       ) : (
+                        // admin 端保留 unicode 字 — 方便辨識空 slot 對應哪個卦,
+                        // 跟前台「不顯示 emoji 占位」是不同訴求。
                         <span style={{ fontSize: 56, color: "rgba(212,168,85,0.6)" }}>
                           {h.character}
                         </span>

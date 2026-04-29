@@ -268,7 +268,8 @@ export default function HexagramsIndexView({ images }: Props) {
                         <img
                           src={url}
                           alt={hName}
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                          // contain → 不裁切檔案,9:14 圖滿框、其他比例 letterbox
+                          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                         />
                       )}
                     </div>

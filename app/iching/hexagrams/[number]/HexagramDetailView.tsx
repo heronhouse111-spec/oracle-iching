@@ -118,8 +118,11 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
           marginBottom: 32,
         }}
       >
-        {/* Hero 圖框 — 沒上傳真圖時刻意留白(不放 Unicode 卦象字 / 卦線),
-            避免日後上傳真圖時的視覺跳動。aspectRatio 1:1 沿用既有上傳圖比例。 */}
+        {/* Hero 圖框 — 9:14 直幅,跟 /tarot/cards/[slug] 同規格。
+            object-fit: contain → 後台上傳時不裁切檔案,前台原樣顯示。
+            如果上傳的圖正好是 9:14,完全吻合;不是的話 letterbox(留白邊),
+            而非 cover 那樣強制裁掉一部分。
+            沒上傳真圖時刻意留白,避免日後上傳真圖時的視覺跳動。 */}
         <div
           style={{
             borderRadius: 12,
@@ -128,7 +131,7 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
             boxShadow: "0 8px 32px rgba(212,168,85,0.18)",
             background:
               "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
-            aspectRatio: "1 / 1",
+            aspectRatio: "9 / 14",
           }}
         >
           {heroUrl && (
@@ -136,7 +139,7 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
             <img
               src={heroUrl}
               alt={hName}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
             />
           )}
         </div>
