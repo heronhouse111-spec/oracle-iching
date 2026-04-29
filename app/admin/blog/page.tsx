@@ -22,7 +22,11 @@ interface PostRow {
   published_at: string;
   published: boolean;
   title_zh: string;
-  title_en: string;
+  title_en: string | null;
+  /** body 對應四語系欄位 — 用來判斷哪些語系翻譯缺失 */
+  body_en: string[] | null;
+  body_ja: string[] | null;
+  body_ko: string[] | null;
   updated_at: string;
 }
 
@@ -39,6 +43,8 @@ export default function AdminBlogListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +86,48 @@ export default function AdminBlogListPage() {
       alert(e instanceof Error ? e.message : String(e));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // 統計缺翻譯的篇數(任一語系 body 為 null 就算)
+  const missingCount = posts.filter(
+    (p) => p.body_en == null || p.body_ja == null || p.body_ko == null
+  ).length;
+
+  const handleBackfill = async () => {
+    if (
+      !confirm(
+        `確定要為 ${missingCount} 篇缺翻譯的文章補翻譯?\n\n會呼叫 DeepSeek API,可能需要 ${Math.max(
+          1,
+          Math.ceil(missingCount * 5 / 60)
+        )} 分鐘。期間請不要關掉這個頁面。`
+      )
+    ) {
+      return;
+    }
+    setBackfillBusy(true);
+    setBackfillResult(null);
+    try {
+      const res = await fetch("/api/admin/blog/backfill-translations", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { detail?: string };
+        throw new Error(j.detail ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as {
+        totalTranslated: number;
+        totalSkipped: number;
+        totalFailed: number;
+      };
+      setBackfillResult(
+        `✓ 完成。翻譯成功 ${data.totalTranslated} 個語系欄位、跳過 ${data.totalSkipped} 篇、失敗 ${data.totalFailed} 個語系欄位。`
+      );
+      await load();
+    } catch (e) {
+      setBackfillResult(`✗ 失敗:${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBackfillBusy(false);
     }
   };
 
@@ -126,19 +174,62 @@ export default function AdminBlogListPage() {
               新增 / 編輯 / 刪除前台 /blog 顯示的文章。儲存後最多 60 秒前台快取會更新。
             </p>
           </div>
-          <Link
-            href="/admin/blog/new"
-            className="btn-gold"
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {missingCount > 0 && (
+              <button
+                onClick={handleBackfill}
+                disabled={backfillBusy}
+                style={{
+                  padding: "10px 18px",
+                  fontSize: 13,
+                  borderRadius: 9999,
+                  border: "1px solid rgba(253,230,138,0.5)",
+                  color: "#fde68a",
+                  background: "rgba(253,230,138,0.08)",
+                  cursor: backfillBusy ? "wait" : "pointer",
+                  opacity: backfillBusy ? 0.6 : 1,
+                  fontFamily: "inherit",
+                }}
+              >
+                {backfillBusy
+                  ? "翻譯中…"
+                  : `✦ 補翻譯(${missingCount} 篇缺)`}
+              </button>
+            )}
+            <Link
+              href="/admin/blog/new"
+              className="btn-gold"
+              style={{
+                padding: "10px 20px",
+                fontSize: 13,
+                textDecoration: "none",
+                display: "inline-block",
+              }}
+            >
+              ✦ 新增文章
+            </Link>
+          </div>
+        </div>
+
+        {backfillResult && (
+          <div
             style={{
-              padding: "10px 20px",
+              padding: 12,
+              border: backfillResult.startsWith("✓")
+                ? "1px solid rgba(74,222,128,0.4)"
+                : "1px solid rgba(248,113,113,0.4)",
+              background: backfillResult.startsWith("✓")
+                ? "rgba(74,222,128,0.08)"
+                : "rgba(248,113,113,0.08)",
+              borderRadius: 8,
+              color: backfillResult.startsWith("✓") ? "#86efac" : "#fca5a5",
               fontSize: 13,
-              textDecoration: "none",
-              display: "inline-block",
+              marginBottom: 16,
             }}
           >
-            ✦ 新增文章
-          </Link>
-        </div>
+            {backfillResult}
+          </div>
+        )}
 
         {loading && <div style={{ color: "rgba(192,192,208,0.5)" }}>載入中…</div>}
         {error && (

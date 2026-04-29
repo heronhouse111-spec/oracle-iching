@@ -86,11 +86,12 @@ function pickPrevNextTitle(
 }
 
 export default function BlogPostView({ post, prev, next }: Props) {
-  const { t, locale } = useLanguage();
+  const { t, locale, cn } = useLanguage();
 
-  const title = pickTitle(post, locale);
-  const excerpt = pickExcerpt(post, locale);
-  const body = pickBody(post, locale);
+  // 撈對應語系欄位,zh 內容再過 opencc(非 zh-CN 時 cn() 是 no-op)
+  const title = cn(pickTitle(post, locale));
+  const excerpt = cn(pickExcerpt(post, locale));
+  const body = pickBody(post, locale).map((p) => cn(p));
 
   return (
     <article style={{ maxWidth: 720, margin: "0 auto", padding: "16px" }}>
@@ -237,7 +238,7 @@ export default function BlogPostView({ post, prev, next }: Props) {
               ← {t("上一篇", "Previous", "前の記事", "이전")}
             </div>
             <div style={{ fontSize: 13, color: "#e8e8f0", marginTop: 4 }}>
-              {pickPrevNextTitle(prev, locale)}
+              {cn(pickPrevNextTitle(prev, locale))}
             </div>
           </Link>
         ) : (
@@ -260,7 +261,7 @@ export default function BlogPostView({ post, prev, next }: Props) {
               {t("下一篇", "Next", "次の記事", "다음")} →
             </div>
             <div style={{ fontSize: 13, color: "#e8e8f0", marginTop: 4 }}>
-              {pickPrevNextTitle(next, locale)}
+              {cn(pickPrevNextTitle(next, locale))}
             </div>
           </Link>
         ) : (

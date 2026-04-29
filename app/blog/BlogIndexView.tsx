@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function BlogIndexView({ posts }: Props) {
-  const { t, locale } = useLanguage();
+  const { t, locale, cn } = useLanguage();
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
@@ -49,8 +49,9 @@ export default function BlogIndexView({ posts }: Props) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {posts.map((post) => {
-            const title = pickTitle(post, locale);
-            const excerpt = pickExcerpt(post, locale);
+            // pickXxx 拿到對應語系欄位後,zh 還要過 opencc(非 zh-CN 時 cn() 是 no-op)
+            const title = cn(pickTitle(post, locale));
+            const excerpt = cn(pickExcerpt(post, locale));
             return (
               <Link
                 key={post.slug}

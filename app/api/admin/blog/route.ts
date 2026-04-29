@@ -61,7 +61,10 @@ export async function GET() {
   const { data, error } = await supabase
     .from("blog_posts")
     .select(
-      "id, slug, category, published_at, published, hero_image_url, title_zh, title_en, excerpt_zh, excerpt_en, body_zh, body_en, updated_at"
+      "id, slug, category, published_at, published, hero_image_url, " +
+      "title_zh, title_en, excerpt_zh, excerpt_en, " +
+      "body_zh, body_en, body_ja, body_ko, " +
+      "updated_at"
     )
     .order("published_at", { ascending: false });
 

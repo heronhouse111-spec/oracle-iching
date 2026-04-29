@@ -53,6 +53,11 @@ interface LanguageContextType {
    *   locale === "zh" + variant === "CN" → 經 opencc-js 轉譯的簡體(尚未載入字典時先回原字串,載好自動重繪)
    */
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
+  /**
+   * cn(zhText) — 純繁→簡轉換 helper,給動態繁中內容(blog 內文、卦名、牌名等)用。
+   * 非 zh-CN locale 回原文 passthrough,zero-cost。
+   */
+  cn: (zhText: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(
@@ -260,6 +265,29 @@ export function LanguageProvider({
     [locale, zhVariant, tw2cn]
   );
 
+  /**
+   * cn(zhText) — 純粹的繁→簡轉換 helper,給「不從 t() 進來」的動態繁中內容用
+   * (例如從 DB 撈出來的 blog 文章、卦名、牌名等)。
+   *
+   * 行為:
+   *   - 非 zh-CN locale 直接回原文(zero-cost passthrough)
+   *   - zh-CN 但 opencc 還沒載完 → 回原文,字典載好後 component re-render 會自動轉
+   *   - zh-CN + 字典已載好 → 走快取轉換
+   */
+  const cn = useCallback(
+    (text: string) => {
+      if (locale !== "zh" || zhVariant !== "CN") return text;
+      if (!tw2cn) return text;
+      const cache = cnCacheRef.current;
+      const cached = cache.get(text);
+      if (cached !== undefined) return cached;
+      const converted = tw2cn(text);
+      cache.set(text, converted);
+      return converted;
+    },
+    [locale, zhVariant, tw2cn]
+  );
+
   const isSimplified = locale === "zh" && zhVariant === "CN";
 
   return (
@@ -272,6 +300,7 @@ export function LanguageProvider({
         cycleLocale,
         isSimplified,
         t,
+        cn,
       }}
     >
       {children}
