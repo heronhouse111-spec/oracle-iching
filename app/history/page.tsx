@@ -204,11 +204,13 @@ export default function HistoryPage() {
       ? Math.max(0, records.length - visibleLimit)
       : 0;
 
+  // 對應 BCP-47 tag,給 toLocaleDateString 用 — zh-CN 也吃 zh-TW 字典(內容不影響日期格式)
+  const dateLocaleTag =
+    locale === "zh" ? "zh-TW" : locale === "ja" ? "ja-JP" : locale === "ko" ? "ko-KR" : "en-US";
+
   // Watermark text: email + date (for expanded AI reading)
   const watermarkText = userEmail
-    ? `${userEmail} · ${new Date().toLocaleDateString(
-        locale === "zh" ? "zh-TW" : "en-US"
-      )}`
+    ? `${userEmail} · ${new Date().toLocaleDateString(dateLocaleTag)}`
     : null;
 
   return (
@@ -222,7 +224,7 @@ export default function HistoryPage() {
       />
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
         <h1 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif", textAlign: "center", marginBottom: 8 }}>
-          {t("占卜紀錄", "Divination History")}
+          {t("占卜紀錄", "Divination History", "占い履歴", "점 기록")}
         </h1>
 
         {source && !isLoading && (
@@ -235,8 +237,18 @@ export default function HistoryPage() {
             }}
           >
             {source === "supabase"
-              ? t("☁ 雲端同步中", "☁ Synced to cloud")
-              : t("📱 僅存於本機(登入後可跨裝置同步)", "📱 Local only (sign in to sync across devices)")}
+              ? t(
+                  "☁ 雲端同步中",
+                  "☁ Synced to cloud",
+                  "☁ クラウド同期中",
+                  "☁ 클라우드 동기화 중"
+                )
+              : t(
+                  "📱 僅存於本機(登入後可跨裝置同步)",
+                  "📱 Local only (sign in to sync across devices)",
+                  "📱 ローカル保存のみ(ログインすると端末間で同期)",
+                  "📱 로컬에만 저장(로그인 시 기기 간 동기화)"
+                )}
           </p>
         )}
 
@@ -263,7 +275,12 @@ export default function HistoryPage() {
                   marginBottom: 6,
                 }}
               >
-                {t("登入以解鎖完整體驗", "Sign in to unlock full features")}
+                {t(
+                  "登入以解鎖完整體驗",
+                  "Sign in to unlock full features",
+                  "ログインして全機能をアンロック",
+                  "로그인하여 전체 기능 해제"
+                )}
               </h2>
               <p
                 style={{
@@ -278,7 +295,9 @@ export default function HistoryPage() {
               >
                 {t(
                   "目前紀錄僅存於本機,換裝置或清瀏覽器就會消失。",
-                  "Records are currently stored only on this device and will disappear if you switch devices or clear your browser."
+                  "Records are currently stored only on this device and will disappear if you switch devices or clear your browser.",
+                  "現在の記録はこの端末にのみ保存されます。端末を変更するかブラウザを消すと消えます。",
+                  "현재 기록은 이 기기에만 저장됩니다. 다른 기기로 옮기거나 브라우저를 정리하면 사라집니다."
                 )}
               </p>
             </div>
@@ -302,7 +321,9 @@ export default function HistoryPage() {
                 <span>
                   {t(
                     "跨裝置雲端同步,手機 / 電腦都看得到",
-                    "Cloud sync across all your devices"
+                    "Cloud sync across all your devices",
+                    "端末間でクラウド同期、スマホ・PC どちらでも見られます",
+                    "여러 기기 간 클라우드 동기화, 모바일·PC 모두에서 확인 가능"
                   )}
                 </span>
               </li>
@@ -311,7 +332,9 @@ export default function HistoryPage() {
                 <span>
                   {t(
                     "產生公開分享連結,傳給朋友也能看到你的卦象",
-                    "Generate shareable links so friends can view your reading"
+                    "Generate shareable links so friends can view your reading",
+                    "公開シェアリンクを生成、友人にも卦象を共有",
+                    "공유 링크 생성, 친구도 점괘를 볼 수 있도록 공유"
                   )}
                 </span>
               </li>
@@ -320,7 +343,9 @@ export default function HistoryPage() {
                 <span>
                   {t(
                     "訂閱解鎖完整歷史、無浮水印輸出",
-                    "Subscribe to unlock full history and watermark-free output"
+                    "Subscribe to unlock full history and watermark-free output",
+                    "サブスク登録で全履歴 + 透かしなし出力をアンロック",
+                    "구독으로 전체 기록과 워터마크 없는 출력 해제"
                   )}
                 </span>
               </li>
@@ -345,7 +370,12 @@ export default function HistoryPage() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("使用 Google 登入", "Sign in with Google")}
+                  {t(
+                    "使用 Google 登入",
+                    "Sign in with Google",
+                    "Google でログイン",
+                    "Google로 로그인"
+                  )}
                 </button>
               )}
               <Link
@@ -360,7 +390,12 @@ export default function HistoryPage() {
                   background: "rgba(212,168,85,0.04)",
                 }}
               >
-                {t("了解訂閱方案 →", "View subscription plans →")}
+                {t(
+                  "了解訂閱方案 →",
+                  "View subscription plans →",
+                  "サブスクプランを見る →",
+                  "구독 플랜 보기 →"
+                )}
               </Link>
             </div>
           </div>
@@ -368,14 +403,26 @@ export default function HistoryPage() {
 
         {isLoading ? (
           <div style={{ textAlign: "center", padding: 48, color: "rgba(192,192,208,0.6)" }}>
-            {t("載入中...", "Loading...")}
+            {t("載入中...", "Loading...", "読み込み中...", "불러오는 중...")}
           </div>
         ) : records.length === 0 ? (
           <div className="mystic-card" style={{ padding: 48, textAlign: "center" }}>
             <span style={{ fontSize: 40, display: "block", marginBottom: 16 }}>🔮</span>
-            <p style={{ color: "rgba(192,192,208,0.6)" }}>{t("尚無占卜紀錄", "No records yet")}</p>
+            <p style={{ color: "rgba(192,192,208,0.6)" }}>
+              {t(
+                "尚無占卜紀錄",
+                "No records yet",
+                "占いの記録がまだありません",
+                "아직 점 기록이 없습니다"
+              )}
+            </p>
             <a href="/" className="btn-gold" style={{ display: "inline-block", marginTop: 16, textDecoration: "none" }}>
-              {t("開始第一次占卜", "Start your first divination")}
+              {t(
+                "開始第一次占卜",
+                "Start your first divination",
+                "最初の占いを始める",
+                "첫 점 시작하기"
+              )}
             </a>
           </div>
         ) : (
@@ -394,17 +441,20 @@ export default function HistoryPage() {
                 divineType === "tarot"
                   ? getSpread(record.tarot_spread_id ?? DEFAULT_SPREAD_ID)
                   : null;
+              const spreadLabelName = recordSpread
+                ? t(recordSpread.nameZh, recordSpread.nameEn, recordSpread.nameJa, recordSpread.nameKo)
+                : "";
               const tarotLabel =
                 divineType === "tarot" && recordSpread
                   ? t(
-                      `塔羅 · ${recordSpread.nameZh}`,
-                      `Tarot · ${recordSpread.nameEn}`,
-                      `タロット · ${recordSpread.nameEn}`,
-                      `타로 · ${recordSpread.nameEn}`
+                      `塔羅 · ${spreadLabelName}`,
+                      `Tarot · ${spreadLabelName}`,
+                      `タロット · ${spreadLabelName}`,
+                      `타로 · ${spreadLabelName}`
                     )
-                  : locale === "zh"
-                  ? hex?.nameZh
-                  : hex?.nameEn;
+                  : hex
+                    ? t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)
+                    : "";
 
               return (
                 <motion.div key={record.id} layout className="mystic-card" style={{ overflow: "hidden" }}>
@@ -428,7 +478,7 @@ export default function HistoryPage() {
                       </p>
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.4)", fontSize: 12 }}>
-                      {new Date(record.created_at).toLocaleDateString(locale === "zh" ? "zh-TW" : "en-US")}
+                      {new Date(record.created_at).toLocaleDateString(dateLocaleTag)}
                     </div>
                   </button>
 
@@ -455,7 +505,9 @@ export default function HistoryPage() {
                               return (
                                 <div key={`${tc.position}-${ci}`} style={{ textAlign: "center", width: 72 }}>
                                   <div style={{ fontSize: 10, color: "#d4a855", marginBottom: 4 }}>
-                                    {locale === "zh" ? pos?.labelZh : pos?.labelEn}
+                                    {pos
+                                      ? t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)
+                                      : ""}
                                   </div>
                                   <div
                                     style={{
@@ -470,15 +522,15 @@ export default function HistoryPage() {
                                   >
                                     <Image
                                       src={card.imagePath}
-                                      alt={locale === "zh" ? card.nameZh : card.nameEn}
+                                      alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
                                       fill
                                       sizes="72px"
                                       style={{ objectFit: "cover" }}
                                     />
                                   </div>
                                   <div style={{ fontSize: 10, color: "rgba(192,192,208,0.7)", marginTop: 4, lineHeight: 1.3 }}>
-                                    {locale === "zh" ? card.nameZh : card.nameEn}
-                                    {tc.isReversed ? t("・逆", " (rev)") : ""}
+                                    {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                                    {tc.isReversed ? t("・逆", " (rev)", "・逆", "・역") : ""}
                                   </div>
                                 </div>
                               );
@@ -537,7 +589,12 @@ export default function HistoryPage() {
                                     margin: "0 0 6px",
                                   }}
                                 >
-                                  {t("登入以解鎖完整體驗", "Sign in to unlock full reading")}
+                                  {t(
+                                    "登入以解鎖完整體驗",
+                                    "Sign in to unlock full reading",
+                                    "ログインで解読の全文を読む",
+                                    "로그인하여 전체 해석 읽기"
+                                  )}
                                 </h4>
                                 <p
                                   style={{
@@ -550,7 +607,9 @@ export default function HistoryPage() {
                                 >
                                   {t(
                                     "登入後可讀完整 AI 解卦、跨裝置同步、產生分享圖。",
-                                    "Sign in to read the full AI analysis, sync across devices, and create shareable images."
+                                    "Sign in to read the full AI analysis, sync across devices, and create shareable images.",
+                                    "ログインで AI 解読の全文、端末間同期、シェア画像作成が可能。",
+                                    "로그인하면 AI 해석 전문, 기기 간 동기화, 공유 이미지 생성 가능."
                                   )}
                                 </p>
                                 <div
@@ -572,7 +631,12 @@ export default function HistoryPage() {
                                         cursor: "pointer",
                                       }}
                                     >
-                                      {t("使用 Google 登入", "Sign in with Google")}
+                                      {t(
+                    "使用 Google 登入",
+                    "Sign in with Google",
+                    "Google でログイン",
+                    "Google로 로그인"
+                  )}
                                     </button>
                                   )}
                                   <Link
@@ -587,7 +651,12 @@ export default function HistoryPage() {
                                       background: "rgba(212,168,85,0.04)",
                                     }}
                                   >
-                                    {t("了解訂閱方案 →", "View plans →")}
+                                    {t(
+                                      "了解訂閱方案 →",
+                                      "View plans →",
+                                      "プランを見る →",
+                                      "플랜 보기 →"
+                                    )}
                                   </Link>
                                 </div>
                               </div>
@@ -635,7 +704,12 @@ export default function HistoryPage() {
                               marginBottom: 12,
                             }}
                           >
-                            🌿 {t("延伸占卜", "Follow-up Readings")}
+                            🌿 {t(
+                              "延伸占卜",
+                              "Follow-up Readings",
+                              "フォローアップ占い",
+                              "후속 점"
+                            )}
                             <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
                               ({record.follow_ups.length})
                             </span>
@@ -671,18 +745,30 @@ export default function HistoryPage() {
                                 >
                                   <span style={{ color: "#d4a855", fontSize: 12, fontFamily: "'Noto Serif TC', serif" }}>
                                     {isIching
-                                      ? `${t("第", "#")}${fHex?.number ?? "?"} ${locale === "zh" ? fHex?.nameZh ?? "" : fHex?.nameEn ?? ""}`
+                                      ? `${t("第", "#", "第", "제")}${fHex?.number ?? "?"} ${
+                                          fHex
+                                            ? t(fHex.nameZh, fHex.nameEn, fHex.nameJa, fHex.nameKo)
+                                            : ""
+                                        }`
                                       : fSpread
-                                      ? t(
-                                          `塔羅 · ${fSpread.nameZh}`,
-                                          `Tarot · ${fSpread.nameEn}`,
-                                          `タロット · ${fSpread.nameEn}`,
-                                          `타로 · ${fSpread.nameEn}`
-                                        )
-                                      : t("塔羅", "Tarot", "タロット", "타로")}
+                                        ? (() => {
+                                            const sn = t(
+                                              fSpread.nameZh,
+                                              fSpread.nameEn,
+                                              fSpread.nameJa,
+                                              fSpread.nameKo
+                                            );
+                                            return t(
+                                              `塔羅 · ${sn}`,
+                                              `Tarot · ${sn}`,
+                                              `タロット · ${sn}`,
+                                              `타로 · ${sn}`
+                                            );
+                                          })()
+                                        : t("塔羅", "Tarot", "タロット", "타로")}
                                   </span>
                                   <span style={{ color: "rgba(192,192,208,0.4)", fontSize: 10 }}>
-                                    {f.createdAt ? new Date(f.createdAt).toLocaleDateString(locale === "zh" ? "zh-TW" : "en-US") : ""}
+                                    {f.createdAt ? new Date(f.createdAt).toLocaleDateString(dateLocaleTag) : ""}
                                   </span>
                                 </div>
                                 <p
@@ -715,7 +801,9 @@ export default function HistoryPage() {
                                       return (
                                         <div key={`${tc.position}-${fci}`} style={{ textAlign: "center", width: 56 }}>
                                           <div style={{ fontSize: 9, color: "#d4a855", marginBottom: 3 }}>
-                                            {locale === "zh" ? pos?.labelZh : pos?.labelEn}
+                                            {pos
+                                              ? t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)
+                                              : ""}
                                           </div>
                                           <div
                                             style={{
@@ -730,15 +818,15 @@ export default function HistoryPage() {
                                           >
                                             <Image
                                               src={card.imagePath}
-                                              alt={locale === "zh" ? card.nameZh : card.nameEn}
+                                              alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
                                               fill
                                               sizes="56px"
                                               style={{ objectFit: "cover" }}
                                             />
                                           </div>
                                           <div style={{ fontSize: 9, color: "rgba(192,192,208,0.7)", marginTop: 2, lineHeight: 1.3 }}>
-                                            {locale === "zh" ? card.nameZh : card.nameEn}
-                                            {tc.isReversed ? t("・逆", " (r)") : ""}
+                                            {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                                            {tc.isReversed ? t("・逆", " (r)", "・逆", "・역") : ""}
                                           </div>
                                         </div>
                                       );
@@ -769,7 +857,9 @@ export default function HistoryPage() {
                                 >
                                   {t(
                                     "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                                    "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                    "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                                    "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                                    "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                                   )}
                                 </div>
                               </div>
@@ -797,7 +887,12 @@ export default function HistoryPage() {
                               marginBottom: 12,
                             }}
                           >
-                            💬 {t("跟老師的對話", "Chat with the Master")}
+                            💬 {t(
+                              "跟老師的對話",
+                              "Chat with the Master",
+                              "占い師との対話",
+                              "선생님과의 대화"
+                            )}
                             <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
                               ({record.chat_messages.length})
                             </span>
@@ -846,7 +941,7 @@ export default function HistoryPage() {
                                         marginBottom: 2,
                                       }}
                                     >
-                                      {t("老師", "Master")}
+                                      {t("老師", "Master", "占い師", "선생님")}
                                     </span>
                                   )}
                                   {msg.content}
@@ -898,7 +993,12 @@ export default function HistoryPage() {
                               fontSize: 13,
                             }}
                           >
-                            {t("繼續對話 / 衍伸占卜 →", "Continue chat / follow-up →")}
+                            {t(
+                              "繼續對話 / 衍伸占卜 →",
+                              "Continue chat / follow-up →",
+                              "対話を続ける / フォローアップ占い →",
+                              "대화 계속 / 후속 점 →"
+                            )}
                           </Link>
                           <p
                             style={{
@@ -1070,7 +1170,12 @@ export default function HistoryPage() {
                         cursor: "pointer",
                       }}
                     >
-                      {t("使用 Google 登入", "Sign in with Google")}
+                      {t(
+                    "使用 Google 登入",
+                    "Sign in with Google",
+                    "Google でログイン",
+                    "Google로 로그인"
+                  )}
                     </button>
                   ) : (
                     <Link
@@ -1083,7 +1188,12 @@ export default function HistoryPage() {
                         fontSize: 13,
                       }}
                     >
-                      {t("升級解鎖 →", "Upgrade to unlock →")}
+                      {t(
+                        "升級解鎖 →",
+                        "Upgrade to unlock →",
+                        "アップグレードでアンロック →",
+                        "업그레이드로 해제 →"
+                      )}
                     </Link>
                   )}
                 </div>
@@ -1102,7 +1212,12 @@ export default function HistoryPage() {
                   fontSize: 14,
                 }}
               >
-                {t("繼續新的占卜 →", "Start a new divination →")}
+                {t(
+                  "繼續新的占卜 →",
+                  "Start a new divination →",
+                  "新しい占いを始める →",
+                  "새로운 점 시작 →"
+                )}
               </a>
             </div>
           </div>
