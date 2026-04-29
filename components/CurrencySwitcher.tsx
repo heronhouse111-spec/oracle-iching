@@ -39,11 +39,11 @@ export default function CurrencySwitcher() {
           letterSpacing: 0.5,
         }}
       >
-        {t("幣別", "Currency")}
+        {t("幣別", "Currency", "通貨", "통화")}
       </span>
       <div
         role="group"
-        aria-label={t("幣別選擇", "Currency")}
+        aria-label={t("幣別選擇", "Currency", "通貨選択", "통화 선택")}
         style={{
           display: "inline-flex",
           padding: 3,
@@ -86,13 +86,18 @@ export default function CurrencySwitcher() {
       </div>
       {autoDetected && (
         <span
-          title={t("依所在地區自動偵測", "Auto-detected from your region")}
+          title={t(
+            "依所在地區自動偵測",
+            "Auto-detected from your region",
+            "地域から自動検出",
+            "지역에서 자동 감지"
+          )}
           style={{
             color: "rgba(192,192,208,0.4)",
             fontSize: 10,
           }}
         >
-          {t("自動", "auto")}
+          {t("自動", "auto", "自動", "자동")}
         </span>
       )}
     </div>
