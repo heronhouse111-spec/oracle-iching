@@ -74,7 +74,12 @@ export default function InternationalSoonPage() {
               marginBottom: 8,
             }}
           >
-            {t("方案一:切換為 NT$(推薦)", "Option 1: Switch to NT$ (recommended)")}
+            {t(
+              "方案一:切換為 NT$(推薦)",
+              "Option 1: Switch to NT$ (recommended)",
+              "オプション 1: NT$ に切り替え(推奨)",
+              "옵션 1: NT$로 전환(권장)"
+            )}
           </h2>
           <p
             style={{
@@ -102,7 +107,7 @@ export default function InternationalSoonPage() {
                 textDecoration: "none",
               }}
             >
-              {t("加購點數", "Credit Packs")}
+              {t("加購點數", "Credit Packs", "ポイントパック", "포인트 팩")}
             </Link>
             <Link
               href="/account/upgrade"
@@ -115,7 +120,7 @@ export default function InternationalSoonPage() {
                 textDecoration: "none",
               }}
             >
-              {t("訂閱方案", "Subscription Plans")}
+              {t("訂閱方案", "Subscription Plans", "サブスクプラン", "구독 플랜")}
             </Link>
           </div>
         </div>
@@ -130,7 +135,12 @@ export default function InternationalSoonPage() {
               marginBottom: 8,
             }}
           >
-            {t("方案二:上線時 email 通知", "Option 2: Email me when it's live")}
+            {t(
+              "方案二:上線時 email 通知",
+              "Option 2: Email me when it's live",
+              "オプション 2: 公開時にメール通知",
+              "옵션 2: 출시 시 이메일 안내"
+            )}
           </h2>
           <p
             style={{
@@ -155,7 +165,12 @@ export default function InternationalSoonPage() {
               textDecoration: "none",
             }}
           >
-            {t("寫信通知我", "Email me when live")}
+            {t(
+              "寫信通知我",
+              "Email me when live",
+              "公開時にメールで連絡",
+              "출시 시 이메일로 알리기"
+            )}
           </a>
         </div>
 
@@ -169,7 +184,12 @@ export default function InternationalSoonPage() {
               marginBottom: 8,
             }}
           >
-            {t("方案三:PayPal 手動匯款", "Option 3: Manual PayPal (concierge)")}
+            {t(
+              "方案三:PayPal 手動匯款",
+              "Option 3: Manual PayPal (concierge)",
+              "オプション 3: PayPal 手動送金(コンシェルジュ)",
+              "옵션 3: PayPal 수동 송금(컨시어지)"
+            )}
           </h2>
           <p
             style={{
@@ -196,7 +216,12 @@ export default function InternationalSoonPage() {
               textDecoration: "none",
             }}
           >
-            {t("寫信請款", "Email for invoice")}
+            {t(
+              "寫信請款",
+              "Email for invoice",
+              "請求書をメールで依頼",
+              "이메일로 청구서 요청"
+            )}
           </a>
         </div>
 
@@ -209,7 +234,12 @@ export default function InternationalSoonPage() {
               textDecoration: "none",
             }}
           >
-            ← {t("返回會員頁", "Back to account")}
+            ← {t(
+              "返回會員頁",
+              "Back to account",
+              "アカウントに戻る",
+              "계정으로 돌아가기"
+            )}
           </Link>
         </div>
       </main>

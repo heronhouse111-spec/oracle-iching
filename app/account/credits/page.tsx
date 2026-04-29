@@ -156,7 +156,12 @@ export default function CreditsPurchasePage() {
       }
       setPlayToast({
         kind: "success",
-        text: t("購買成功!點數已補入帳號", "Purchase complete — credits added"),
+        text: t(
+          "購買成功!點數已補入帳號",
+          "Purchase complete — credits added",
+          "購入完了 — ポイントが追加されました",
+          "구매 완료 — 포인트가 추가되었습니다"
+        ),
       });
     } finally {
       setPlayPurchasing(null);
@@ -271,7 +276,7 @@ export default function CreditsPurchasePage() {
             marginBottom: 8,
           }}
         >
-          {t("購買點數", "Purchase Credits")}
+          {t("購買點數", "Purchase Credits", "ポイント購入", "포인트 구매")}
         </h1>
         <p
           style={{
@@ -284,7 +289,9 @@ export default function CreditsPurchasePage() {
         >
           {t(
             "每次 AI 占卜分析扣 5 點、衍伸問卜扣 10 點、追問每則 1 點",
-            "Main divination costs 5 credits; follow-up reading 10; each chat message 1."
+            "Main divination costs 5 credits; follow-up reading 10; each chat message 1.",
+            "AI 占い解析は 5 ポイント、フォローアップ占いは 10 ポイント、追加質問は 1 件 1 ポイント。",
+            "AI 점 해석은 5 포인트, 후속 점은 10 포인트, 추가 질문은 1건당 1 포인트."
           )}
         </p>
 
@@ -309,7 +316,7 @@ export default function CreditsPurchasePage() {
                   marginBottom: 4,
                 }}
               >
-                {t("目前餘額", "Current Balance")}
+                {t("目前餘額", "Current Balance", "現在の残高", "현재 잔액")}
               </div>
               <div
                 style={{
@@ -331,7 +338,7 @@ export default function CreditsPurchasePage() {
                   marginBottom: 4,
                 }}
               >
-                {t("下次補點", "Next Refill")}
+                {t("下次補點", "Next Refill", "次回の補充", "다음 충전")}
               </div>
               <div
                 style={{
@@ -484,7 +491,7 @@ export default function CreditsPurchasePage() {
                       letterSpacing: 1,
                     }}
                   >
-                    {t("最划算", "BEST VALUE")}
+                    {t("最划算", "BEST VALUE", "最もお得", "최고 가성비")}
                   </div>
                 )}
                 <div
@@ -495,7 +502,7 @@ export default function CreditsPurchasePage() {
                     textAlign: "center",
                   }}
                 >
-                  {t("加購包", "Credit Pack")}
+                  {t("加購包", "Credit Pack", "ポイントパック", "포인트 팩")}
                 </div>
                 <div
                   className="text-gold-gradient"
@@ -517,7 +524,7 @@ export default function CreditsPurchasePage() {
                       backgroundImage: "none",
                     }}
                   >
-                    {t("點", "pts")}
+                    {t("點", "pts", "pt", "pt")}
                   </span>
                 </div>
                 {pack.bonusCredits > 0 ? (
@@ -580,8 +587,8 @@ export default function CreditsPurchasePage() {
                   }}
                 >
                   {playPurchasing === pack.id || ecpayLoading === pack.id
-                    ? t("處理中…", "Processing…")
-                    : t("購買", "Purchase")}
+                    ? t("處理中…", "Processing…", "処理中…", "처리 중…")
+                    : t("購買", "Purchase", "購入", "구매")}
                 </button>
               </div>
             );
@@ -626,7 +633,12 @@ export default function CreditsPurchasePage() {
               whiteSpace: "nowrap",
             }}
           >
-            {t("看訂閱方案 →", "See Subscription Plans →")}
+            {t(
+              "看訂閱方案 →",
+              "See Subscription Plans →",
+              "サブスクプランを見る →",
+              "구독 플랜 보기 →"
+            )}
           </Link>
         </div>
         )}
@@ -640,7 +652,12 @@ export default function CreditsPurchasePage() {
               textDecoration: "none",
             }}
           >
-            ← {t("返回會員頁", "Back to account")}
+            ← {t(
+              "返回會員頁",
+              "Back to account",
+              "アカウントに戻る",
+              "계정으로 돌아가기"
+            )}
           </Link>
         </div>
       </main>
@@ -666,7 +683,12 @@ export default function CreditsPurchasePage() {
             ? `/account/credits?autoBuy=${pendingAfterLoginPack}`
             : "/account/credits"
         }
-        title={t("登入即可完成購買", "Sign in to complete your purchase")}
+        title={t(
+          "登入即可完成購買",
+          "Sign in to complete your purchase",
+          "ログインで購入を完了",
+          "로그인하여 구매 완료"
+        )}
         subtitle={t(
           "登入後會自動帶你進入結帳頁",
           "We'll take you straight to checkout after sign-in"
@@ -711,10 +733,20 @@ export default function CreditsPurchasePage() {
               }}
             >
               {!authed
-                ? t("請先登入", "Sign In First")
+                ? t("請先登入", "Sign In First", "ログインが必要", "먼저 로그인")
                 : currency === "USD"
-                ? t("國際支付即將推出", "International Payment Coming Soon")
-                : t("金流準備中", "Payment Coming Soon")}
+                  ? t(
+                      "國際支付即將推出",
+                      "International Payment Coming Soon",
+                      "国際決済は近日公開",
+                      "국제 결제 곧 출시"
+                    )
+                  : t(
+                      "金流準備中",
+                      "Payment Coming Soon",
+                      "決済準備中",
+                      "결제 준비 중"
+                    )}
             </h3>
             <p
               style={{
@@ -747,7 +779,12 @@ export default function CreditsPurchasePage() {
                     className="btn-gold"
                     style={{ padding: "8px 18px", fontSize: 13, textDecoration: "none" }}
                   >
-                    {t("查看替代方案 →", "See alternatives →")}
+                    {t(
+                      "查看替代方案 →",
+                      "See alternatives →",
+                      "代替手段を見る →",
+                      "대체 방법 보기 →"
+                    )}
                   </Link>
                 )}
                 <button
@@ -762,7 +799,7 @@ export default function CreditsPurchasePage() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("了解", "Got it")}
+                  {t("了解", "Got it", "了解", "확인")}
                 </button>
               </div>
             ) : (
@@ -785,7 +822,7 @@ export default function CreditsPurchasePage() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("取消", "Cancel")}
+                  {t("取消", "Cancel", "キャンセル", "취소")}
                 </button>
                 <Link
                   href="/"
@@ -796,7 +833,12 @@ export default function CreditsPurchasePage() {
                     textDecoration: "none",
                   }}
                 >
-                  {t("回首頁登入", "Sign In")}
+                  {t(
+                    "回首頁登入",
+                    "Sign In",
+                    "ホームに戻ってログイン",
+                    "홈으로 돌아가 로그인"
+                  )}
                 </Link>
               </div>
             )}

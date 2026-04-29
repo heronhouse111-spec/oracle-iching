@@ -105,7 +105,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   },
 ];
 
-/** 訂閱戶共通權益清單 —— UI 上兩個方案共享,只差期數 */
+/** 訂閱戶共通權益清單 —— UI 上兩個方案共享,只差期數。
+ *  4 語系統一順序排好,view 端用 SUBSCRIPTION_BENEFITS[locale] 取對應陣列。 */
 export const SUBSCRIPTION_BENEFITS_ZH: string[] = [
   "每月補 600 點",
   "完整占卜紀錄與衍伸占卜歷史",
@@ -123,6 +124,35 @@ export const SUBSCRIPTION_BENEFITS_EN: string[] = [
   "Watermark-free share images",
   "30% off on lucky charm purchases",
 ];
+
+export const SUBSCRIPTION_BENEFITS_JA: string[] = [
+  "毎月 600 ポイント補充",
+  "占い履歴とフォローアップ占いの全記録",
+  "タロット / 易経の切り替え無制限",
+  "爻辞の詳細分析(サブスク会員限定)",
+  "透かしなしの共有画像",
+  "開運グッズ購入 30% オフ",
+];
+
+export const SUBSCRIPTION_BENEFITS_KO: string[] = [
+  "매월 600 포인트 충전",
+  "점 기록과 후속 점 전체 보관",
+  "타로 / 주역 무제한 전환",
+  "효사 상세 분석(구독자 전용)",
+  "워터마크 없는 공유 이미지",
+  "행운 아이템 구매 30% 할인",
+];
+
+/** 統一語系入口 — 給 view import 用 */
+export const SUBSCRIPTION_BENEFITS_BY_LOCALE: Record<
+  "zh" | "en" | "ja" | "ko",
+  string[]
+> = {
+  zh: SUBSCRIPTION_BENEFITS_ZH,
+  en: SUBSCRIPTION_BENEFITS_EN,
+  ja: SUBSCRIPTION_BENEFITS_JA,
+  ko: SUBSCRIPTION_BENEFITS_KO,
+};
 
 /** Helper:取特定幣別的金額 */
 export function priceOf(price: Price, currency: Currency): number {

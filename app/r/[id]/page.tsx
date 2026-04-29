@@ -192,8 +192,21 @@ export default async function PublicDivinationPage({
   if (!d) notFound();
 
   const cat = questionCategories.find((c) => c.id === d.category);
-  const zh = d.locale !== "en";
-  const t = (zhText: string, enText: string) => (zh ? zhText : enText);
+  // 公開分享頁:語系沿用佔卜當下儲存的 locale(d.locale),不跟訪客當下選的語言走 —
+  // 為了讓分享出去的截圖/連結顯示原樣。新分享資料 locale 可能是 zh/en/ja/ko;
+  // 舊資料只會是 zh/en,沒問題。
+  const dLocale = ((): "zh" | "en" | "ja" | "ko" => {
+    const v = d.locale;
+    if (v === "en" || v === "ja" || v === "ko") return v;
+    return "zh";
+  })();
+  const zh = dLocale === "zh";
+  const t = (zhText: string, enText: string, jaText?: string, koText?: string) => {
+    if (dLocale === "en") return enText;
+    if (dLocale === "ja") return jaText ?? enText;
+    if (dLocale === "ko") return koText ?? enText;
+    return zhText;
+  };
 
   const isTarot = d.divine_type === "tarot";
   const brandIcon = isTarot ? "🎴" : "☯";
@@ -269,14 +282,19 @@ export default async function PublicDivinationPage({
             }}
           >
             <span style={{ fontSize: 22 }}>{brandIcon}</span>
-            <span>{t("易問", "Tarogram")}</span>
+            <span>{t("易問", "Tarogram", "易問", "타로그램")}</span>
           </Link>
           <Link
             href="/"
             className="btn-gold"
             style={{ fontSize: 13, padding: "8px 16px" }}
           >
-            {t("我也要占卜", "Try your own")}
+            {t(
+              "我也要占卜",
+              "Try your own",
+              "自分も占う",
+              "나도 점치기"
+            )}
           </Link>
         </div>
       </header>
@@ -319,7 +337,7 @@ export default async function PublicDivinationPage({
                     size={relHex ? "sm" : "md"}
                   />
                   <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>
-                    {t("本卦", "Primary")}
+                    {t("本卦", "Primary", "本卦", "본괘")}
                   </p>
                 </div>
                 {relHex && relatingLines && (
@@ -377,8 +395,8 @@ export default async function PublicDivinationPage({
                 const suitNames = zh ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
                 const cardName = zh ? card.nameZh : card.nameEn;
                 const orientationLabel = drawn.isReversed
-                  ? t("逆位", "Reversed")
-                  : t("正位", "Upright");
+                  ? t("逆位", "Reversed", "逆位置", "역방향")
+                  : t("正位", "Upright", "正位置", "정방향");
                 return (
                   <div
                     key={idx}
@@ -452,7 +470,9 @@ export default async function PublicDivinationPage({
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, color: "#d4a855" }}>
             <span style={{ fontSize: 22 }}>{cat?.icon ?? "🔮"}</span>
             <span style={{ fontSize: 14 }}>
-              {cat ? (zh ? cat.nameZh : cat.nameEn) : t("綜合", "General")}
+              {cat
+                ? t(cat.nameZh, cat.nameEn, cat.nameJa, cat.nameKo)
+                : t("綜合", "General", "総合", "종합")}
             </span>
           </div>
           <p
@@ -480,7 +500,7 @@ export default async function PublicDivinationPage({
                 marginBottom: 10,
               }}
             >
-              {t("卦辭", "Judgment")}
+              {t("卦辭", "Judgment", "卦辞", "괘사")}
             </h3>
             <p
               style={{
@@ -519,7 +539,7 @@ export default async function PublicDivinationPage({
                 marginBottom: 10,
               }}
             >
-              {t("象辭", "Image")}
+              {t("象辭", "Image", "象辞", "상사")}
             </h3>
             <p
               style={{
@@ -559,7 +579,7 @@ export default async function PublicDivinationPage({
                 marginBottom: 12,
               }}
             >
-              {t("牌義速覽", "Card Meanings")}
+              {t("牌義速覽", "Card Meanings", "カード意味", "카드 의미")}
             </h3>
             {drawnForRender.map((drawn, idx) => {
               const card = drawn.card;
@@ -576,8 +596,8 @@ export default async function PublicDivinationPage({
                 ? card.uprightMeaningZh
                 : card.uprightMeaningEn;
               const orientationLabel = drawn.isReversed
-                ? t("逆位", "Reversed")
-                : t("正位", "Upright");
+                ? t("逆位", "Reversed", "逆位置", "역방향")
+                : t("正位", "Upright", "正位置", "정방향");
               const isLast = idx === drawnForRender.length - 1;
               return (
                 <div
@@ -631,7 +651,7 @@ export default async function PublicDivinationPage({
               marginBottom: 10,
             }}
           >
-            ✦ {t("老師解盤", "Master's Reading")}
+            ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
           </h3>
           <div
             style={{
@@ -684,14 +704,19 @@ export default async function PublicDivinationPage({
               lineHeight: 1.6,
             }}
           >
-            {t("心中有疑惑?為自己占一卦。", "Got a question? Cast your own divination.")}
+            {t(
+              "心中有疑惑?為自己占一卦。",
+              "Got a question? Cast your own divination.",
+              "心に疑問が?自分のために占いを。",
+              "마음에 의문이? 직접 점을 쳐보세요."
+            )}
           </p>
           <Link
             href="/"
             className="btn-gold"
             style={{ fontSize: 15, padding: "12px 32px" }}
           >
-            {t("開始占卜", "Begin Divination")}
+            {t("開始占卜", "Begin Divination", "占いを始める", "점 시작")}
           </Link>
           <p
             style={{
@@ -717,7 +742,7 @@ export default async function PublicDivinationPage({
             marginTop: 20,
           }}
         >
-          {t("占卜日期", "Divined on")}:{" "}
+          {t("占卜日期", "Divined on", "占い日", "점친 날짜")}:{" "}
           {new Date(d.created_at).toISOString().slice(0, 10)}
         </p>
       </main>

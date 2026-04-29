@@ -10,8 +10,7 @@ import { useIsTWA } from "@/lib/env/useIsTWA";
 import { useCurrency } from "@/lib/geo/useCurrency";
 import {
   SUBSCRIPTION_PLANS,
-  SUBSCRIPTION_BENEFITS_ZH,
-  SUBSCRIPTION_BENEFITS_EN,
+  SUBSCRIPTION_BENEFITS_BY_LOCALE,
   formatPrice,
   formatPriceOf,
   priceOf,
@@ -125,7 +124,12 @@ export default function UpgradePage() {
       // Play Billing 不支援 lifetime,UI 不該觸發到這
       setPlayToast({
         kind: "error",
-        text: t("終身方案不在此提供", "Lifetime not available here"),
+        text: t(
+          "終身方案不在此提供",
+          "Lifetime not available here",
+          "ライフタイムプランはこちらでは利用できません",
+          "라이프타임 플랜은 여기서 이용할 수 없습니다"
+        ),
       });
       return;
     }
@@ -166,7 +170,12 @@ export default function UpgradePage() {
       }
       setPlayToast({
         kind: "success",
-        text: t("訂閱成功!權益已啟用", "Subscribed — benefits active"),
+        text: t(
+          "訂閱成功!權益已啟用",
+          "Subscribed — benefits active",
+          "サブスク登録完了 — 特典が有効になりました",
+          "구독 완료 — 혜택이 활성화되었습니다"
+        ),
       });
     } finally {
       setPlayPurchasing(null);
@@ -242,28 +251,27 @@ export default function UpgradePage() {
     margin: "0 auto",
   } as const;
 
-  const benefits =
-    locale === "zh" ? SUBSCRIPTION_BENEFITS_ZH : SUBSCRIPTION_BENEFITS_EN;
+  const benefits = SUBSCRIPTION_BENEFITS_BY_LOCALE[locale];
 
   const planLabel = (id: SubscriptionPlanId) => {
     switch (id) {
       case "monthly":
-        return t("月訂閱", "Monthly");
+        return t("月訂閱", "Monthly", "月額プラン", "월간 플랜");
       case "yearly":
-        return t("年訂閱", "Yearly");
+        return t("年訂閱", "Yearly", "年額プラン", "연간 플랜");
       case "lifetime":
-        return t("終身方案", "Lifetime");
+        return t("終身方案", "Lifetime", "ライフタイム", "라이프타임");
     }
   };
 
   const periodLabel = (id: SubscriptionPlanId) => {
     switch (id) {
       case "monthly":
-        return t("/ 月", "/ month");
+        return t("/ 月", "/ month", "/ 月", "/ 월");
       case "yearly":
-        return t("/ 年", "/ year");
+        return t("/ 年", "/ year", "/ 年", "/ 년");
       case "lifetime":
-        return t("一次付清", "one-time");
+        return t("一次付清", "one-time", "一括払い", "일시 결제");
     }
   };
 
@@ -281,7 +289,12 @@ export default function UpgradePage() {
             marginBottom: 8,
           }}
         >
-          {t("升級訂閱", "Upgrade Subscription")}
+          {t(
+            "升級訂閱",
+            "Upgrade Subscription",
+            "サブスクをアップグレード",
+            "구독 업그레이드"
+          )}
         </h1>
         <p
           style={{
@@ -294,7 +307,9 @@ export default function UpgradePage() {
         >
           {t(
             "解鎖完整權益,每月自動補 600 點,問卜不再煩惱點數",
-            "Unlock the full experience with 600 credits refilled every month."
+            "Unlock the full experience with 600 credits refilled every month.",
+            "全機能をアンロック。毎月 600 ポイント自動補充で、ポイント切れの心配なし。",
+            "전체 혜택 잠금 해제. 매월 600 포인트 자동 충전으로 포인트 걱정 없이 점치기."
           )}
         </p>
 
@@ -317,7 +332,12 @@ export default function UpgradePage() {
                 letterSpacing: 1,
               }}
             >
-              {t("你目前的方案", "Your current plan")}:
+              {t(
+                "你目前的方案",
+                "Your current plan",
+                "現在のプラン",
+                "현재 플랜"
+              )}:
             </span>{" "}
             <span
               style={{
@@ -447,7 +467,7 @@ export default function UpgradePage() {
                       letterSpacing: 1,
                     }}
                   >
-                    {t("推薦", "RECOMMENDED")}
+                    {t("推薦", "RECOMMENDED", "おすすめ", "추천")}
                   </div>
                 )}
 
@@ -494,16 +514,18 @@ export default function UpgradePage() {
                       marginBottom: 16,
                     }}
                   >
-                    {t(
-                      `相當於 ${formatPrice(
+                    {(() => {
+                      const monthly = formatPrice(
                         currency === "TWD" ? Math.round(perMonth) : Number(perMonth.toFixed(2)),
                         currency
-                      )} / 月,省 20%`,
-                      `≈ ${formatPrice(
-                        currency === "TWD" ? Math.round(perMonth) : Number(perMonth.toFixed(2)),
-                        currency
-                      )} / month · save 20%`
-                    )}
+                      );
+                      return t(
+                        `相當於 ${monthly} / 月,省 20%`,
+                        `≈ ${monthly} / month · save 20%`,
+                        `≈ ${monthly} / 月 · 20% お得`,
+                        `≈ ${monthly} / 월 · 20% 절약`
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -518,7 +540,9 @@ export default function UpgradePage() {
                   >
                     {t(
                       "一次付清,永久會員",
-                      "Pay once, lifetime access"
+                      "Pay once, lifetime access",
+                      "一度のお支払いで永久会員",
+                      "한 번 결제로 평생 회원"
                     )}
                   </div>
                 )}
@@ -575,7 +599,7 @@ export default function UpgradePage() {
                       cursor: "default",
                     }}
                   >
-                    ✓ {t("目前方案", "Current Plan")}
+                    ✓ {t("目前方案", "Current Plan", "現在のプラン", "현재 플랜")}
                   </button>
                 ) : plan.id === "lifetime" ? (
                   // 終身方案不再販售(網頁也已隱藏);留按鈕避免破版,點擊無動作
@@ -592,7 +616,7 @@ export default function UpgradePage() {
                       cursor: "not-allowed",
                     }}
                   >
-                    {t("已停售", "Discontinued")}
+                    {t("已停售", "Discontinued", "販売終了", "판매 종료")}
                   </button>
                 ) : (
                   <button
@@ -625,8 +649,13 @@ export default function UpgradePage() {
                     }}
                   >
                     {playPurchasing === plan.id || ecpayLoading === plan.id
-                      ? t("處理中…", "Processing…")
-                      : t("選擇此方案", "Choose This Plan")}
+                      ? t("處理中…", "Processing…", "処理中…", "처리 중…")
+                      : t(
+                          "選擇此方案",
+                          "Choose This Plan",
+                          "このプランを選ぶ",
+                          "이 플랜 선택"
+                        )}
                   </button>
                 )}
               </div>
@@ -657,7 +686,9 @@ export default function UpgradePage() {
           >
             {t(
               "只想偶爾問卜?可單次加購點數。",
-              "Just occasional use? Try credit packs instead."
+              "Just occasional use? Try credit packs instead.",
+              "たまに占うだけ?ポイントパックの単発購入もできます。",
+              "가끔만 점치시나요? 단회 포인트 팩 구매를 이용하세요."
             )}
           </div>
           <Link
@@ -672,7 +703,12 @@ export default function UpgradePage() {
               whiteSpace: "nowrap",
             }}
           >
-            {t("看加購包 →", "See Credit Packs →")}
+            {t(
+              "看加購包 →",
+              "See Credit Packs →",
+              "ポイントパックを見る →",
+              "포인트 팩 보기 →"
+            )}
           </Link>
         </div>
         )}
@@ -686,7 +722,12 @@ export default function UpgradePage() {
               textDecoration: "none",
             }}
           >
-            ← {t("返回會員頁", "Back to account")}
+            ← {t(
+              "返回會員頁",
+              "Back to account",
+              "アカウントに戻る",
+              "계정으로 돌아가기"
+            )}
           </Link>
         </div>
       </main>
@@ -712,7 +753,12 @@ export default function UpgradePage() {
             ? `/account/upgrade?autoSubscribe=${pendingAfterLoginPlan}`
             : "/account/upgrade"
         }
-        title={t("登入即可完成訂閱", "Sign in to complete your subscription")}
+        title={t(
+          "登入即可完成訂閱",
+          "Sign in to complete your subscription",
+          "ログインで登録を完了",
+          "로그인하여 구독 완료"
+        )}
         subtitle={t(
           "登入後會自動帶你進入訂閱結帳頁",
           "We'll take you straight to checkout after sign-in"
@@ -757,10 +803,20 @@ export default function UpgradePage() {
               }}
             >
               {!authed
-                ? t("請先登入", "Sign In First")
+                ? t("請先登入", "Sign In First", "ログインが必要", "먼저 로그인")
                 : currency === "USD"
-                ? t("國際支付即將推出", "International Payment Coming Soon")
-                : t("金流準備中", "Payment Coming Soon")}
+                  ? t(
+                      "國際支付即將推出",
+                      "International Payment Coming Soon",
+                      "国際決済は近日公開",
+                      "국제 결제 곧 출시"
+                    )
+                  : t(
+                      "金流準備中",
+                      "Payment Coming Soon",
+                      "決済準備中",
+                      "결제 준비 중"
+                    )}
             </h3>
             <p
               style={{
@@ -773,17 +829,23 @@ export default function UpgradePage() {
               {!authed
                 ? t(
                     "訂閱與點數需要綁定帳號,請先登入。登入送 30 點,老使用者自動補 500 點。",
-                    "Subscriptions require an account. Sign in to continue — 30 credits on signup, 500 for existing users."
+                    "Subscriptions require an account. Sign in to continue — 30 credits on signup, 500 for existing users.",
+                    "サブスクとポイントはアカウント連携が必要です。ログインで 30 ポイント、既存ユーザーは 500 ポイント自動補充。",
+                    "구독과 포인트는 계정 연동이 필요합니다. 로그인 시 30 포인트, 기존 사용자는 500 포인트 자동 충전."
                   )
                 : currency === "USD"
-                ? t(
-                    "國際信用卡(USD)訂閱正在整合中。你可以切換到 NT$ 用台灣金流,或留 email 等我們通知上線。",
-                    "International (USD) subscription is being integrated. Switch to NT$ for the Taiwan payment rail, or leave your email so we can notify you when USD goes live."
-                  )
-                : t(
-                    "訂閱功能即將開放,上線前會以 email 通知。想優先試用可到首頁訂閱電子報。",
-                    "Subscription will open shortly — you'll be notified via email when live."
-                  )}
+                  ? t(
+                      "國際信用卡(USD)訂閱正在整合中。你可以切換到 NT$ 用台灣金流,或留 email 等我們通知上線。",
+                      "International (USD) subscription is being integrated. Switch to NT$ for the Taiwan payment rail, or leave your email so we can notify you when USD goes live.",
+                      "国際クレジットカード(USD)のサブスクは統合中です。NT$ に切り替えて台湾決済を利用するか、メールアドレスをご登録ください。",
+                      "국제 신용카드(USD) 구독은 통합 중입니다. NT$로 전환하여 대만 결제를 이용하거나 이메일을 남겨 출시 안내를 받으세요."
+                    )
+                  : t(
+                      "訂閱功能即將開放,上線前會以 email 通知。想優先試用可到首頁訂閱電子報。",
+                      "Subscription will open shortly — you'll be notified via email when live.",
+                      "サブスク機能は近日公開。リリース時にメールでお知らせします。",
+                      "구독 기능 곧 출시됩니다. 출시 시 이메일로 안내드립니다."
+                    )}
             </p>
             {authed ? (
               <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
@@ -793,7 +855,12 @@ export default function UpgradePage() {
                     className="btn-gold"
                     style={{ padding: "8px 18px", fontSize: 13, textDecoration: "none" }}
                   >
-                    {t("查看替代方案 →", "See alternatives →")}
+                    {t(
+                      "查看替代方案 →",
+                      "See alternatives →",
+                      "代替手段を見る →",
+                      "대체 방법 보기 →"
+                    )}
                   </Link>
                 )}
                 <button
@@ -808,7 +875,7 @@ export default function UpgradePage() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("了解", "Got it")}
+                  {t("了解", "Got it", "了解", "확인")}
                 </button>
               </div>
             ) : (
@@ -831,7 +898,7 @@ export default function UpgradePage() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("取消", "Cancel")}
+                  {t("取消", "Cancel", "キャンセル", "취소")}
                 </button>
                 <Link
                   href="/"
@@ -842,7 +909,12 @@ export default function UpgradePage() {
                     textDecoration: "none",
                   }}
                 >
-                  {t("回首頁登入", "Sign In")}
+                  {t(
+                    "回首頁登入",
+                    "Sign In",
+                    "ホームに戻ってログイン",
+                    "홈으로 돌아가 로그인"
+                  )}
                 </Link>
               </div>
             )}

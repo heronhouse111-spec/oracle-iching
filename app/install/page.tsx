@@ -110,7 +110,7 @@ export default function InstallPage() {
               textDecoration: "none",
             }}
           >
-            ← {t("回首頁", "Back to home")}
+            ← {t("回首頁", "Back to home", "ホームに戻る", "홈으로")}
           </Link>
         </div>
 
@@ -125,7 +125,12 @@ export default function InstallPage() {
               marginBottom: 10,
             }}
           >
-            {t("把 Tarogram 加到主畫面", "Add Tarogram to your home screen")}
+            {t(
+              "把 Tarogram 加到主畫面",
+              "Add Tarogram to your home screen",
+              "Tarogram をホーム画面に追加",
+              "Tarogram을 홈 화면에 추가"
+            )}
           </h1>
           <p
             style={{
@@ -138,7 +143,9 @@ export default function InstallPage() {
           >
             {t(
               "像 app 一樣全螢幕開啟,下次不用再打網址。無需下載、不佔空間、隨時可移除。",
-              "Opens fullscreen like a native app. No download, no storage, remove anytime."
+              "Opens fullscreen like a native app. No download, no storage, remove anytime.",
+              "ネイティブアプリのようにフルスクリーンで起動。ダウンロード不要、容量を占有せず、いつでも削除可能。",
+              "네이티브 앱처럼 전체 화면으로 실행. 다운로드 불필요, 용량 차지 없음, 언제든 제거 가능."
             )}
           </p>
         </div>
@@ -155,31 +162,49 @@ export default function InstallPage() {
           >
             <div style={{ fontSize: 20, marginBottom: 4 }}>✓</div>
             <div style={{ color: "#9ae0a5", fontSize: 13, fontWeight: 600 }}>
-              {t("安裝完成,請從主畫面開啟", "Installed — open from home screen")}
+              {t(
+                "安裝完成,請從主畫面開啟",
+                "Installed — open from home screen",
+                "インストール完了。ホーム画面から開いてください",
+                "설치 완료. 홈 화면에서 열어주세요"
+              )}
             </div>
           </div>
         )}
 
         {/* Android */}
         <PlatformSection
-          title={t("Android 裝置(Chrome / Samsung / Edge)", "Android (Chrome / Samsung / Edge)")}
+          title={t(
+            "Android 裝置(Chrome / Samsung / Edge)",
+            "Android (Chrome / Samsung / Edge)",
+            "Android(Chrome / Samsung / Edge)",
+            "Android(Chrome / Samsung / Edge)"
+          )}
           active={platform === "android"}
           steps={[
             t(
               "打開 Chrome(或 Samsung Internet / Edge)瀏覽 tarogram.heronhouse.me",
-              "Open Chrome (or Samsung Internet / Edge) and visit tarogram.heronhouse.me"
+              "Open Chrome (or Samsung Internet / Edge) and visit tarogram.heronhouse.me",
+              "Chrome(または Samsung Internet / Edge)で tarogram.heronhouse.me を開く",
+              "Chrome(또는 Samsung Internet / Edge)으로 tarogram.heronhouse.me 열기"
             ),
             t(
               "若底部跳出「安裝應用程式」橫幅,直接按「安裝」即可",
-              "If you see an \"Install app\" banner at the bottom, tap \"Install\""
+              "If you see an \"Install app\" banner at the bottom, tap \"Install\"",
+              "下に「アプリをインストール」バナーが出たら「インストール」をタップ",
+              "하단에 \"앱 설치\" 배너가 보이면 \"설치\"를 탭"
             ),
             t(
               "若沒跳出橫幅:點右上角 ⋮(三個點)→ 選「加到主畫面」或「安裝應用程式」",
-              "No banner? Tap ⋮ (top-right) → \"Add to home screen\" or \"Install app\""
+              "No banner? Tap ⋮ (top-right) → \"Add to home screen\" or \"Install app\"",
+              "バナーが出ない場合:右上の ⋮ →「ホーム画面に追加」または「アプリをインストール」",
+              "배너가 없으면: 우측 상단 ⋮ → \"홈 화면에 추가\" 또는 \"앱 설치\""
             ),
             t(
               "確認命名後按「新增」,桌面會多一個 Tarogram icon",
-              "Confirm the name, tap \"Add\". Tarogram icon appears on your home screen"
+              "Confirm the name, tap \"Add\". Tarogram icon appears on your home screen",
+              "名前を確認して「追加」をタップ。ホーム画面に Tarogram アイコンが追加されます",
+              "이름 확인 후 \"추가\" 탭. 홈 화면에 Tarogram 아이콘이 추가됩니다"
             ),
           ]}
           extra={
@@ -197,7 +222,12 @@ export default function InstallPage() {
                   width: "100%",
                 }}
               >
-                {t("✦ 一鍵安裝到主畫面", "✦ Install now")}
+                {t(
+                  "✦ 一鍵安裝到主畫面",
+                  "✦ Install now",
+                  "✦ ワンタップでホーム画面に追加",
+                  "✦ 한 번에 홈 화면에 설치"
+                )}
               </button>
             ) : null
           }
@@ -205,49 +235,80 @@ export default function InstallPage() {
 
         {/* iOS */}
         <PlatformSection
-          title={t("iPhone / iPad(Safari)", "iPhone / iPad (Safari)")}
+          title={t(
+            "iPhone / iPad(Safari)",
+            "iPhone / iPad (Safari)",
+            "iPhone / iPad(Safari)",
+            "iPhone / iPad(Safari)"
+          )}
           active={platform === "ios"}
           steps={[
             t(
               "用 Safari 打開 tarogram.heronhouse.me(Chrome iOS 版不支援)",
-              "Open in Safari (Chrome/Firefox iOS won't work for this)"
+              "Open in Safari (Chrome/Firefox iOS won't work for this)",
+              "Safari で tarogram.heronhouse.me を開く(iOS 版 Chrome / Firefox は非対応)",
+              "Safari로 tarogram.heronhouse.me 열기(iOS Chrome / Firefox 미지원)"
             ),
-            t("點畫面底部中間的「分享」按鈕 ⬆", "Tap the Share button ⬆ at the bottom"),
+            t(
+              "點畫面底部中間的「分享」按鈕 ⬆",
+              "Tap the Share button ⬆ at the bottom",
+              "画面下部中央の「共有」ボタン ⬆ をタップ",
+              "화면 하단 중앙의 \"공유\" 버튼 ⬆ 탭"
+            ),
             t(
               "往下捲,找到「加入主畫面」並點選",
-              "Scroll down and tap \"Add to Home Screen\""
+              "Scroll down and tap \"Add to Home Screen\"",
+              "下にスクロールして「ホーム画面に追加」をタップ",
+              "아래로 스크롤하여 \"홈 화면에 추가\" 탭"
             ),
             t(
               "右上角「新增」,桌面會多一個 Tarogram icon,點開即是全螢幕 app",
-              "Tap \"Add\" (top-right). Tap the new icon on your home screen to launch fullscreen"
+              "Tap \"Add\" (top-right). Tap the new icon on your home screen to launch fullscreen",
+              "右上の「追加」をタップ。ホーム画面の新しいアイコンを開くとフルスクリーンで起動",
+              "우측 상단 \"추가\" 탭. 홈 화면의 새 아이콘을 누르면 전체 화면으로 실행"
             ),
           ]}
           note={t(
             "iOS 限制:只能在 Safari 安裝,其他瀏覽器沒有此選項。",
-            "iOS limitation: only Safari can install to home screen."
+            "iOS limitation: only Safari can install to home screen.",
+            "iOS の制約:Safari のみホーム画面に追加可能。他のブラウザにはこのオプションはありません。",
+            "iOS 제약: Safari에서만 홈 화면에 설치 가능. 다른 브라우저에는 이 옵션이 없습니다."
           )}
         />
 
         {/* Desktop */}
         <PlatformSection
-          title={t("電腦(Chrome / Edge)", "Desktop (Chrome / Edge)")}
+          title={t(
+            "電腦(Chrome / Edge)",
+            "Desktop (Chrome / Edge)",
+            "PC(Chrome / Edge)",
+            "PC(Chrome / Edge)"
+          )}
           active={platform === "desktop"}
           steps={[
             t(
               "用 Chrome 或 Edge 打開 tarogram.heronhouse.me",
-              "Open in Chrome or Edge"
+              "Open in Chrome or Edge",
+              "Chrome または Edge で tarogram.heronhouse.me を開く",
+              "Chrome 또는 Edge로 tarogram.heronhouse.me 열기"
             ),
             t(
               "網址列右邊會出現「安裝」小圖示 ⊕,點下去",
-              "Click the \"Install\" icon ⊕ on the right side of the address bar"
+              "Click the \"Install\" icon ⊕ on the right side of the address bar",
+              "アドレスバー右側の「インストール」アイコン ⊕ をクリック",
+              "주소 표시줄 오른쪽의 \"설치\" 아이콘 ⊕ 클릭"
             ),
             t(
               "或從瀏覽器選單 ⋮ 找「安裝 Tarogram 易問」",
-              "Or from menu ⋮ → \"Install Tarogram 易問\""
+              "Or from menu ⋮ → \"Install Tarogram 易問\"",
+              "またはメニュー ⋮ から「Tarogram 易問 をインストール」",
+              "또는 메뉴 ⋮ → \"Tarogram 易問 설치\""
             ),
             t(
               "確認後會從作業系統啟動列直接打開獨立視窗",
-              "Launches as a standalone window from your OS dock/Start menu"
+              "Launches as a standalone window from your OS dock/Start menu",
+              "確認後、OS のドック / スタートメニューから独立ウィンドウで起動",
+              "확인 후 OS 도크 / 시작 메뉴에서 독립 창으로 실행"
             ),
           ]}
           extra={
@@ -264,7 +325,12 @@ export default function InstallPage() {
                   borderRadius: 9999,
                 }}
               >
-                {t("✦ 一鍵安裝到桌面", "✦ Install to desktop")}
+                {t(
+                  "✦ 一鍵安裝到桌面",
+                  "✦ Install to desktop",
+                  "✦ ワンクリックでデスクトップにインストール",
+                  "✦ 한 번에 데스크톱에 설치"
+                )}
               </button>
             ) : null
           }
@@ -287,27 +353,48 @@ export default function InstallPage() {
               marginBottom: 8,
             }}
           >
-            {t("常見問題", "FAQ")}
+            {t("常見問題", "FAQ", "よくある質問", "자주 묻는 질문")}
           </h3>
           <Faq
-            q={t("會佔手機空間嗎?", "Does it take up storage?")}
+            q={t(
+              "會佔手機空間嗎?",
+              "Does it take up storage?",
+              "ストレージを使いますか?",
+              "저장 공간을 차지하나요?"
+            )}
             a={t(
               "幾乎不會。PWA 不是傳統 app,只是一個桌面 icon + 瀏覽器快取,整個加起來通常不到 1 MB。",
-              "Almost none. PWA is just a home-screen shortcut plus browser cache — typically under 1 MB total."
+              "Almost none. PWA is just a home-screen shortcut plus browser cache — typically under 1 MB total.",
+              "ほぼ使いません。PWA はホーム画面のショートカット + ブラウザキャッシュだけで、合計でも通常 1 MB 未満です。",
+              "거의 차지하지 않습니다. PWA는 홈 화면 바로가기 + 브라우저 캐시일 뿐, 전체 합쳐 보통 1 MB 미만입니다."
             )}
           />
           <Faq
-            q={t("要怎麼移除?", "How do I remove it?")}
+            q={t(
+              "要怎麼移除?",
+              "How do I remove it?",
+              "どうやって削除しますか?",
+              "어떻게 제거하나요?"
+            )}
             a={t(
               "長按桌面上的 Tarogram icon,選「移除」或「解除安裝」即可。不會刪除任何會員資料。",
-              "Long-press the Tarogram icon → \"Remove\" or \"Uninstall\". Your account data is not affected."
+              "Long-press the Tarogram icon → \"Remove\" or \"Uninstall\". Your account data is not affected.",
+              "ホーム画面の Tarogram アイコンを長押し →「削除」または「アンインストール」。アカウントデータには影響しません。",
+              "홈 화면의 Tarogram 아이콘을 길게 눌러 \"제거\" 또는 \"앱 제거\". 계정 데이터는 영향받지 않습니다."
             )}
           />
           <Faq
-            q={t("為什麼 iOS 要用 Safari?", "Why must iOS use Safari?")}
+            q={t(
+              "為什麼 iOS 要用 Safari?",
+              "Why must iOS use Safari?",
+              "なぜ iOS は Safari でなければならない?",
+              "왜 iOS는 Safari를 써야 하나요?"
+            )}
             a={t(
               "蘋果限制:只有 Safari 能安裝 PWA 到主畫面,這是系統限制不是我們能改的。",
-              "Apple's restriction: only Safari can install PWAs to home screen on iOS. Not our choice."
+              "Apple's restriction: only Safari can install PWAs to home screen on iOS. Not our choice.",
+              "Apple の制約:iOS では Safari のみが PWA をホーム画面に追加できます。当方の判断ではありません。",
+              "Apple 제약: iOS에서는 Safari만 PWA를 홈 화면에 설치할 수 있습니다. 저희 선택이 아닙니다."
             )}
           />
         </div>

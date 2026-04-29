@@ -117,7 +117,7 @@ export default function AccountDeletePage() {
               color: "rgba(192,192,208,0.6)",
             }}
           >
-            {t("載入中...", "Loading...")}
+            {t("載入中...", "Loading...", "読み込み中...", "불러오는 중...")}
           </div>
         </main>
       </div>
@@ -159,7 +159,7 @@ export default function AccountDeletePage() {
                 textDecoration: "none",
               }}
             >
-              {t("回首頁", "Back to home")}
+              {t("回首頁", "Back to home", "ホームに戻る", "홈으로")}
             </Link>
           </div>
         </main>
@@ -180,7 +180,12 @@ export default function AccountDeletePage() {
               textDecoration: "none",
             }}
           >
-            ← {t("返回會員頁", "Back to account")}
+            ← {t(
+              "返回會員頁",
+              "Back to account",
+              "アカウントに戻る",
+              "계정으로 돌아가기"
+            )}
           </Link>
         </div>
 
@@ -193,7 +198,7 @@ export default function AccountDeletePage() {
             marginBottom: 8,
           }}
         >
-          {t("刪除帳號", "Delete Account")}
+          {t("刪除帳號", "Delete Account", "アカウント削除", "계정 삭제")}
         </h1>
         <p
           style={{
@@ -226,7 +231,12 @@ export default function AccountDeletePage() {
               margin: "0 0 12px 0",
             }}
           >
-            {t("將被永久清除的內容", "What will be permanently deleted")}
+            {t(
+              "將被永久清除的內容",
+              "What will be permanently deleted",
+              "完全に削除される内容",
+              "영구적으로 삭제되는 내용"
+            )}
           </h2>
           <ul
             style={{
@@ -291,7 +301,12 @@ export default function AccountDeletePage() {
                 marginBottom: 2,
               }}
             >
-              {t("目前登入帳號", "Signed in as")}
+              {t(
+                "目前登入帳號",
+                "Signed in as",
+                "ログイン中のアカウント",
+                "현재 로그인된 계정"
+              )}
             </div>
             <div
               style={{
@@ -419,8 +434,13 @@ export default function AccountDeletePage() {
             }}
           >
             {isDeleting
-              ? t("刪除中...", "Deleting...")
-              : t("永久刪除我的帳號", "Permanently Delete My Account")}
+              ? t("刪除中...", "Deleting...", "削除中...", "삭제 중...")
+              : t(
+                  "永久刪除我的帳號",
+                  "Permanently Delete My Account",
+                  "アカウントを完全に削除",
+                  "내 계정 영구 삭제"
+                )}
           </button>
         </div>
 
@@ -433,7 +453,12 @@ export default function AccountDeletePage() {
               textDecoration: "none",
             }}
           >
-            {t("← 取消,返回會員頁", "← Cancel, back to account")}
+            {t(
+              "← 取消,返回會員頁",
+              "← Cancel, back to account",
+              "← キャンセル、アカウントに戻る",
+              "← 취소, 계정으로 돌아가기"
+            )}
           </Link>
         </div>
       </main>

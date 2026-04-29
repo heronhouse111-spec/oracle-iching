@@ -134,7 +134,12 @@ export default function LinkedAccountsPage() {
       await unlinkIdentity(identity.identity_id);
       setMessage({
         kind: "success",
-        text: t("已移除登入方式", "Sign-in method removed"),
+        text: t(
+          "已移除登入方式",
+          "Sign-in method removed",
+          "ログイン方法を削除しました",
+          "로그인 방법이 제거되었습니다"
+        ),
       });
       await loadIdentities();
     } catch (e) {
@@ -153,7 +158,12 @@ export default function LinkedAccountsPage() {
         <Header />
         <main style={pageStyle}>
           <p style={{ color: "rgba(192,192,208,0.75)", textAlign: "center" }}>
-            {t("功能需 Supabase 設定後才能使用", "This page requires Supabase to be configured")}
+            {t(
+              "功能需 Supabase 設定後才能使用",
+              "This page requires Supabase to be configured",
+              "この機能は Supabase の設定後に利用可能です",
+              "이 기능은 Supabase 설정 후 사용 가능합니다"
+            )}
           </p>
         </main>
       </div>
@@ -173,7 +183,12 @@ export default function LinkedAccountsPage() {
               textDecoration: "none",
             }}
           >
-            ← {t("回我的會員", "Back to My Account")}
+            ← {t(
+              "回我的會員",
+              "Back to My Account",
+              "マイアカウントに戻る",
+              "내 계정으로 돌아가기"
+            )}
           </Link>
         </div>
 
@@ -186,7 +201,12 @@ export default function LinkedAccountsPage() {
             marginBottom: 6,
           }}
         >
-          {t("登入方式綁定", "Linked Sign-in Methods")}
+          {t(
+            "登入方式綁定",
+            "Linked Sign-in Methods",
+            "ログイン方法の連携",
+            "로그인 방법 연동"
+          )}
         </h1>
         <p
           style={{
@@ -215,7 +235,12 @@ export default function LinkedAccountsPage() {
               wordBreak: "break-all",
             }}
           >
-            {t("目前帳號:", "Current account: ")}{email}
+            {t(
+              "目前帳號:",
+              "Current account: ",
+              "現在のアカウント:",
+              "현재 계정:"
+            )}{email}
           </p>
         )}
 
@@ -243,7 +268,7 @@ export default function LinkedAccountsPage() {
 
         {isLoading ? (
           <p style={{ color: "rgba(192,192,208,0.55)", textAlign: "center" }}>
-            {t("載入中…", "Loading…")}
+            {t("載入中…", "Loading…", "読み込み中…", "불러오는 중…")}
           </p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -285,7 +310,7 @@ export default function LinkedAccountsPage() {
                         }}
                       >
                         {linked.identity_data?.email ??
-                          t("已綁定", "Linked")}
+                          t("已綁定", "Linked", "連携済み", "연동됨")}
                       </div>
                     ) : disabled ? (
                       <div
@@ -294,7 +319,7 @@ export default function LinkedAccountsPage() {
                           fontSize: 11,
                         }}
                       >
-                        {t("即將推出", "Coming soon")}
+                        {t("即將推出", "Coming soon", "近日公開", "곧 출시")}
                       </div>
                     ) : (
                       <div
@@ -303,7 +328,7 @@ export default function LinkedAccountsPage() {
                           fontSize: 11,
                         }}
                       >
-                        {t("尚未綁定", "Not linked")}
+                        {t("尚未綁定", "Not linked", "未連携", "미연동")}
                       </div>
                     )}
                   </div>
@@ -319,7 +344,9 @@ export default function LinkedAccountsPage() {
                           : "rgba(192,192,208,0.4)",
                       }}
                     >
-                      {linked ? t("已啟用", "Active") : t("—", "—")}
+                      {linked
+                        ? t("已啟用", "Active", "有効", "활성")
+                        : t("—", "—", "—", "—")}
                     </span>
                   ) : linked ? (
                     <button
@@ -347,7 +374,7 @@ export default function LinkedAccountsPage() {
                         flexShrink: 0,
                       }}
                     >
-                      {isBusy ? "…" : t("移除", "Unlink")}
+                      {isBusy ? "…" : t("移除", "Unlink", "削除", "연동 해제")}
                     </button>
                   ) : (
                     <button
@@ -365,7 +392,7 @@ export default function LinkedAccountsPage() {
                         flexShrink: 0,
                       }}
                     >
-                      {isBusy ? "…" : t("綁定", "Link")}
+                      {isBusy ? "…" : t("綁定", "Link", "連携", "연동")}
                     </button>
                   )}
                 </div>

@@ -940,7 +940,12 @@ export default function Home() {
     } catch (e) {
       console.error("公開狀態切換失敗:", e);
       setShareMessage(
-        t("切換失敗,請稍候再試", "Toggle failed, please try again")
+        t(
+          "切換失敗,請稍候再試",
+          "Toggle failed, please try again",
+          "切り替えに失敗しました。後ほど再度お試しください",
+          "전환 실패. 잠시 후 다시 시도해 주세요"
+        )
       );
       setTimeout(() => setShareMessage(null), 3000);
     } finally {
@@ -960,7 +965,7 @@ export default function Home() {
       setTimeout(() => setCopyStatus("idle"), 2000);
     } catch (e) {
       console.error("複製失敗:", e);
-      setShareMessage(t("複製失敗", "Copy failed"));
+      setShareMessage(t("複製失敗", "Copy failed", "コピー失敗", "복사 실패"));
       setTimeout(() => setShareMessage(null), 3000);
     }
   };
@@ -997,11 +1002,23 @@ export default function Home() {
           : `oracle-iching-${hexagram?.number ?? "x"}-${ts}`;
       link.download = `${filePrefix}.png`;
       link.click();
-      setShareMessage(t("分享圖已下載 ✨", "Share image downloaded ✨"));
+      setShareMessage(
+        t(
+          "分享圖已下載 ✨",
+          "Share image downloaded ✨",
+          "共有画像をダウンロードしました ✨",
+          "공유 이미지가 다운로드되었습니다 ✨"
+        )
+      );
     } catch (e) {
       console.error("下載分享圖失敗:", e);
       setShareMessage(
-        t("下載失敗,請再試一次", "Download failed, please try again")
+        t(
+          "下載失敗,請再試一次",
+          "Download failed, please try again",
+          "ダウンロードに失敗しました。再度お試しください",
+          "다운로드 실패. 다시 시도해 주세요"
+        )
       );
     } finally {
       setIsSharing(false);
@@ -1732,7 +1749,18 @@ export default function Home() {
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
-      setChatMessages([...newMessages, { role: "assistant", content: t("抱歉，暫時無法回覆。", "Sorry, unable to reply at the moment.") }]);
+      setChatMessages([
+        ...newMessages,
+        {
+          role: "assistant",
+          content: t(
+            "抱歉，暫時無法回覆。",
+            "Sorry, unable to reply at the moment.",
+            "申し訳ありません、しばらくお返事できません。",
+            "죄송합니다. 지금은 답변할 수 없습니다."
+          ),
+        },
+      ]);
     } finally {
       if (!controller.signal.aborted) setIsChatLoading(false);
     }
@@ -1783,7 +1811,12 @@ export default function Home() {
     return (
       <div className="mystic-card" style={{ padding: 16, marginTop: 16 }}>
         <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-          🌿 {t("延伸占卜", "Follow-up Readings")}
+          🌿 {t(
+            "延伸占卜",
+            "Follow-up Readings",
+            "フォローアップ占い",
+            "후속 점"
+          )}
           <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginLeft: 8, fontWeight: 400 }}>
             ({followUps.length})
           </span>
@@ -1906,7 +1939,12 @@ export default function Home() {
                 whiteSpace: "pre-wrap",
               }}>
                 <div style={{ color: "#d4a855", fontSize: 11, marginBottom: 4 }}>
-                  {t("老師延伸解說", "Master's continuation")}
+                  {t(
+                    "老師延伸解說",
+                    "Master's continuation",
+                    "占い師の続き解説",
+                    "선생님의 후속 해설"
+                  )}
                 </div>
                 {f.aiReading}
                 {/* 免責聲明 */}
@@ -1923,7 +1961,9 @@ export default function Home() {
                 >
                   {t(
                     "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                    "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                    "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                    "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                    "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                   )}
                 </div>
               </div>
@@ -1969,7 +2009,7 @@ export default function Home() {
             className="btn-gold"
             style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
           >
-            {t("登入後解鎖", "Sign in to unlock")}
+            {t("登入後解鎖", "Sign in to unlock", "ログインして解除", "로그인하여 잠금 해제")}
           </button>
         </div>
       );
@@ -1985,7 +2025,12 @@ export default function Home() {
           background: "rgba(10,10,26,0.5)",
         }}>
           <div style={{ color: "#d4a855", fontSize: 13, marginBottom: 8, fontFamily: "'Noto Serif TC', serif" }}>
-            ✦ {t("提出延伸問題,再抽一卦", "Ask a deeper question, draw again")}
+            ✦ {t(
+              "提出延伸問題,再抽一卦",
+              "Ask a deeper question, draw again",
+              "深い質問でもう一度占う",
+              "더 깊은 질문으로 다시 점치기"
+            )}
           </div>
           <textarea
             value={followUpQuestion}
@@ -2023,7 +2068,7 @@ export default function Home() {
                 cursor: "pointer",
               }}
             >
-              {t("取消", "Cancel")}
+              {t("取消", "Cancel", "キャンセル", "취소")}
             </button>
             <button
               onClick={handleStartFollowUp}
@@ -2031,7 +2076,12 @@ export default function Home() {
               className="btn-gold"
               style={{ flex: 1, fontSize: 14, padding: "8px 16px" }}
             >
-              {t("進入占卜工具 →", "Choose oracle →")}
+              {t(
+                "進入占卜工具 →",
+                "Choose oracle →",
+                "占いツールを選ぶ →",
+                "점 도구 선택 →"
+              )}
             </button>
           </div>
           <p style={{ marginTop: 8, color: "rgba(192,192,208,0.5)", fontSize: 11, lineHeight: 1.5, margin: "8px 0 0" }}>
@@ -2061,7 +2111,12 @@ export default function Home() {
           lineHeight: 1.5,
         }}
       >
-        ✦ {t("相關衍伸問題繼續占卜", "Follow up with another reading")}
+        ✦ {t(
+          "相關衍伸問題繼續占卜",
+          "Follow up with another reading",
+          "関連する深い質問で続けて占う",
+          "관련된 후속 질문으로 점 계속하기"
+        )}
       </button>
     );
   };
@@ -2081,7 +2136,12 @@ export default function Home() {
         open={guestGateOpen}
         onClose={() => setGuestGateOpen(false)}
         lineEnabled={LINE_LOGIN_ENABLED}
-        title={t("登入以解鎖完整體驗", "Sign in to unlock the full experience")}
+        title={t(
+          "登入以解鎖完整體驗",
+          "Sign in to unlock the full experience",
+          "ログインして全機能をアンロック",
+          "로그인하여 전체 기능 해제"
+        )}
         subtitle={t(
           "訪客每人限占卜 2 次。登入即贈 30 點,先前的占卜結果會自動保留進您的占卜紀錄。",
           "Guests are limited to 2 divinations. Sign in for 30 bonus credits — your previous readings will be carried over into your history."
@@ -2124,7 +2184,7 @@ export default function Home() {
                   />
                   <Image
                     src="/logo-256.png"
-                    alt={t("易問", "Tarogram")}
+                    alt={t("易問", "Tarogram", "易問", "타로그램")}
                     width={140}
                     height={140}
                     priority
@@ -2727,10 +2787,20 @@ export default function Home() {
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
                 <span style={{ fontSize: 40 }}>{questionCategories.find((c) => c.id === selectedCategory)?.icon}</span>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif", marginTop: 8 }}>
-                  {t("請輸入你的問題", "Enter your question")}
+                  {t(
+                    "請輸入你的問題",
+                    "Enter your question",
+                    "質問を入力してください",
+                    "질문을 입력하세요"
+                  )}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>
-                  {t("心誠則靈，專注你想問的事", "Focus your mind on what you seek to know")}
+                  {t(
+                    "心誠則靈，專注你想問的事",
+                    "Focus your mind on what you seek to know",
+                    "心を込めて、知りたいことに集中しましょう",
+                    "마음을 모아 알고 싶은 것에 집중하세요"
+                  )}
                 </p>
               </div>
 
@@ -2791,11 +2861,11 @@ export default function Home() {
                       padding: "10px 24px", borderRadius: 9999, border: "1px solid rgba(212,168,85,0.3)",
                       color: "#d4a855", fontSize: 14, background: "none", cursor: "pointer",
                     }}>
-                    {t("返回", "Back")}
+                    {t("返回", "Back", "戻る", "뒤로")}
                   </button>
                   <button onClick={handleQuestionSubmit} disabled={!userQuestion.trim()}
                     className="btn-gold" style={{ flex: 1, fontSize: 16 }}>
-                    {t("開始占卜", "Begin Divination")}
+                    {t("開始占卜", "Begin Divination", "占いを始める", "점 시작")}
                   </button>
                 </div>
 
@@ -2822,7 +2892,12 @@ export default function Home() {
                       textUnderlineOffset: 2,
                     }}
                   >
-                    {t("詳閱服務條款與免責聲明", "Read full terms & disclaimer")}
+                    {t(
+                      "詳閱服務條款與免責聲明",
+                      "Read full terms & disclaimer",
+                      "利用規約と免責事項を読む",
+                      "이용약관 및 면책조항 읽기"
+                    )}
                   </Link>
                 </p>
               </div>
@@ -2834,10 +2909,20 @@ export default function Home() {
             <motion.div key="dt" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("選擇占卜工具", "Choose Your Method")}
+                  {t(
+                    "選擇占卜工具",
+                    "Choose Your Method",
+                    "占いツールを選ぶ",
+                    "점 도구 선택"
+                  )}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6 }}>
-                  {t("兩種系統皆以你提出的問題為核心給出指引", "Both systems will center on the question you asked")}
+                  {t(
+                    "兩種系統皆以你提出的問題為核心給出指引",
+                    "Both systems will center on the question you asked",
+                    "どちらのシステムもあなたの質問を中心に導きを示します",
+                    "두 시스템 모두 당신의 질문을 중심으로 답을 줍니다"
+                  )}
                 </p>
               </div>
 
@@ -2860,7 +2945,7 @@ export default function Home() {
                     <span style={{ fontSize: 32 }}>☯</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("易經占卜", "I Ching")}
+                        {t("易經占卜", "I Ching", "易経占い", "주역 점")}
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -2890,7 +2975,7 @@ export default function Home() {
                     <span style={{ fontSize: 32 }}>🎴</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("塔羅占卜", "Tarot")}
+                        {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -2916,7 +3001,12 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回修改問題", "Back to edit question")}
+                  {t(
+                    "返回修改問題",
+                    "Back to edit question",
+                    "質問を編集に戻る",
+                    "질문 수정하러 돌아가기"
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -2927,7 +3017,12 @@ export default function Home() {
             <motion.div key="ssel" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("選擇塔羅牌陣", "Choose Your Tarot Spread")}
+                  {t(
+                    "選擇塔羅牌陣",
+                    "Choose Your Tarot Spread",
+                    "タロット スプレッドを選ぶ",
+                    "타로 스프레드 선택"
+                  )}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6, lineHeight: 1.7 }}>
                   {t(
@@ -3013,11 +3108,21 @@ export default function Home() {
                               paddingBottom: 1,
                             }}
                           >
-                            {t("看詳細介紹 →", "Details →")}
+                            {t(
+                              "看詳細介紹 →",
+                              "Details →",
+                              "詳細を見る →",
+                              "자세히 보기 →"
+                            )}
                           </Link>
                           {lockedForGuest && (
                             <span style={{ color: "#fde68a", fontSize: 11 }}>
-                              🔒 {t("登入會員可解鎖", "Sign in to unlock")}
+                              🔒 {t(
+                                "登入會員可解鎖",
+                                "Sign in to unlock",
+                                "ログインで解除",
+                                "로그인 시 잠금 해제"
+                              )}
                             </span>
                           )}
                         </div>
@@ -3040,7 +3145,12 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回選擇工具", "Back to choose oracle")}
+                  {t(
+                    "返回選擇工具",
+                    "Back to choose oracle",
+                    "ツール選択に戻る",
+                    "도구 선택으로 돌아가기"
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -3051,10 +3161,20 @@ export default function Home() {
             <motion.div key="mode" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 24 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("選擇占卜方式", "Choose Divination Mode")}
+                  {t(
+                    "選擇占卜方式",
+                    "Choose Divination Mode",
+                    "占い方法を選ぶ",
+                    "점치는 방식 선택"
+                  )}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6 }}>
-                  {t("兩種方式都能得到相同品質的卦象", "Both modes produce the same quality reading")}
+                  {t(
+                    "兩種方式都能得到相同品質的卦象",
+                    "Both modes produce the same quality reading",
+                    "どちらの方式も同じ品質の卦象が得られます",
+                    "두 방식 모두 같은 품질의 점괘를 얻습니다"
+                  )}
                 </p>
               </div>
 
@@ -3090,14 +3210,14 @@ export default function Home() {
                         borderRadius: 9999,
                       }}
                     >
-                      {t("上次選擇", "Last used")}
+                      {t("上次選擇", "Last used", "前回の選択", "최근 선택")}
                     </span>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 32 }}>⚡</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("自動占卜", "Auto")}
+                        {t("自動占卜", "Auto", "自動占い", "자동 점")}
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -3140,14 +3260,14 @@ export default function Home() {
                         borderRadius: 9999,
                       }}
                     >
-                      {t("上次選擇", "Last used")}
+                      {t("上次選擇", "Last used", "前回の選択", "최근 선택")}
                     </span>
                   )}
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 32 }}>🪙</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("手動占卜", "Manual")}
+                        {t("手動占卜", "Manual", "手動占い", "수동 점")}
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -3173,7 +3293,12 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回選擇工具", "Back to choose oracle")}
+                  {t(
+                    "返回選擇工具",
+                    "Back to choose oracle",
+                    "ツール選択に戻る",
+                    "도구 선택으로 돌아가기"
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -3184,7 +3309,7 @@ export default function Home() {
             <motion.div key="div" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("擲銅錢", "Throw the Coins")}
+                  {t("擲銅錢", "Throw the Coins", "銅銭を投げる", "동전 던지기")}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginTop: 4 }}>
                   {t(`第 ${currentThrow + 1} 爻（共 6 爻）`, `Line ${currentThrow + 1} of 6`)}
@@ -3238,8 +3363,18 @@ export default function Home() {
                     </motion.span>
                     <span>
                       {throws.length >= 6
-                        ? t("占卜完成,正在為您解讀...", "Divination complete, reading...")
-                        : t("自動占卜進行中...", "Auto divination in progress...")}
+                        ? t(
+                            "占卜完成,正在為您解讀...",
+                            "Divination complete, reading...",
+                            "占い完了。解読中…",
+                            "점 완료. 해석 중…"
+                          )
+                        : t(
+                            "自動占卜進行中...",
+                            "Auto divination in progress...",
+                            "自動占い進行中…",
+                            "자동 점 진행 중…"
+                          )}
                     </span>
                   </div>
                 ) : (
@@ -3251,7 +3386,9 @@ export default function Home() {
                     className="btn-gold"
                     style={{ fontSize: 18, padding: "14px 48px" }}
                   >
-                    {isFlipping ? t("擲銅錢中...", "Throwing...") : t("擲銅錢", "Throw Coins")}
+                    {isFlipping
+                      ? t("擲銅錢中...", "Throwing...", "投擲中…", "던지는 중…")
+                      : t("擲銅錢", "Throw Coins", "銅銭を投げる", "동전 던지기")}
                   </motion.button>
                 )}
               </div>
@@ -3463,7 +3600,12 @@ export default function Home() {
                     cursor: "pointer",
                   }}
                 >
-                  {t("返回選擇牌陣", "Back to choose spread")}
+                  {t(
+                    "返回選擇牌陣",
+                    "Back to choose spread",
+                    "スプレッド選択に戻る",
+                    "스프레드 선택으로 돌아가기"
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -3548,7 +3690,7 @@ export default function Home() {
               {/* AI Analysis - clearly marked */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  ✦ {t("老師解盤", "Master's Reading")}
+                  ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
                 </h3>
 
                 {isLoadingAI && !aiReading ? (
@@ -3556,7 +3698,12 @@ export default function Home() {
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       style={{ fontSize: 24 }}>☯</motion.div>
                     <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14 }}>
-                      {t("正在為您分析...", "Analyzing for you...")}
+                      {t(
+                        "正在為您分析...",
+                        "Analyzing for you...",
+                        "解読中…",
+                        "해석 중…"
+                      )}
                     </span>
                   </div>
                 ) : (
@@ -3587,7 +3734,9 @@ export default function Home() {
                   >
                     {t(
                       "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                      "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                      "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                      "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                      "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                     )}
                   </p>
                 )}
@@ -3597,15 +3746,30 @@ export default function Home() {
               {!isLoadingAI && aiReading && (
                 <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                   <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                    📤 {t("分享這次占卜", "Share this divination")}
+                    📤 {t(
+                      "分享這次占卜",
+                      "Share this divination",
+                      "この占いをシェア",
+                      "이 점 공유하기"
+                    )}
                   </h3>
 
                   {/* v1: 下載分享圖 */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
                       {isActive
-                        ? t("📥 下載無浮水印分享圖（付費會員專屬）", "📥 Clean share image (premium member perk)")
-                        : t("📥 下載分享圖（免費版含浮水印，升級即可移除）", "📥 Download share image (free version has watermark)")}
+                        ? t(
+                            "📥 下載無浮水印分享圖（付費會員專屬）",
+                            "📥 Clean share image (premium member perk)",
+                            "📥 透かしなしの共有画像をダウンロード(有料会員限定)",
+                            "📥 워터마크 없는 공유 이미지 다운로드(유료 회원 전용)"
+                          )
+                        : t(
+                            "📥 下載分享圖（免費版含浮水印，升級即可移除）",
+                            "📥 Download share image (free version has watermark)",
+                            "📥 共有画像をダウンロード(無料版は透かし入り、アップグレードで除去可)",
+                            "📥 공유 이미지 다운로드(무료 버전은 워터마크, 업그레이드 시 제거)"
+                          )}
                     </p>
                     <button
                       onClick={handleShare}
@@ -3614,8 +3778,8 @@ export default function Home() {
                       style={{ fontSize: 14, padding: "10px 20px", flexShrink: 0 }}
                     >
                       {isSharing
-                        ? t("產生中…", "Generating…")
-                        : t("下載分享圖", "Download")}
+                        ? t("產生中…", "Generating…", "生成中…", "생성 중…")
+                        : t("下載分享圖", "Download", "ダウンロード", "다운로드")}
                     </button>
                   </div>
 
@@ -3640,7 +3804,7 @@ export default function Home() {
                           className="btn-gold"
                           style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
                         >
-                          {t("登入", "Sign in")}
+                          {t("登入", "Sign in", "ログイン", "로그인")}
                         </button>
                       </div>
                     ) : !isPublic ? (
@@ -3667,8 +3831,13 @@ export default function Home() {
                           }}
                         >
                           {isTogglingPublic
-                            ? t("開啟中…", "Enabling…")
-                            : t("🔓 開啟分享連結", "🔓 Enable share link")}
+                            ? t("開啟中…", "Enabling…", "有効化中…", "활성화 중…")
+                            : t(
+                                "🔓 開啟分享連結",
+                                "🔓 Enable share link",
+                                "🔓 共有リンクを有効化",
+                                "🔓 공유 링크 활성화"
+                              )}
                         </button>
                       </div>
                     ) : (
@@ -3719,8 +3888,8 @@ export default function Home() {
                             }}
                           >
                             {copyStatus === "copied"
-                              ? t("已複製 ✓", "Copied ✓")
-                              : t("複製", "Copy")}
+                              ? t("已複製 ✓", "Copied ✓", "コピー済み ✓", "복사됨 ✓")
+                              : t("複製", "Copy", "コピー", "복사")}
                           </button>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -3745,8 +3914,13 @@ export default function Home() {
                             }}
                           >
                             {isTogglingPublic
-                              ? t("關閉中…", "Disabling…")
-                              : t("🔒 關閉公開", "🔒 Make private")}
+                              ? t("關閉中…", "Disabling…", "無効化中…", "비활성화 중…")
+                              : t(
+                                  "🔒 關閉公開",
+                                  "🔒 Make private",
+                                  "🔒 非公開にする",
+                                  "🔒 비공개로 전환"
+                                )}
                           </button>
                         </div>
                       </div>
@@ -3771,7 +3945,7 @@ export default function Home() {
                 style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
               >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
-                  {t("繼續請教老師", "Ask the Master")}
+                  {t("繼續請教老師", "Ask the Master", "占い師に質問する", "선생님께 물어보기")}
                 </h3>
 
                 {/* Chat messages */}
@@ -3794,7 +3968,7 @@ export default function Home() {
                         }}>
                           {msg.role === "assistant" && (
                             <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
-                              {t("老師", "Master")}
+                              {t("老師", "Master", "占い師", "선생님")}
                             </span>
                           )}
                           {msg.content}
@@ -3820,7 +3994,9 @@ export default function Home() {
                               >
                                 {t(
                                   "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                                  "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                  "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                                  "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                                  "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                                 )}
                               </div>
                             )}
@@ -3838,7 +4014,12 @@ export default function Home() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
-                    placeholder={t("想問老師什麼呢...", "Ask the master...")}
+                    placeholder={t(
+                      "想問老師什麼呢...",
+                      "Ask the master...",
+                      "占い師に聞きたいこと…",
+                      "선생님께 물어볼 것…"
+                    )}
                     disabled={isChatLoading || isLoadingAI}
                     style={{
                       flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10,
@@ -3859,7 +4040,7 @@ export default function Home() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {t("送出", "Send")}
+                    {t("送出", "Send", "送信", "보내기")}
                   </button>
                 </div>
 
@@ -3870,7 +4051,7 @@ export default function Home() {
               {/* Actions */}
               <div style={{ marginTop: 16 }}>
                 <button onClick={handleReset} className="btn-gold" style={{ width: "100%", fontSize: 16 }}>
-                  {t("重新占卜", "New Divination")}
+                  {t("重新占卜", "New Divination", "新しい占い", "새로운 점")}
                 </button>
               </div>
             </motion.div>
@@ -4019,7 +4200,7 @@ export default function Home() {
               {/* AI 解讀 */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  ✦ {t("老師解盤", "Master's Reading")}
+                  ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
                 </h3>
 
                 {isLoadingAI && !aiReading ? (
@@ -4027,7 +4208,12 @@ export default function Home() {
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       style={{ fontSize: 24 }}>🎴</motion.div>
                     <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 14 }}>
-                      {t("正在為您分析...", "Analyzing for you...")}
+                      {t(
+                        "正在為您分析...",
+                        "Analyzing for you...",
+                        "解読中…",
+                        "해석 중…"
+                      )}
                     </span>
                   </div>
                 ) : (
@@ -4058,7 +4244,9 @@ export default function Home() {
                   >
                     {t(
                       "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                      "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                      "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                      "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                      "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                     )}
                   </p>
                 )}
@@ -4068,15 +4256,30 @@ export default function Home() {
               {!isLoadingAI && aiReading && (
                 <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                   <h3 style={{ fontSize: 15, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                    📤 {t("分享這次占卜", "Share this divination")}
+                    📤 {t(
+                      "分享這次占卜",
+                      "Share this divination",
+                      "この占いをシェア",
+                      "이 점 공유하기"
+                    )}
                   </h3>
 
                   {/* v1: 下載分享圖 */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                     <p style={{ flex: "1 1 200px", color: "rgba(192,192,208,0.7)", fontSize: 12, lineHeight: 1.6, margin: 0 }}>
                       {isActive
-                        ? t("📥 下載無浮水印分享圖(付費會員專屬)", "📥 Clean share image (premium member perk)")
-                        : t("📥 下載分享圖(免費版含浮水印,升級即可移除)", "📥 Download share image (free version has watermark)")}
+                        ? t(
+                            "📥 下載無浮水印分享圖(付費會員專屬)",
+                            "📥 Clean share image (premium member perk)",
+                            "📥 透かしなしの共有画像をダウンロード(有料会員限定)",
+                            "📥 워터마크 없는 공유 이미지 다운로드(유료 회원 전용)"
+                          )
+                        : t(
+                            "📥 下載分享圖(免費版含浮水印,升級即可移除)",
+                            "📥 Download share image (free version has watermark)",
+                            "📥 共有画像をダウンロード(無料版は透かし入り、アップグレードで除去可)",
+                            "📥 공유 이미지 다운로드(무료 버전은 워터마크, 업그레이드 시 제거)"
+                          )}
                     </p>
                     <button
                       onClick={handleShare}
@@ -4085,8 +4288,8 @@ export default function Home() {
                       style={{ fontSize: 14, padding: "10px 20px", flexShrink: 0 }}
                     >
                       {isSharing
-                        ? t("產生中…", "Generating…")
-                        : t("下載分享圖", "Download")}
+                        ? t("產生中…", "Generating…", "生成中…", "생성 중…")
+                        : t("下載分享圖", "Download", "ダウンロード", "다운로드")}
                     </button>
                   </div>
 
@@ -4111,7 +4314,7 @@ export default function Home() {
                           className="btn-gold"
                           style={{ fontSize: 13, padding: "8px 18px", flexShrink: 0 }}
                         >
-                          {t("登入", "Sign in")}
+                          {t("登入", "Sign in", "ログイン", "로그인")}
                         </button>
                       </div>
                     ) : !isPublic ? (
@@ -4138,8 +4341,13 @@ export default function Home() {
                           }}
                         >
                           {isTogglingPublic
-                            ? t("開啟中…", "Enabling…")
-                            : t("🔓 開啟分享連結", "🔓 Enable share link")}
+                            ? t("開啟中…", "Enabling…", "有効化中…", "활성화 중…")
+                            : t(
+                                "🔓 開啟分享連結",
+                                "🔓 Enable share link",
+                                "🔓 共有リンクを有効化",
+                                "🔓 공유 링크 활성화"
+                              )}
                         </button>
                       </div>
                     ) : (
@@ -4190,8 +4398,8 @@ export default function Home() {
                             }}
                           >
                             {copyStatus === "copied"
-                              ? t("已複製 ✓", "Copied ✓")
-                              : t("複製", "Copy")}
+                              ? t("已複製 ✓", "Copied ✓", "コピー済み ✓", "복사됨 ✓")
+                              : t("複製", "Copy", "コピー", "복사")}
                           </button>
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -4216,8 +4424,13 @@ export default function Home() {
                             }}
                           >
                             {isTogglingPublic
-                              ? t("關閉中…", "Disabling…")
-                              : t("🔒 關閉公開", "🔒 Make private")}
+                              ? t("關閉中…", "Disabling…", "無効化中…", "비활성화 중…")
+                              : t(
+                                  "🔒 關閉公開",
+                                  "🔒 Make private",
+                                  "🔒 非公開にする",
+                                  "🔒 비공개로 전환"
+                                )}
                           </button>
                         </div>
                       </div>
@@ -4242,7 +4455,7 @@ export default function Home() {
                 style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
               >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
-                  {t("繼續請教老師", "Ask the Master")}
+                  {t("繼續請教老師", "Ask the Master", "占い師に質問する", "선생님께 물어보기")}
                 </h3>
 
                 {chatMessages.length > 0 && (
@@ -4264,7 +4477,7 @@ export default function Home() {
                         }}>
                           {msg.role === "assistant" && (
                             <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
-                              {t("老師", "Master")}
+                              {t("老師", "Master", "占い師", "선생님")}
                             </span>
                           )}
                           {msg.content}
@@ -4290,7 +4503,9 @@ export default function Home() {
                               >
                                 {t(
                                   "※ 僅供參考,不構成投資、醫療、法律或重大決策之建議。",
-                                  "※ For reference only. Not investment, medical, legal, or major life decision advice."
+                                  "※ For reference only. Not investment, medical, legal, or major life decision advice.",
+                                  "※ 参考のみ。投資・医療・法律・人生の重要な決断のアドバイスではありません。",
+                                  "※ 참고용입니다. 투자·의료·법률·인생의 중대한 결정의 조언이 아닙니다."
                                 )}
                               </div>
                             )}
@@ -4307,7 +4522,12 @@ export default function Home() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
-                    placeholder={t("想問老師什麼呢...", "Ask the master...")}
+                    placeholder={t(
+                      "想問老師什麼呢...",
+                      "Ask the master...",
+                      "占い師に聞きたいこと…",
+                      "선생님께 물어볼 것…"
+                    )}
                     disabled={isChatLoading || isLoadingAI}
                     style={{
                       flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 10,
@@ -4328,7 +4548,7 @@ export default function Home() {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {t("送出", "Send")}
+                    {t("送出", "Send", "送信", "보내기")}
                   </button>
                 </div>
 
@@ -4339,7 +4559,7 @@ export default function Home() {
               {/* Actions */}
               <div style={{ marginTop: 16 }}>
                 <button onClick={handleReset} className="btn-gold" style={{ width: "100%", fontSize: 16 }}>
-                  {t("重新占卜", "New Divination")}
+                  {t("重新占卜", "New Divination", "新しい占い", "새로운 점")}
                 </button>
               </div>
             </motion.div>

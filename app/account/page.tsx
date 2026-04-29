@@ -163,7 +163,7 @@ export default function AccountPage() {
               color: "rgba(192,192,208,0.6)",
             }}
           >
-            {t("載入中...", "Loading...")}
+            {t("載入中...", "Loading...", "読み込み中...", "불러오는 중...")}
           </div>
         </main>
       </div>
@@ -227,7 +227,12 @@ export default function AccountPage() {
                 textDecoration: "none",
               }}
             >
-              {t("回首頁登入", "Back to home to sign in")}
+              {t(
+                "回首頁登入",
+                "Back to home to sign in",
+                "ホームに戻ってログイン",
+                "홈으로 돌아가 로그인"
+              )}
             </Link>
           </div>
         </main>
@@ -244,7 +249,7 @@ export default function AccountPage() {
   const statusBadge = (() => {
     if (isActive) {
       return {
-        label: t("訂閱中", "Active"),
+        label: t("訂閱中", "Active", "サブスク中", "구독 중"),
         bg: "rgba(16,185,129,0.12)",
         border: "rgba(52,211,153,0.45)",
         color: "#6ee7b7",
@@ -252,7 +257,12 @@ export default function AccountPage() {
     }
     if (status === "canceled") {
       return {
-        label: t("已取消(未到期)", "Canceled (still valid)"),
+        label: t(
+          "已取消(未到期)",
+          "Canceled (still valid)",
+          "キャンセル済み(有効期限内)",
+          "취소됨(유효 기간 내)"
+        ),
         bg: "rgba(245,158,11,0.12)",
         border: "rgba(251,191,36,0.45)",
         color: "#fcd34d",
@@ -260,14 +270,14 @@ export default function AccountPage() {
     }
     if (status === "expired") {
       return {
-        label: t("已到期", "Expired"),
+        label: t("已到期", "Expired", "期限切れ", "만료됨"),
         bg: "rgba(244,63,94,0.12)",
         border: "rgba(251,113,133,0.45)",
         color: "#fda4af",
       };
     }
     return {
-      label: t("免費會員", "Free Member"),
+      label: t("免費會員", "Free Member", "無料会員", "무료 회원"),
       bg: "rgba(192,192,208,0.08)",
       border: "rgba(192,192,208,0.3)",
       color: "rgba(192,192,208,0.9)",
@@ -277,13 +287,18 @@ export default function AccountPage() {
   const planLabel = (() => {
     switch (plan) {
       case "monthly":
-        return t("月訂閱", "Monthly");
+        return t("月訂閱", "Monthly", "月額プラン", "월간 플랜");
       case "yearly":
-        return t("年訂閱", "Yearly");
+        return t("年訂閱", "Yearly", "年額プラン", "연간 플랜");
       case "lifetime":
-        return t("終身方案", "Lifetime");
+        return t("終身方案", "Lifetime", "ライフタイム", "라이프타임");
       default:
-        return t("尚未訂閱", "Not subscribed");
+        return t(
+          "尚未訂閱",
+          "Not subscribed",
+          "未登録",
+          "구독 안 함"
+        );
     }
   })();
 
@@ -300,7 +315,7 @@ export default function AccountPage() {
     user.user_metadata?.full_name ||
     user.user_metadata?.name ||
     user.email?.split("@")[0] ||
-    t("無名氏", "Anonymous");
+    t("無名氏", "Anonymous", "匿名", "익명");
 
   const labelStyle = {
     color: "rgba(192,192,208,0.5)",
@@ -325,7 +340,7 @@ export default function AccountPage() {
             marginBottom: 24,
           }}
         >
-          {t("我的會員", "My Account")}
+          {t("我的會員", "My Account", "マイアカウント", "내 계정")}
         </h1>
 
         {/* --- Profile card --- */}
@@ -400,7 +415,7 @@ export default function AccountPage() {
                 margin: 0,
               }}
             >
-              {t("訂閱狀態", "Subscription")}
+              {t("訂閱狀態", "Subscription", "サブスク状態", "구독 상태")}
             </h2>
             <span
               style={{
@@ -424,20 +439,20 @@ export default function AccountPage() {
             }}
           >
             <div>
-              <div style={labelStyle}>{t("方案", "Plan")}</div>
+              <div style={labelStyle}>{t("方案", "Plan", "プラン", "플랜")}</div>
               <div style={valueStyle}>{planLabel}</div>
             </div>
             <div>
-              <div style={labelStyle}>{t("到期日", "Expires")}</div>
+              <div style={labelStyle}>{t("到期日", "Expires", "有効期限", "만료일")}</div>
               <div style={valueStyle}>
                 {plan === "lifetime"
-                  ? t("永久", "Never")
+                  ? t("永久", "Never", "永久", "영구")
                   : formatDate(summary?.subscription_expires_at)}
               </div>
             </div>
             {summary?.subscription_started_at && (
               <div>
-                <div style={labelStyle}>{t("開始日", "Started")}</div>
+                <div style={labelStyle}>{t("開始日", "Started", "開始日", "시작일")}</div>
                 <div style={valueStyle}>
                   {formatDate(summary.subscription_started_at)}
                 </div>
@@ -449,10 +464,10 @@ export default function AccountPage() {
               plan !== "lifetime" && (
                 <div>
                   <div style={labelStyle}>
-                    {t("剩餘天數", "Days Left")}
+                    {t("剩餘天數", "Days Left", "残日数", "남은 일수")}
                   </div>
                   <div style={valueStyle}>
-                    {daysRemaining} {t("天", "days")}
+                    {daysRemaining} {t("天", "days", "日", "일")}
                   </div>
                 </div>
               )}
@@ -491,7 +506,12 @@ export default function AccountPage() {
                   textDecoration: "none",
                 }}
               >
-                {t("查看訂閱方案", "See Subscription Plans")}
+                {t(
+                  "查看訂閱方案",
+                  "See Subscription Plans",
+                  "サブスクプランを見る",
+                  "구독 플랜 보기"
+                )}
               </Link>
             </div>
           )}
@@ -533,7 +553,12 @@ export default function AccountPage() {
               textDecoration: "none",
             }}
           >
-            {t("→ 購買點數", "→ Purchase Credits")}
+            {t(
+              "→ 購買點數",
+              "→ Purchase Credits",
+              "→ ポイント購入",
+              "→ 포인트 구매"
+            )}
           </Link>
           {isActive && (
             <Link
@@ -546,7 +571,12 @@ export default function AccountPage() {
                 textDecoration: "none",
               }}
             >
-              {t("→ 管理訂閱方案", "→ Manage Subscription")}
+              {t(
+                "→ 管理訂閱方案",
+                "→ Manage Subscription",
+                "→ サブスク管理",
+                "→ 구독 관리"
+              )}
             </Link>
           )}
           <Link
@@ -559,7 +589,7 @@ export default function AccountPage() {
               textDecoration: "none",
             }}
           >
-            {t("→ 占卜紀錄", "→ Divination History")}
+            {t("→ 占卜紀錄", "→ Divination History", "→ 占い履歴", "→ 점 기록")}
           </Link>
           <Link
             href="/account/linked"
@@ -571,7 +601,12 @@ export default function AccountPage() {
               textDecoration: "none",
             }}
           >
-            {t("→ 登入方式綁定", "→ Linked Sign-in Methods")}
+            {t(
+              "→ 登入方式綁定",
+              "→ Linked Sign-in Methods",
+              "→ ログイン方法の連携",
+              "→ 로그인 방법 연동"
+            )}
           </Link>
           <Link
             href="/"
@@ -583,7 +618,12 @@ export default function AccountPage() {
               textDecoration: "none",
             }}
           >
-            {t("→ 開始新占卜", "→ Start a new divination")}
+            {t(
+              "→ 開始新占卜",
+              "→ Start a new divination",
+              "→ 新しい占いを始める",
+              "→ 새로운 점 시작"
+            )}
           </Link>
           <button
             onClick={handleLogout}
@@ -601,7 +641,7 @@ export default function AccountPage() {
               cursor: "pointer",
             }}
           >
-            {t("登出", "Sign Out")}
+            {t("登出", "Sign Out", "ログアウト", "로그아웃")}
           </button>
 
           {/* 取消訂閱 — 小、低調,只在有效中訂閱者出現 */}
@@ -628,8 +668,13 @@ export default function AccountPage() {
               )}
             >
               {cancelLoading
-                ? t("處理中…", "Processing…")
-                : t("取消訂閱(停止下期續扣)", "Cancel subscription (stop auto-renewal)")}
+                ? t("處理中…", "Processing…", "処理中…", "처리 중…")
+                : t(
+                    "取消訂閱(停止下期續扣)",
+                    "Cancel subscription (stop auto-renewal)",
+                    "サブスク解約(次回更新を停止)",
+                    "구독 취소(다음 갱신 중지)"
+                  )}
             </button>
           )}
           {cancelMessage && (
@@ -656,7 +701,12 @@ export default function AccountPage() {
               textDecoration: "none",
             }}
           >
-            {t("→ 刪除帳號與所有資料", "→ Delete account & all data")}
+            {t(
+              "→ 刪除帳號與所有資料",
+              "→ Delete account & all data",
+              "→ アカウントとすべてのデータを削除",
+              "→ 계정과 모든 데이터 삭제"
+            )}
           </Link>
         </div>
       </main>
