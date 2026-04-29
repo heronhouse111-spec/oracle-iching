@@ -12,7 +12,7 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   display_name text,
   avatar_url text,
-  preferred_locale text default 'zh' check (preferred_locale in ('zh', 'en')),
+  preferred_locale text default 'zh' check (preferred_locale in ('zh', 'en', 'ja', 'ko')),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -59,7 +59,7 @@ create table public.divinations (
   changing_lines integer[] default '{}',
   relating_hexagram_number integer check (relating_hexagram_number between 1 and 64),
   ai_reading text,
-  locale text default 'zh' check (locale in ('zh', 'en')),
+  locale text default 'zh' check (locale in ('zh', 'en', 'ja', 'ko')),
   created_at timestamptz default now()
 );
 
