@@ -151,8 +151,9 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
         throw new Error(j.detail ?? j.error ?? `HTTP ${res.status}`);
       }
 
-      // 翻譯部分失敗的話 server 會回 translationWarnings array
+      // server 會回 translationSkipped + translationWarnings(部分失敗的語系列表)
       const data = (await res.json().catch(() => ({}))) as {
+        translationSkipped?: boolean;
         translationWarnings?: { lang: string; message: string }[];
       };
       if (data.translationWarnings && data.translationWarnings.length > 0) {
@@ -161,11 +162,22 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
           `已儲存,但部分語系翻譯失敗(${langs})— 該語系前台會 fallback 到中文。可在文章列表重新編輯觸發再次翻譯。`
         );
         setSaving(false);
-        // 給使用者看 1.5s 警告再轉走
         setTimeout(() => {
           router.push("/admin/blog");
           router.refresh();
         }, 1500);
+        return;
+      }
+      if (data.translationSkipped) {
+        // 純改 meta(slug / 分類 / 日期 / 上架 / 封面圖)— 中文沒動,沒燒翻譯 token
+        setTranslationWarning(
+          "✓ 已儲存。中文內容未變動,跳過 AI 翻譯,沒有額外消耗 token。"
+        );
+        setSaving(false);
+        setTimeout(() => {
+          router.push("/admin/blog");
+          router.refresh();
+        }, 1200);
         return;
       }
 
@@ -210,7 +222,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
             marginBottom: 16,
           }}
         >
-          ⚠ {translationWarning}
+          {translationWarning}
         </div>
       )}
 

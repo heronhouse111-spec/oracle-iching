@@ -95,14 +95,46 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
     return NextResponse.json({ error: "validation", detail: validationError }, { status: 400 });
   }
 
-  // 重新從 zh 翻譯三語(覆蓋既有翻譯)— 確保所有語系都跟最新中文版同步
-  const translations = await translatePostToAllLangs({
-    title: body.titleZh!,
-    excerpt: body.excerptZh!,
-    body: body.bodyZh!,
-  });
-
   const supabase = createAdminClient();
+
+  // ── Diff check:中文三欄如果跟 DB 一模一樣 → 跳過翻譯,省 deepseek token ──
+  // 只改 slug / 分類 / 發布日期 / 上架狀態 / 封面圖 → 完全不打 API,update 只動 meta
+  const { data: existing, error: existingErr } = await supabase
+    .from("blog_posts")
+    .select("title_zh, excerpt_zh, body_zh")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (existingErr) {
+    return NextResponse.json(
+      { error: "db_error", detail: existingErr.message },
+      { status: 500 }
+    );
+  }
+  if (!existing) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  const arrayEq = (a: string[] | null | undefined, b: string[]): boolean => {
+    if (!Array.isArray(a) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  };
+
+  const zhUnchanged =
+    existing.title_zh === body.titleZh &&
+    existing.excerpt_zh === body.excerptZh &&
+    arrayEq(existing.body_zh as string[] | null, body.bodyZh!);
+
+  // 中文沒變 → 翻譯欄位都不動;有變 → 重新呼叫 deepseek 三語平行翻
+  const translations = zhUnchanged
+    ? null
+    : await translatePostToAllLangs({
+        title: body.titleZh!,
+        excerpt: body.excerptZh!,
+        body: body.bodyZh!,
+      });
+
   // 只覆寫翻譯成功的語系欄位 — 失敗的語系保留 DB 既有值,不要把舊翻譯洗掉
   const updatePayload: Record<string, unknown> = {
     slug: body.slug!,
@@ -114,17 +146,17 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
     excerpt_zh: body.excerptZh!,
     body_zh: body.bodyZh!,
   };
-  if (translations.en) {
+  if (translations?.en) {
     updatePayload.title_en = translations.en.title;
     updatePayload.excerpt_en = translations.en.excerpt;
     updatePayload.body_en = translations.en.body;
   }
-  if (translations.ja) {
+  if (translations?.ja) {
     updatePayload.title_ja = translations.ja.title;
     updatePayload.excerpt_ja = translations.ja.excerpt;
     updatePayload.body_ja = translations.ja.body;
   }
-  if (translations.ko) {
+  if (translations?.ko) {
     updatePayload.title_ko = translations.ko.title;
     updatePayload.excerpt_ko = translations.ko.excerpt;
     updatePayload.body_ko = translations.ko.body;
@@ -154,7 +186,9 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
     payload: {
       slug: data.slug,
       published: data.published,
-      translationErrors: translations.errors.length > 0 ? translations.errors : undefined,
+      translationSkipped: zhUnchanged,
+      translationErrors:
+        translations && translations.errors.length > 0 ? translations.errors : undefined,
     },
   });
 
@@ -163,7 +197,8 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
   return NextResponse.json({
     ok: true,
     post: data,
-    translationWarnings: translations.errors,
+    translationSkipped: zhUnchanged,
+    translationWarnings: translations?.errors ?? [],
   });
 }
 
