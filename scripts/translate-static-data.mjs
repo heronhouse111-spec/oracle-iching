@@ -651,6 +651,113 @@ Return STRICT JSON keyed by code (a 3-digit string like "111").`;
 }
 
 // ──────────────────────────────────────────
+// 5. Legal docs (privacy + terms)
+// ──────────────────────────────────────────
+// 跟前面 entity 不一樣 — legal docs 不是 keyed map,而是「整份 JSON 翻成另一份 JSON」。
+// data/legal/{privacy,terms}.zh.json 為 source of truth(en 已經人工寫好,但這裡只翻 zh→{ja,ko})。
+//
+// 設計選擇:
+//   - 整份送進去 + 要求 deepseek 回同 schema 的 JSON。沒有分批 — privacy ~3000 字、terms ~1500 字,
+//     一次塞得進 deepseek 的 max_tokens(8000)且翻譯一致性更高。
+//   - 翻譯時保留 inline syntax(**bold**、[text](url)),這個在 prompt 裡明示。
+async function translateLegalDoc(docName) {
+  const sourcePath = `data/legal/${docName}.zh.json`;
+  const sourceFull = resolve(repoRoot, sourcePath);
+  if (!existsSync(sourceFull)) {
+    console.warn(`  ⚠ ${docName}: source ${sourcePath} not found, skip`);
+    return;
+  }
+  const source = JSON.parse(readFileSync(sourceFull, "utf8"));
+  console.log(`▶ legal/${docName}: ${source.sections.length} sections`);
+
+  for (const lang of TARGETS) {
+    const file = `data/legal/${docName}.${lang}.json`;
+    const existing = loadJsonMap(file);
+    // 已有 sections.length > 0 視為已翻過(missing-only 跳過),force-all 才覆寫
+    const isComplete = existing.sections && existing.sections.length > 0;
+    if (isComplete && !FORCE_ALL) {
+      console.log(`  ⊘ ${lang}: already translated`);
+      continue;
+    }
+
+    const systemPrompt = `You are a professional legal-and-policy translator. Translate this Privacy Policy / Terms-of-Service document from Traditional Chinese into ${LANG_NAMES[lang]}.
+
+CRITICAL RULES:
+1. Preserve the JSON structure EXACTLY — same keys, same nesting, same array length, same block "type" values ("paragraph" or "list").
+2. Translate every "title", "lastUpdated", "heading", "footerNote", and the "content" inside each block.
+3. For paragraph blocks (type: "paragraph"), "content" is a single string — translate it as one string.
+4. For list blocks (type: "list"), "content" is an array of strings — translate each item to the SAME-LENGTH array.
+5. Inside any string, preserve these inline markers verbatim:
+   - **xxx**       → keep the asterisks; translate the text inside.
+   - [text](url)   → keep the URL EXACTLY; translate only the visible link text.
+   - \\n           → keep line breaks where present.
+6. Tone: formal but readable, matching how privacy / terms docs are typically written in ${LANG_NAMES[lang]}.
+7. Conventions:
+   - "Heronhouse" / "鷺居國際" → keep as-is in JA, transliterate to "헤론하우스" in KO (or "Heronhouse").
+   - "Tarogram" / "易問" → keep "Tarogram"; in JA may render as "易問", in KO as "타로그램".
+   - "易經" → "易経" (JA) / "주역" (KO).
+   - "塔羅" → "タロット" (JA) / "타로" (KO).
+   - Section numbering: JA uses "一、二、三…" or "1. 2. 3."; KO can use "1." form. Match the source's style.
+8. Output STRICT JSON. No prose, no code fences. The output must parse as the same shape as the input.`;
+
+    const userMessage = `Translate this legal document into ${LANG_NAMES[lang]}, preserving the JSON shape exactly.
+
+INPUT (zh):
+${JSON.stringify(source, null, 2)}
+
+Return STRICT JSON of the same shape.`;
+
+    try {
+      const parsed = await translateBatch({ systemPrompt, userMessage });
+      // sanity check on shape
+      if (
+        typeof parsed.title !== "string" ||
+        typeof parsed.lastUpdated !== "string" ||
+        !Array.isArray(parsed.sections) ||
+        parsed.sections.length !== source.sections.length
+      ) {
+        throw new Error(
+          `shape mismatch: title=${typeof parsed.title} lastUpdated=${typeof parsed.lastUpdated} sectionsLen=${
+            Array.isArray(parsed.sections) ? parsed.sections.length : "non-array"
+          } (expected ${source.sections.length})`
+        );
+      }
+      // 每個 section.blocks 數量也要對齊,list 條目數量也要對齊
+      for (let i = 0; i < source.sections.length; i++) {
+        const src = source.sections[i];
+        const out = parsed.sections[i];
+        if (!Array.isArray(out.blocks) || out.blocks.length !== src.blocks.length) {
+          throw new Error(`section ${i} blocks length mismatch (got ${out.blocks?.length}, expected ${src.blocks.length})`);
+        }
+        for (let j = 0; j < src.blocks.length; j++) {
+          if (out.blocks[j].type !== src.blocks[j].type) {
+            throw new Error(`section ${i} block ${j} type mismatch (got ${out.blocks[j].type}, expected ${src.blocks[j].type})`);
+          }
+          if (src.blocks[j].type === "list") {
+            const srcItems = src.blocks[j].content;
+            const outItems = out.blocks[j].content;
+            if (!Array.isArray(outItems) || outItems.length !== srcItems.length) {
+              throw new Error(`section ${i} block ${j} list length mismatch`);
+            }
+          }
+        }
+      }
+      // 過關,寫檔
+      const outPath = resolve(repoRoot, file);
+      writeFileSync(outPath, JSON.stringify(parsed, null, 2) + "\n", "utf8");
+      console.log(`  ✓ ${lang}: translated ${source.sections.length} sections`);
+    } catch (e) {
+      console.error(`  ✗ ${lang}: ${e.message}`);
+    }
+  }
+}
+
+async function translateLegal() {
+  await translateLegalDoc("privacy");
+  await translateLegalDoc("terms");
+}
+
+// ──────────────────────────────────────────
 // Main
 // ──────────────────────────────────────────
 function shouldRun(name) {
@@ -664,6 +771,7 @@ async function main() {
   if (shouldRun("spreads")) await translateSpreads();
   if (shouldRun("hexagrams")) await translateHexagrams();
   if (shouldRun("tarot")) await translateTarot();
+  if (shouldRun("legal")) await translateLegal();
   console.log("\n✓ Done.");
 }
 
