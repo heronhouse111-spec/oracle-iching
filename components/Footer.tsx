@@ -44,7 +44,6 @@ export default function Footer() {
           )}
         </p>
 
-        {/* 站內探索連結 — 牌陣大全、牌意百科、輕量入口、Blog */}
         <div
           style={{
             display: "flex",
@@ -56,22 +55,6 @@ export default function Footer() {
             marginBottom: 4,
           }}
         >
-          <Link href="/yes-no" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("Yes/No 占卜", "Yes/No", "Yes/No 占い", "Yes/No 점")}
-          </Link>
-          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
-          <Link href="/daily" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("每日一卡", "Daily Card", "今日の一枚", "오늘의 카드")}
-          </Link>
-          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
-          <Link href="/tarot/cards" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("78 張牌意", "78 Cards", "78枚の意味", "78장 카드 의미")}
-          </Link>
-          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
-          <Link href="/tarot-spread" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("牌陣大全", "Spreads", "スプレッド", "스프레드")}
-          </Link>
-          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link href="/blog" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
             {t("部落格", "Blog", "ブログ", "블로그")}
           </Link>
