@@ -2,19 +2,24 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { BLOG_POSTS, getBlogPost } from "@/data/blog";
+import {
+  getBlogPostBySlug,
+  getPublishedBlogPosts,
+  getAllPublishedSlugs,
+} from "@/lib/blog";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
+  const slugs = await getAllPublishedSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPostBySlug(slug);
   if (!post) return { title: "Article not found" };
 
   return {
@@ -26,6 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.excerptZh,
       type: "article",
       publishedTime: post.publishedAt,
+      images: post.heroImageUrl ? [{ url: post.heroImageUrl }] : undefined,
     },
   };
 }
@@ -77,14 +83,14 @@ function renderParagraph(p: string, key: string, isEn = false) {
 
 export default async function BlogSlugPage({ params }: Props) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await getBlogPostBySlug(slug);
   if (!post) notFound();
 
   // 找上一篇 / 下一篇(以 publishedAt 排序)
-  const sorted = [...BLOG_POSTS].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
+  const sorted = await getPublishedBlogPosts();
   const idx = sorted.findIndex((p) => p.slug === post.slug);
   const prev = idx > 0 ? sorted[idx - 1] : null;
-  const next = idx < sorted.length - 1 ? sorted[idx + 1] : null;
+  const next = idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : null;
 
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
@@ -95,6 +101,26 @@ export default async function BlogSlugPage({ params }: Props) {
             ← 部落格
           </Link>
         </nav>
+
+        {post.heroImageUrl && (
+          <div
+            style={{
+              width: "100%",
+              aspectRatio: "16 / 9",
+              borderRadius: 14,
+              overflow: "hidden",
+              border: "1px solid rgba(212,168,85,0.25)",
+              marginBottom: 24,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.heroImageUrl}
+              alt={post.titleZh}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          </div>
+        )}
 
         <header style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 11, color: "rgba(212,168,85,0.6)", letterSpacing: 1, marginBottom: 6 }}>

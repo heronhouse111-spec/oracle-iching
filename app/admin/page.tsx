@@ -407,6 +407,7 @@ export default async function AdminDashboardPage() {
                 gap: 10,
               }}
             >
+              <AdminLinkCard href="/admin/blog" icon="📝" title="部落格文章" desc="新增 / 編輯 / 刪除 /blog 上的文章,中英雙語" />
               <AdminLinkCard href="/admin/personas" icon="🧙" title="占卜師" desc="新增 / 編輯人格,設鎖定權限,上傳大頭照" />
               <AdminLinkCard href="/admin/inspirations" icon="✦" title="問題靈感" desc="6 大類問題題庫,4 語版本" />
               <AdminLinkCard href="/admin/ui-images" icon="🖼️" title="首頁 icon" desc="CTAs / 類別 / 免費工具 / 雙系統圖像" />

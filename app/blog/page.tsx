@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { BLOG_POSTS_BY_DATE } from "@/data/blog";
+import { getPublishedBlogPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
   title: "易經 × 塔羅 部落格 · Blog | Tarogram 易問",
@@ -14,7 +14,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogIndexPage() {
+export default async function BlogIndexPage() {
+  const posts = await getPublishedBlogPosts();
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
@@ -31,43 +32,78 @@ export default function BlogIndexPage() {
           </p>
         </header>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {BLOG_POSTS_BY_DATE.map((post) => (
-            <Link
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              style={{
-                display: "block",
-                background: "rgba(13,13,43,0.5)",
-                border: "1px solid rgba(212,168,85,0.2)",
-                borderRadius: 14,
-                padding: 20,
-                textDecoration: "none",
-                color: "inherit",
-              }}
-            >
-              <div style={{ fontSize: 11, color: "rgba(212,168,85,0.6)", letterSpacing: 1, marginBottom: 6 }}>
-                {post.publishedAt}
-              </div>
-              <h2
+        {posts.length === 0 ? (
+          <div
+            style={{
+              padding: 48,
+              textAlign: "center",
+              color: "rgba(192,192,208,0.55)",
+              fontSize: 14,
+            }}
+          >
+            尚無文章 · No posts yet
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {posts.map((post) => (
+              <Link
+                key={post.slug}
+                href={`/blog/${post.slug}`}
                 style={{
-                  fontFamily: "'Noto Serif TC', serif",
-                  fontSize: 19,
-                  color: "#d4a855",
-                  margin: "0 0 4px",
+                  display: "flex",
+                  gap: 14,
+                  background: "rgba(13,13,43,0.5)",
+                  border: "1px solid rgba(212,168,85,0.2)",
+                  borderRadius: 14,
+                  padding: 16,
+                  textDecoration: "none",
+                  color: "inherit",
                 }}
               >
-                {post.titleZh}
-              </h2>
-              <p style={{ color: "rgba(192,192,208,0.65)", fontSize: 13, fontStyle: "italic", margin: "0 0 8px" }}>
-                {post.titleEn}
-              </p>
-              <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.7, margin: 0 }}>
-                {post.excerptZh}
-              </p>
-            </Link>
-          ))}
-        </div>
+                {post.heroImageUrl && (
+                  <div
+                    style={{
+                      width: 96,
+                      flexShrink: 0,
+                      aspectRatio: "1 / 1",
+                      borderRadius: 10,
+                      overflow: "hidden",
+                      border: "1px solid rgba(212,168,85,0.2)",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={post.heroImageUrl}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: "rgba(212,168,85,0.6)", letterSpacing: 1, marginBottom: 6 }}>
+                    {post.publishedAt}
+                  </div>
+                  <h2
+                    style={{
+                      fontFamily: "'Noto Serif TC', serif",
+                      fontSize: 19,
+                      color: "#d4a855",
+                      margin: "0 0 4px",
+                    }}
+                  >
+                    {post.titleZh}
+                  </h2>
+                  <p style={{ color: "rgba(192,192,208,0.65)", fontSize: 13, fontStyle: "italic", margin: "0 0 8px" }}>
+                    {post.titleEn}
+                  </p>
+                  <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                    {post.excerptZh}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
