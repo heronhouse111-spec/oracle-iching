@@ -47,24 +47,10 @@ export default function Footer() {
         <div
           style={{
             display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            justifyContent: "center",
-            fontSize: 11,
-            marginTop: 4,
-            marginBottom: 4,
-          }}
-        >
-          <Link href="/blog" style={{ color: "rgba(212,168,85,0.75)", textDecoration: "none" }}>
-            {t("部落格", "Blog", "ブログ", "블로그")}
-          </Link>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
             gap: 14,
             alignItems: "center",
+            flexWrap: "wrap",
+            justifyContent: "center",
             fontSize: 11,
           }}
         >
@@ -88,6 +74,16 @@ export default function Footer() {
               <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
             </>
           )}
+          <Link
+            href="/blog"
+            style={{
+              color: "rgba(212,168,85,0.75)",
+              textDecoration: "none",
+            }}
+          >
+            {t("部落格", "Blog", "ブログ", "블로그")}
+          </Link>
+          <span style={{ color: "rgba(192,192,208,0.3)" }}>·</span>
           <Link
             href="/terms"
             style={{
