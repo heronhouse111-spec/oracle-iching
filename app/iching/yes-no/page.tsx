@@ -45,7 +45,6 @@ export default function IChingYesNoPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
-  const isZh = locale === "zh";
 
   const handleDraw = async () => {
     if (!question.trim()) return;
@@ -292,7 +291,12 @@ export default function IChingYesNoPage() {
                       fontFamily: "'Noto Serif TC', serif",
                     }}
                   >
-                    {isZh ? hex.nameZh : hex.nameEn.split(" ")[0]}
+                    {t(
+                      hex.nameZh,
+                      hex.nameEn.split(" ")[0],
+                      hex.nameJa,
+                      hex.nameKo
+                    )}
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginTop: 2 }}>
                     {t(
@@ -311,7 +315,6 @@ export default function IChingYesNoPage() {
                   <UpperLowerTrigrams
                     upperCode={hex.upperTrigram}
                     lowerCode={hex.lowerTrigram}
-                    isZh={isZh}
                     t={t}
                   />
 
@@ -352,41 +355,39 @@ export default function IChingYesNoPage() {
                     </motion.div>
                   )}
 
-                  {/* 卦辭原文 — 給看得懂中文的使用者看,其他語系沒有等同物只能跳過 */}
-                  {isZh && (
+                  {/* 卦辭原文 — 古漢語跨語系統一顯示;對照頁籤上方有現代訳 */}
+                  <div
+                    style={{
+                      background: "rgba(13,13,43,0.5)",
+                      border: "1px solid rgba(212,168,85,0.18)",
+                      borderRadius: 10,
+                      padding: 12,
+                      margin: "0 auto 14px",
+                      maxWidth: 560,
+                    }}
+                  >
                     <div
                       style={{
-                        background: "rgba(13,13,43,0.5)",
-                        border: "1px solid rgba(212,168,85,0.18)",
-                        borderRadius: 10,
-                        padding: 12,
-                        margin: "0 auto 14px",
-                        maxWidth: 560,
+                        fontSize: 11,
+                        color: "rgba(212,168,85,0.7)",
+                        letterSpacing: 1,
+                        marginBottom: 4,
                       }}
                     >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(212,168,85,0.7)",
-                          letterSpacing: 1,
-                          marginBottom: 4,
-                        }}
-                      >
-                        卦辭
-                      </div>
-                      <div
-                        style={{
-                          color: "#fde68a",
-                          fontSize: 15,
-                          fontWeight: 700,
-                          fontFamily: "'Noto Serif TC', serif",
-                          lineHeight: 1.7,
-                        }}
-                      >
-                        {hex.judgmentZh}
-                      </div>
+                      {t("卦辭", "Judgment", "卦辞", "괘사")}
                     </div>
-                  )}
+                    <div
+                      style={{
+                        color: "#fde68a",
+                        fontSize: 15,
+                        fontWeight: 700,
+                        fontFamily: "'Noto Serif TC', serif",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      {hex.judgmentZh}
+                    </div>
+                  </div>
 
                   <div
                     style={{
@@ -543,19 +544,17 @@ function HexagramLines({
 function UpperLowerTrigrams({
   upperCode,
   lowerCode,
-  isZh,
   t,
 }: {
   upperCode: string;
   lowerCode: string;
-  isZh: boolean;
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }) {
   const upper = trigramNames[upperCode];
   const lower = trigramNames[lowerCode];
   if (!upper || !lower) return null;
-  const upperName = isZh ? upper.zh : upper.en;
-  const lowerName = isZh ? lower.zh : lower.en;
+  const upperName = t(upper.zh, upper.en, upper.ja, upper.ko);
+  const lowerName = t(lower.zh, lower.en, lower.ja, lower.ko);
   return (
     <div
       style={{

@@ -9,8 +9,7 @@ interface Props {
 }
 
 export default function TarotSpreadIndexView({ uiImages }: Props) {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t } = useLanguage();
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
@@ -43,8 +42,8 @@ export default function TarotSpreadIndexView({ uiImages }: Props) {
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {SPREADS.map((s) => {
           const thumb = uiImages[spreadImageSlot(s.id)];
-          const sName = isZh ? s.nameZh : s.nameEn;
-          const sTagline = isZh ? s.taglineZh : s.taglineEn;
+          const sName = t(s.nameZh, s.nameEn, s.nameJa, s.nameKo);
+          const sTagline = t(s.taglineZh, s.taglineEn, s.taglineJa, s.taglineKo);
           return (
             <Link
               key={s.id}

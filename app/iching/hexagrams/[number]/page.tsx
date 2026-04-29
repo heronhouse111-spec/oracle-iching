@@ -54,10 +54,22 @@ export default async function IChingHexagramDetailPage({ params }: Props) {
   const prevHex = hex.number > 1 ? getHexagramByNumber(hex.number - 1) : null;
   const nextHex = hex.number < 64 ? getHexagramByNumber(hex.number + 1) : null;
   const prev = prevHex
-    ? { number: prevHex.number, nameZh: prevHex.nameZh, nameEn: prevHex.nameEn }
+    ? {
+        number: prevHex.number,
+        nameZh: prevHex.nameZh,
+        nameEn: prevHex.nameEn,
+        nameJa: prevHex.nameJa,
+        nameKo: prevHex.nameKo,
+      }
     : null;
   const next = nextHex
-    ? { number: nextHex.number, nameZh: nextHex.nameZh, nameEn: nextHex.nameEn }
+    ? {
+        number: nextHex.number,
+        nameZh: nextHex.nameZh,
+        nameEn: nextHex.nameEn,
+        nameJa: nextHex.nameJa,
+        nameKo: nextHex.nameKo,
+      }
     : null;
 
   return (

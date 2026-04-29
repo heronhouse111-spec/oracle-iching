@@ -15,8 +15,7 @@ const SECTIONS = [
 ];
 
 export default function HexagramsIndexView({ images }: Props) {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t } = useLanguage();
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
@@ -153,7 +152,7 @@ export default function HexagramsIndexView({ images }: Props) {
             >
               <div style={{ fontSize: 28, color: "#d4a855", lineHeight: 1 }}>{tg.symbol}</div>
               <div style={{ fontSize: 13, color: "#e8e8f0", marginTop: 6, fontWeight: 600 }}>
-                {isZh ? tg.zh : tg.en}
+                {t(tg.zh, tg.en, tg.ja, tg.ko)}
               </div>
             </div>
           ))}
@@ -220,7 +219,13 @@ export default function HexagramsIndexView({ images }: Props) {
             >
               {items.map((h) => {
                 const url = images[String(h.number)];
-                const hName = isZh ? h.nameZh : h.nameEn.split(" ")[0];
+                // EN 名為 "Qian (The Creative)" 形式,index card 上空間有限只取首字
+                const hName = t(
+                  h.nameZh,
+                  h.nameEn.split(" ")[0],
+                  h.nameJa,
+                  h.nameKo
+                );
                 const numLabel = t(
                   `第 ${h.number} 卦`,
                   `Hexagram ${h.number}`,

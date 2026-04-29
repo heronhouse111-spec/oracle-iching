@@ -168,7 +168,6 @@ const TIER_TEXT_COLORS = {
 
 export default function MethodsView() {
   const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
 
   const pickName = (m: Method) => {
     if (locale === "ja") return m.nameJa ?? m.nameEn;
@@ -274,7 +273,7 @@ export default function MethodsView() {
                   flexShrink: 0,
                 }}
               >
-                {isZh ? m.numberZh : m.numberEn}
+                {m.numberZh}
               </span>
               <h2
                 style={{

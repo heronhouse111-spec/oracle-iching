@@ -18,6 +18,8 @@ import {
   THREE_CARD_POSITIONS,
   SUIT_NAMES_ZH,
   SUIT_NAMES_EN,
+  SUIT_NAMES_JA,
+  SUIT_NAMES_KO,
   CARD_BACK_IMAGE,
   type DrawnCard,
 } from "@/data/tarot";
@@ -1061,7 +1063,6 @@ export default function Home() {
   // 讓 AI 知道「我們之前是看什麼卦、抽什麼牌、聊過什麼」,新占卜才能做連貫銜接。
   const buildPreviousContext = useCallback((): string => {
     if (!rootSnapshot) return "";
-    const isZh = locale === "zh";
 
     const describeIching = (
       label: string,
@@ -1071,13 +1072,16 @@ export default function Home() {
       reading: string
     ) => {
       if (!hex) return "";
-      const name = isZh ? hex.nameZh : hex.nameEn;
-      const judgment = isZh ? hex.judgmentZh : hex.judgmentEn;
-      const rel = relHex ? `${isZh ? "之卦" : "Relating"}: ${relHex.number} ${isZh ? relHex.nameZh : relHex.nameEn}` : "";
+      const name = t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
+      // 卦辭原文跨語系統一給 AI 古漢語(原典),不替換成現代訳 — AI 自己知道怎麼處理
+      const judgment = hex.judgmentZh;
+      const rel = relHex
+        ? `${t("之卦", "Relating", "之卦", "지괘")}: ${relHex.number} ${t(relHex.nameZh, relHex.nameEn, relHex.nameJa, relHex.nameKo)}`
+        : "";
       const cl = changing && changing.length > 0
-        ? `${isZh ? "變爻" : "Changing lines"}: ${changing.map((l) => l + 1).join(isZh ? "、" : ", ")}`
-        : (isZh ? "無變爻" : "No changing lines");
-      return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${hex.number} ${name} | ${judgment} | ${cl}${rel ? " | " + rel : ""}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
+        ? `${t("變爻", "Changing lines", "変爻", "변효")}: ${changing.map((l) => l + 1).join(t("、", ", ", "、", ", "))}`
+        : t("無變爻", "No changing lines", "変爻なし", "변효 없음");
+      return `【${label}】${t("易經", "I Ching", "易経", "주역")} | ${t("第", "#", "第", "제")}${hex.number} ${name} | ${judgment} | ${cl}${rel ? " | " + rel : ""}\n${t("當時老師的解盤", "Prior reading", "当時の解読", "당시의 해석")}: ${reading}`;
     };
 
     const describeTarot = (
@@ -1091,16 +1095,19 @@ export default function Home() {
       if (cards.length !== spread.cardCount) return "";
       const parts = cards.map((d, i) => {
         const pos = spread.positions[i];
-        const nm = isZh ? d.card.nameZh : d.card.nameEn;
-        const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
-        return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
-      }).join(isZh ? " / " : " / ");
-      const spreadLabel = isZh ? spread.nameZh : spread.nameEn;
-      return `【${label}】${isZh ? "塔羅" : "Tarot"} ${spreadLabel} | ${parts}\n${isZh ? "當時老師的解盤" : "Prior reading"}: ${reading}`;
+        const nm = t(d.card.nameZh, d.card.nameEn, d.card.nameJa, d.card.nameKo);
+        const ori = d.isReversed
+          ? t("逆位", "Reversed", "逆位置", "역방향")
+          : t("正位", "Upright", "正位置", "정방향");
+        const lbl = t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo);
+        return `${lbl}=${nm}(${ori})`;
+      }).join(" / ");
+      const spreadLabel = t(spread.nameZh, spread.nameEn, spread.nameJa, spread.nameKo);
+      return `【${label}】${t("塔羅", "Tarot", "タロット", "타로")} ${spreadLabel} | ${parts}\n${t("當時老師的解盤", "Prior reading", "当時の解読", "당시의 해석")}: ${reading}`;
     };
 
-    const rootLabel = isZh ? "原始占卜" : "Original reading";
-    const rootQ = `${isZh ? "原始問題" : "Original question"}: ${rootSnapshot.question}`;
+    const rootLabel = t("原始占卜", "Original reading", "元の占い", "원래 점");
+    const rootQ = `${t("原始問題", "Original question", "元の質問", "원래 질문")}: ${rootSnapshot.question}`;
     const rootBlock = rootSnapshot.divineType === "iching"
       ? describeIching(
           rootLabel,
@@ -1112,8 +1119,13 @@ export default function Home() {
       : describeTarot(rootLabel, rootSnapshot.drawnCards, rootSnapshot.aiReading, rootSnapshot.spreadId);
 
     const followBlocks = followUps.map((f, i) => {
-      const label = isZh ? `延伸第${i + 1}回合` : `Follow-up #${i + 1}`;
-      const q = `${isZh ? "當時問題" : "Question"}: ${f.question}`;
+      const label = t(
+        `延伸第${i + 1}回合`,
+        `Follow-up #${i + 1}`,
+        `フォローアップ #${i + 1}`,
+        `후속 #${i + 1}`
+      );
+      const q = `${t("當時問題", "Question", "当時の質問", "당시의 질문")}: ${f.question}`;
       const body = f.divineType === "iching"
         ? describeIching(label, f.hexagram ?? null, f.relatingHexagram ?? null, f.changingLines, f.aiReading)
         : describeTarot(label, f.drawnCards ?? [], f.aiReading, f.spreadId);
@@ -1121,7 +1133,7 @@ export default function Home() {
     });
 
     return [rootQ, rootBlock, ...followBlocks].filter(Boolean).join("\n\n");
-  }, [rootSnapshot, followUps, locale]);
+  }, [rootSnapshot, followUps, t]);
 
   const handleCategorySelect = (catId: string) => {
     setSelectedCategory(catId);
@@ -1301,11 +1313,13 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           hexagramNumber: hex.number,
-          hexagramName: locale === "zh" ? hex.nameZh : hex.nameEn,
+          hexagramName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
           changingLines: result.changingLines,
           relatingHexagramNumber: relHex?.number,
           question: userQuestion,
-          category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
+          category: category
+            ? t(category.promptHintZh, category.promptHintEn, category.promptHintJa, category.promptHintKo)
+            : "",
           locale,
           previousContext: followUpCtx,
           chatHistory: followUpChat,
@@ -1442,7 +1456,9 @@ export default function Home() {
           isReversed: d.isReversed,
         })),
         question: userQuestion,
-        category: category ? (locale === "zh" ? category.promptHintZh : category.promptHintEn) : "",
+        category: category
+          ? t(category.promptHintZh, category.promptHintEn, category.promptHintJa, category.promptHintKo)
+          : "",
         locale,
         previousContext: followUpCtx,
         chatHistory: followUpChat,
@@ -1596,50 +1612,72 @@ export default function Home() {
     if (divineType === "tarot" && chatSpread) {
       const lines = drawnCards.map((d, i) => {
         const pos = chatSpread.positions[i];
-        const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
+        const cardName = t(d.card.nameZh, d.card.nameEn, d.card.nameJa, d.card.nameKo);
         const meaning = d.isReversed
-          ? (locale === "zh" ? d.card.reversedMeaningZh : d.card.reversedMeaningEn)
-          : (locale === "zh" ? d.card.uprightMeaningZh : d.card.uprightMeaningEn);
-        if (locale === "zh") {
-          return `【${pos.labelZh}】${cardName}(${d.isReversed ? "逆位" : "正位"}):${meaning}`;
-        }
-        return `[${pos.labelEn}] ${cardName} (${d.isReversed ? "Reversed" : "Upright"}): ${meaning}`;
+          ? t(d.card.reversedMeaningZh, d.card.reversedMeaningEn, d.card.reversedMeaningJa, d.card.reversedMeaningKo)
+          : t(d.card.uprightMeaningZh, d.card.uprightMeaningEn, d.card.uprightMeaningJa, d.card.uprightMeaningKo);
+        const lbl = t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo);
+        const ori = d.isReversed
+          ? t("逆位", "Reversed", "逆位置", "역방향")
+          : t("正位", "Upright", "正位置", "정방향");
+        return `${t("【", "[", "【", "[")}${lbl}${t("】", "]", "】", "]")} ${cardName} (${ori}): ${meaning}`;
       }).join("\n");
-      const spreadLabel = locale === "zh" ? chatSpread.nameZh : chatSpread.nameEn;
-      readingContext = locale === "zh"
-        ? `問題:${userQuestion}\n\n${spreadLabel}(${chatSpread.cardCount} 張):\n${lines}\n\n老師解盤:${aiReading}`
-        : `Question: ${userQuestion}\n\n${spreadLabel} (${chatSpread.cardCount} cards):\n${lines}\n\nReading: ${aiReading}`;
+      const spreadLabel = t(chatSpread.nameZh, chatSpread.nameEn, chatSpread.nameJa, chatSpread.nameKo);
+      const cardCountLabel = t(
+        `${chatSpread.cardCount} 張`,
+        `${chatSpread.cardCount} cards`,
+        `${chatSpread.cardCount}枚`,
+        `${chatSpread.cardCount}장`
+      );
+      const qLabel = t("問題", "Question", "質問", "질문");
+      const readingLabel = t("老師解盤", "Reading", "解読", "해석");
+      readingContext = `${qLabel}: ${userQuestion}\n\n${spreadLabel}(${cardCountLabel}):\n${lines}\n\n${readingLabel}: ${aiReading}`;
     } else {
-      readingContext = locale === "zh"
-        ? `本卦：第${hexagram!.number}卦 ${hexagram!.nameZh}\n卦辭：${hexagram!.judgmentZh}\n象辭：${hexagram!.imageZh}\n問題：${userQuestion}\n老師解盤：${aiReading}`
-        : `Hexagram ${hexagram!.number}: ${hexagram!.nameEn}\nJudgment: ${hexagram!.judgmentEn}\nImage: ${hexagram!.imageEn}\nQuestion: ${userQuestion}\nReading: ${aiReading}`;
+      const hexName = t(hexagram!.nameZh, hexagram!.nameEn, hexagram!.nameJa, hexagram!.nameKo);
+      const judgmentModern = t(hexagram!.judgmentVernacularZh, hexagram!.judgmentEn, hexagram!.judgmentJa, hexagram!.judgmentKo);
+      const imageModern = t(hexagram!.imageVernacularZh, hexagram!.imageEn, hexagram!.imageJa, hexagram!.imageKo);
+      const numLabel = t(`第${hexagram!.number}卦`, `Hexagram ${hexagram!.number}`, `第${hexagram!.number}卦`, `제 ${hexagram!.number}괘`);
+      const judgmentLabel = t("卦辭", "Judgment", "卦辞", "괘사");
+      const imageLabel = t("象辭", "Image", "象辞", "상사");
+      const qLabel = t("問題", "Question", "質問", "질문");
+      const readingLabel = t("老師解盤", "Reading", "解読", "해석");
+      const benLabel = t("本卦", "Hexagram", "本卦", "본괘");
+      readingContext = `${benLabel}:${numLabel} ${hexName}\n${judgmentLabel}:${hexagram!.judgmentZh} (${judgmentModern})\n${imageLabel}:${hexagram!.imageZh} (${imageModern})\n${qLabel}:${userQuestion}\n${readingLabel}:${aiReading}`;
     }
 
     // 若這個 session 已經做過衍伸占卜,把衍伸鏈也接到 readingContext,
     // 這樣聊天 AI 會知道「根占卜 + 延伸占卜 X 次」的完整脈絡。
     if (followUps.length > 0) {
-      const isZh = locale === "zh";
       const followBlocks = followUps.map((f, i) => {
-        const label = isZh ? `延伸第${i + 1}回合` : `Follow-up #${i + 1}`;
+        const label = t(
+          `延伸第${i + 1}回合`,
+          `Follow-up #${i + 1}`,
+          `フォローアップ #${i + 1}`,
+          `후속 #${i + 1}`
+        );
         if (f.divineType === "iching" && f.hexagram) {
-          const nm = isZh ? f.hexagram.nameZh : f.hexagram.nameEn;
-          return `【${label}】${isZh ? "易經" : "I Ching"} | ${isZh ? "第" : "#"}${f.hexagram.number} ${nm}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
+          const nm = t(f.hexagram.nameZh, f.hexagram.nameEn, f.hexagram.nameJa, f.hexagram.nameKo);
+          const numLabel = t(`第${f.hexagram.number}卦`, `Hexagram ${f.hexagram.number}`, `第${f.hexagram.number}卦`, `제 ${f.hexagram.number}괘`);
+          return `【${label}】${t("易經", "I Ching", "易経", "주역")} | ${numLabel} ${nm}\n${t("當時問題", "Question", "当時の質問", "당시의 질문")}: ${f.question}\n${t("當時老師解盤", "Reading", "当時の解読", "당시의 해석")}: ${f.aiReading}`;
         }
         if (f.divineType === "tarot" && f.drawnCards && f.drawnCards.length > 0) {
           const fSpread = getSpread(f.spreadId ?? DEFAULT_SPREAD_ID);
           if (f.drawnCards.length !== fSpread.cardCount) return "";
           const parts = f.drawnCards.map((d, idx) => {
             const pos = fSpread.positions[idx];
-            const nm = isZh ? d.card.nameZh : d.card.nameEn;
-            const ori = d.isReversed ? (isZh ? "逆位" : "Reversed") : (isZh ? "正位" : "Upright");
-            return `${isZh ? pos.labelZh : pos.labelEn}=${nm}(${ori})`;
-          }).join(isZh ? " / " : " / ");
-          const spreadLabel = isZh ? fSpread.nameZh : fSpread.nameEn;
-          return `【${label}】${isZh ? "塔羅" : "Tarot"} ${spreadLabel} | ${parts}\n${isZh ? "當時問題" : "Question"}: ${f.question}\n${isZh ? "當時老師解盤" : "Reading"}: ${f.aiReading}`;
+            const nm = t(d.card.nameZh, d.card.nameEn, d.card.nameJa, d.card.nameKo);
+            const ori = d.isReversed
+              ? t("逆位", "Reversed", "逆位置", "역방향")
+              : t("正位", "Upright", "正位置", "정방향");
+            const lbl = t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo);
+            return `${lbl}=${nm}(${ori})`;
+          }).join(" / ");
+          const spreadLabel = t(fSpread.nameZh, fSpread.nameEn, fSpread.nameJa, fSpread.nameKo);
+          return `【${label}】${t("塔羅", "Tarot", "タロット", "타로")} ${spreadLabel} | ${parts}\n${t("當時問題", "Question", "当時の質問", "당시의 질문")}: ${f.question}\n${t("當時老師解盤", "Reading", "当時の解読", "당시의 해석")}: ${f.aiReading}`;
         }
         return "";
       }).filter(Boolean).join("\n\n");
-      readingContext = `${readingContext}\n\n${isZh ? "── 之後的延伸占卜 ──" : "── Subsequent follow-ups ──"}\n${followBlocks}`;
+      readingContext = `${readingContext}\n\n${t("── 之後的延伸占卜 ──", "── Subsequent follow-ups ──", "── その後のフォローアップ占い ──", "── 이후 후속 점 ──")}\n${followBlocks}`;
     }
 
     if (chatAbortRef.current) chatAbortRef.current.abort();
@@ -1752,7 +1790,9 @@ export default function Home() {
         </h3>
         {followUps.map((f, i) => {
           const isIching = f.divineType === "iching";
-          const hexName = f.hexagram ? (locale === "zh" ? f.hexagram.nameZh : f.hexagram.nameEn) : "";
+          const hexName = f.hexagram
+            ? t(f.hexagram.nameZh, f.hexagram.nameEn, f.hexagram.nameJa, f.hexagram.nameKo)
+            : "";
           const isLast = i === followUps.length - 1;
           return (
             <div
@@ -1766,13 +1806,18 @@ export default function Home() {
               }}
             >
               <div style={{ color: "#d4a855", fontSize: 12, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
-                {t(`延伸第 ${i + 1} 回合`, `Follow-up #${i + 1}`)}
+                {t(
+                  `延伸第 ${i + 1} 回合`,
+                  `Follow-up #${i + 1}`,
+                  `フォローアップ #${i + 1}`,
+                  `후속 #${i + 1}`
+                )}
                 <span style={{ color: "rgba(192,192,208,0.5)", marginLeft: 8 }}>
                   {isIching
-                    ? `· ☯ ${t("易經", "I Ching")} · ${hexName}`
+                    ? `· ☯ ${t("易經", "I Ching", "易経", "주역")} · ${hexName}`
                     : (() => {
                         const sp = getSpread(f.spreadId ?? DEFAULT_SPREAD_ID);
-                        return `· 🎴 ${locale === "zh" ? sp.nameZh : sp.nameEn}`;
+                        return `· 🎴 ${t(sp.nameZh, sp.nameEn, sp.nameJa, sp.nameKo)}`;
                       })()}
                 </span>
               </div>
@@ -1805,7 +1850,7 @@ export default function Home() {
                 }}>
                   {f.drawnCards!.map((d, idx) => {
                     const pos = fSpread.positions[idx] ?? fSpread.positions[0];
-                    const cardName = locale === "zh" ? d.card.nameZh : d.card.nameEn;
+                    const cardName = t(d.card.nameZh, d.card.nameEn, d.card.nameJa, d.card.nameKo);
                     return (
                       <div key={idx} style={{ textAlign: "center" }}>
                         <div style={{
@@ -1814,7 +1859,7 @@ export default function Home() {
                           marginBottom: 3,
                           fontFamily: "'Noto Serif TC', serif",
                         }}>
-                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                          {t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)}
                         </div>
                         <div style={{
                           width: "100%",
@@ -2383,7 +2428,7 @@ export default function Home() {
                       />
                       <div style={{ padding: "10px 8px 12px" }}>
                         <span style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                          {locale === "zh" ? cat.nameZh : cat.nameEn}
+                          {t(cat.nameZh, cat.nameEn, cat.nameJa, cat.nameKo)}
                         </span>
                       </div>
                     </motion.button>
@@ -2943,17 +2988,18 @@ export default function Home() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "baseline" }}>
                           <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 15, fontFamily: "'Noto Serif TC', serif" }}>
-                            {locale === "zh" ? s.nameZh : s.nameEn}
+                            {t(s.nameZh, s.nameEn, s.nameJa, s.nameKo)}
+                            {/* 第二語名 — 中文使用者顯示英文,其他語系顯示英文(讓使用者對照) */}
                             <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginLeft: 6, fontStyle: "italic", fontWeight: 400 }}>
-                              {locale === "zh" ? s.nameEn : s.nameZh}
+                              {locale === "en" ? s.nameZh : s.nameEn}
                             </span>
                           </div>
                           <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, whiteSpace: "nowrap" }}>
-                            {t(`${s.cardCount} 張`, `${s.cardCount} cards`)}
+                            {t(`${s.cardCount} 張`, `${s.cardCount} cards`, `${s.cardCount}枚`, `${s.cardCount}장`)}
                           </span>
                         </div>
                         <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 12, lineHeight: 1.55, margin: "4px 0 0" }}>
-                          {locale === "zh" ? s.taglineZh : s.taglineEn}
+                          {t(s.taglineZh, s.taglineEn, s.taglineJa, s.taglineKo)}
                         </p>
                         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 6 }}>
                           <Link
@@ -3221,23 +3267,38 @@ export default function Home() {
             const positionsHint =
               spread.positions
                 .slice(0, 3)
-                .map((p) => (locale === "zh" ? p.labelZh : p.labelEn))
+                .map((p) => t(p.labelZh, p.labelEn, p.labelJa, p.labelKo))
                 .join(" → ") + (spread.positions.length > 3 ? "…" : "");
             return (
             <motion.div key="tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
                 <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>
-                  {locale === "zh" ? spread.nameZh : spread.nameEn} · {spread.cardCount} {t("張", "cards")}
+                  {t(spread.nameZh, spread.nameEn, spread.nameJa, spread.nameKo)} · {spread.cardCount} {t("張", "cards", "枚", "장")}
                 </div>
                 <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t("翻牌揭示", "Reveal Your Cards")}
+                  {t("翻牌揭示", "Reveal Your Cards", "カードをめくる", "카드 펼치기")}
                 </h2>
                 <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 14, marginTop: 4 }}>
                   {revealedCount === 0
-                    ? t(`依序點擊牌卡翻開(${positionsHint})`, `Tap each card in order (${positionsHint})`)
+                    ? t(
+                        `依序點擊牌卡翻開(${positionsHint})`,
+                        `Tap each card in order (${positionsHint})`,
+                        `順番にカードをタップしてめくる(${positionsHint})`,
+                        `순서대로 카드를 탭해 펼치세요 (${positionsHint})`
+                      )
                     : revealedCount < spread.cardCount
-                    ? t(`已翻開 ${revealedCount} / ${spread.cardCount} 張`, `Revealed ${revealedCount} of ${spread.cardCount}`)
-                    : t(`${spread.cardCount} 張牌已揭示,老師正在為你解讀...`, `All ${spread.cardCount} cards revealed. Reading now...`)}
+                    ? t(
+                        `已翻開 ${revealedCount} / ${spread.cardCount} 張`,
+                        `Revealed ${revealedCount} of ${spread.cardCount}`,
+                        `${revealedCount} / ${spread.cardCount} 枚をめくりました`,
+                        `${revealedCount} / ${spread.cardCount}장 펼쳤습니다`
+                      )
+                    : t(
+                        `${spread.cardCount} 張牌已揭示,老師正在為你解讀...`,
+                        `All ${spread.cardCount} cards revealed. Reading now...`,
+                        `${spread.cardCount}枚すべて揭示されました。解読中...`,
+                        `${spread.cardCount}장 모두 펼쳤습니다. 해석 중...`
+                      )}
                 </p>
               </div>
 
@@ -3252,11 +3313,16 @@ export default function Home() {
                   const isRevealed = idx < revealedCount;
                   const isNext = idx === revealedCount;
                   const pos = spread.positions[idx];
-                  const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
-                  const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                  const cardName = t(drawn.card.nameZh, drawn.card.nameEn, drawn.card.nameJa, drawn.card.nameKo);
+                  const suitName = t(
+                    SUIT_NAMES_ZH[drawn.card.suit],
+                    SUIT_NAMES_EN[drawn.card.suit],
+                    SUIT_NAMES_JA[drawn.card.suit],
+                    SUIT_NAMES_KO[drawn.card.suit]
+                  );
                   const orientationLabel = drawn.isReversed
-                    ? t("逆位", "Reversed")
-                    : t("正位", "Upright");
+                    ? t("逆位", "Reversed", "逆位置", "역방향")
+                    : t("正位", "Upright", "正位置", "정방향");
 
                   return (
                     <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -3268,7 +3334,7 @@ export default function Home() {
                         marginBottom: 8,
                         textAlign: "center",
                       }}>
-                        {locale === "zh" ? pos.labelZh : pos.labelEn}
+                        {t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)}
                       </div>
 
                       {/* 翻牌卡(CSS 3D flip) */}
@@ -3370,7 +3436,7 @@ export default function Home() {
                             fontSize: 10,
                             marginTop: 2,
                           }}>
-                            {suitNames[drawn.card.suit]} · {orientationLabel}
+                            {suitName} · {orientationLabel}
                           </div>
                         </motion.div>
                       )}
@@ -3410,13 +3476,18 @@ export default function Home() {
               {/* Hexagram card */}
               <div className="mystic-card" style={{ padding: 32, textAlign: "center", marginTop: 16 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t(`第${hexagram.number}卦 ${hexagram.nameZh}`, `Hexagram ${hexagram.number}: ${hexagram.nameEn}`)}
+                  {t(
+                    `第${hexagram.number}卦 ${hexagram.nameZh}`,
+                    `Hexagram ${hexagram.number}: ${hexagram.nameEn}`,
+                    `第${hexagram.number}卦 ${hexagram.nameJa ?? hexagram.nameZh}`,
+                    `제 ${hexagram.number}괘 ${hexagram.nameKo ?? hexagram.nameEn.split(" ")[0]}`
+                  )}
                 </h2>
 
                 <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 24 }}>
                   <div>
                     <HexagramDisplay lines={divinationResult?.primaryLines || []} changingLines={divinationResult?.changingLines} size="md" />
-                    <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>{t("本卦", "Primary")}</p>
+                    <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>{t("本卦", "Primary", "本卦", "본괘")}</p>
                   </div>
                   {relatingHexagram && divinationResult?.relatingLines && (
                     <>
@@ -3424,7 +3495,12 @@ export default function Home() {
                       <div>
                         <HexagramDisplay lines={divinationResult.relatingLines} size="md" />
                         <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>
-                          {t(`之卦 ${relatingHexagram.nameZh}`, `Relating: ${relatingHexagram.nameEn}`)}
+                          {t(
+                            `之卦 ${relatingHexagram.nameZh}`,
+                            `Relating: ${relatingHexagram.nameEn}`,
+                            `之卦 ${relatingHexagram.nameJa ?? relatingHexagram.nameZh}`,
+                            `지괘 ${relatingHexagram.nameKo ?? relatingHexagram.nameEn.split(" ")[0]}`
+                          )}
                         </p>
                       </div>
                     </>
@@ -3433,34 +3509,40 @@ export default function Home() {
 
               </div>
 
-              {/* 卦辭 Judgment Section */}
+              {/* 卦辭 Judgment Section — 古漢語跨語系統一顯示原文 + 對應語系現代訳 */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  {t("卦辭", "Judgment")}
+                  {t("卦辭", "Judgment", "卦辞", "괘사")}
                 </h3>
                 <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
-                  {locale === "zh" ? hexagram.judgmentZh : hexagram.judgmentEn}
+                  {hexagram.judgmentZh}
                 </p>
-                {locale === "zh" && hexagram.judgmentVernacularZh && (
-                  <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
-                    {hexagram.judgmentVernacularZh}
-                  </p>
-                )}
+                <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                  {t(
+                    hexagram.judgmentVernacularZh,
+                    hexagram.judgmentEn,
+                    hexagram.judgmentJa,
+                    hexagram.judgmentKo
+                  )}
+                </p>
               </div>
 
               {/* 象辭 Image Section */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  {t("象辭", "Image")}
+                  {t("象辭", "Image", "象辞", "상사")}
                 </h3>
                 <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
-                  {locale === "zh" ? hexagram.imageZh : hexagram.imageEn}
+                  {hexagram.imageZh}
                 </p>
-                {locale === "zh" && hexagram.imageVernacularZh && (
-                  <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
-                    {hexagram.imageVernacularZh}
-                  </p>
-                )}
+                <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                  {t(
+                    hexagram.imageVernacularZh,
+                    hexagram.imageEn,
+                    hexagram.imageJa,
+                    hexagram.imageKo
+                  )}
+                </p>
               </div>
 
               {/* AI Analysis - clearly marked */}
@@ -3801,7 +3883,7 @@ export default function Home() {
             const cols = spread.cardCount <= 3 ? 3 : 5;
             const positionsHint = spread.positions
               .slice(0, 3)
-              .map((p) => (locale === "zh" ? p.labelZh : p.labelEn))
+              .map((p) => t(p.labelZh, p.labelEn, p.labelJa, p.labelKo))
               .join(" · ") + (spread.positions.length > 3 ? "…" : "");
             return (
             <motion.div key="res-tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -3809,7 +3891,7 @@ export default function Home() {
               <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                 <div style={{ textAlign: "center", marginBottom: 16 }}>
                   <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
-                    {locale === "zh" ? spread.nameZh : spread.nameEn}
+                    {t(spread.nameZh, spread.nameEn, spread.nameJa, spread.nameKo)}
                   </h2>
                   <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 4 }}>
                     {positionsHint}
@@ -3823,11 +3905,16 @@ export default function Home() {
                 }}>
                   {drawnCards.map((drawn, idx) => {
                     const pos = spread.positions[idx];
-                    const suitNames = locale === "zh" ? SUIT_NAMES_ZH : SUIT_NAMES_EN;
-                    const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                    const cardName = t(drawn.card.nameZh, drawn.card.nameEn, drawn.card.nameJa, drawn.card.nameKo);
+                    const suitName = t(
+                      SUIT_NAMES_ZH[drawn.card.suit],
+                      SUIT_NAMES_EN[drawn.card.suit],
+                      SUIT_NAMES_JA[drawn.card.suit],
+                      SUIT_NAMES_KO[drawn.card.suit]
+                    );
                     const orientationLabel = drawn.isReversed
-                      ? t("逆位", "Reversed")
-                      : t("正位", "Upright");
+                      ? t("逆位", "Reversed", "逆位置", "역방향")
+                      : t("正位", "Upright", "正位置", "정방향");
                     return (
                       <div key={idx} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <div style={{
@@ -3836,7 +3923,7 @@ export default function Home() {
                           fontFamily: "'Noto Serif TC', serif",
                           marginBottom: 6,
                         }}>
-                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                          {t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)}
                         </div>
                         <div style={{
                           width: "100%",
@@ -3874,7 +3961,7 @@ export default function Home() {
                             fontSize: 10,
                             marginTop: 2,
                           }}>
-                            {suitNames[drawn.card.suit]} · {orientationLabel}
+                            {suitName} · {orientationLabel}
                           </div>
                         </div>
                       </div>
@@ -3886,17 +3973,17 @@ export default function Home() {
               {/* 每張牌的牌義 */}
               <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  {t("牌義速覽", "Card Meanings")}
+                  {t("牌義速覽", "Card Meanings", "カード意味", "카드 의미")}
                 </h3>
                 {drawnCards.map((drawn, idx) => {
                   const pos = spread.positions[idx];
-                  const cardName = locale === "zh" ? drawn.card.nameZh : drawn.card.nameEn;
+                  const cardName = t(drawn.card.nameZh, drawn.card.nameEn, drawn.card.nameJa, drawn.card.nameKo);
                   const meaning = drawn.isReversed
-                    ? (locale === "zh" ? drawn.card.reversedMeaningZh : drawn.card.reversedMeaningEn)
-                    : (locale === "zh" ? drawn.card.uprightMeaningZh : drawn.card.uprightMeaningEn);
+                    ? t(drawn.card.reversedMeaningZh, drawn.card.reversedMeaningEn, drawn.card.reversedMeaningJa, drawn.card.reversedMeaningKo)
+                    : t(drawn.card.uprightMeaningZh, drawn.card.uprightMeaningEn, drawn.card.uprightMeaningJa, drawn.card.uprightMeaningKo);
                   const orientationLabel = drawn.isReversed
-                    ? t("逆位", "Reversed")
-                    : t("正位", "Upright");
+                    ? t("逆位", "Reversed", "逆位置", "역방향")
+                    : t("正位", "Upright", "正位置", "정방향");
                   const isLast = idx === drawnCards.length - 1;
                   return (
                     <div key={idx} style={{
@@ -3906,7 +3993,7 @@ export default function Home() {
                     }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                         <span style={{ color: "#d4a855", fontSize: 13, fontWeight: 600 }}>
-                          {locale === "zh" ? pos.labelZh : pos.labelEn}
+                          {t(pos.labelZh, pos.labelEn, pos.labelJa, pos.labelKo)}
                         </span>
                         <span style={{ color: "#e8e8f0", fontSize: 14, fontWeight: 600, fontFamily: "'Noto Serif TC', serif" }}>
                           {cardName}
@@ -4292,7 +4379,7 @@ export default function Home() {
                 categoryNameZh={cat?.nameZh ?? "綜合"}
                 categoryNameEn={cat?.nameEn ?? "General"}
                 aiReading={aiReading}
-                locale={locale}
+                locale={locale === "zh" ? "zh" : "en"}
                 showWatermark={!isActive}
               />
             </div>
@@ -4328,7 +4415,7 @@ export default function Home() {
                 categoryNameZh={cat?.nameZh ?? "綜合"}
                 categoryNameEn={cat?.nameEn ?? "General"}
                 aiReading={aiReading}
-                locale={locale}
+                locale={locale === "zh" ? "zh" : "en"}
                 showWatermark={!isActive}
               />
             </div>

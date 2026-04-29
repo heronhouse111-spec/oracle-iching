@@ -12,15 +12,23 @@
  */
 
 import { tarotDeck, type DrawnCard } from "@/data/tarot";
+import spreadsJa from "@/data/translations/spreads.ja.json";
+import spreadsKo from "@/data/translations/spreads.ko.json";
 
 export interface SpreadPosition {
   /** 簡短英文 key,寫進 DB 用(避免 i18n 字串污染 schema) */
   key: string;
   labelZh: string;
   labelEn: string;
+  /** ja/ko 由 data/translations/spreads.{ja,ko}.json 在 module 初始化時填入。
+   *  缺值時 view 端的 t() 會 fallback 到 en。 */
+  labelJa?: string;
+  labelKo?: string;
   /** 給使用者的位置描述(landing page 上會顯示) */
   descZh: string;
   descEn: string;
+  descJa?: string;
+  descKo?: string;
 }
 
 export type SpreadCategory = "general" | "love" | "decision" | "year";
@@ -30,12 +38,18 @@ export interface Spread {
   id: string;
   nameZh: string;
   nameEn: string;
+  nameJa?: string;
+  nameKo?: string;
   /** 一句話介紹(landing page hero) */
   taglineZh: string;
   taglineEn: string;
+  taglineJa?: string;
+  taglineKo?: string;
   /** 何時用 / 適合什麼問題(landing page 主文) */
   whenZh: string;
   whenEn: string;
+  whenJa?: string;
+  whenKo?: string;
   category: SpreadCategory;
   positions: SpreadPosition[];
   /** 抽幾張等於 positions.length,但獨立欄位避免每次 .length */
@@ -303,6 +317,49 @@ export const SPREADS: Spread[] = [
   CELTIC_CROSS,
   YEAR_TWELVE,
 ];
+
+// ──────────────────────────────────────────
+// Module-init merge: data/translations/spreads.{ja,ko}.json → SPREADS
+// 翻譯由 scripts/translate-static-data.mjs 產出。某筆缺欄位時 t() fallback 到 en。
+// ──────────────────────────────────────────
+interface SpreadTranslation {
+  name?: string;
+  tagline?: string;
+  when?: string;
+  positions?: Record<string, { label?: string; desc?: string }>;
+}
+type SpreadTranslationMap = Record<string, SpreadTranslation>;
+
+function mergeSpreadTranslations(map: SpreadTranslationMap, lang: "ja" | "ko") {
+  for (const s of SPREADS) {
+    const tr = map[s.id];
+    if (!tr) continue;
+    if (lang === "ja") {
+      if (tr.name) s.nameJa = tr.name;
+      if (tr.tagline) s.taglineJa = tr.tagline;
+      if (tr.when) s.whenJa = tr.when;
+    } else {
+      if (tr.name) s.nameKo = tr.name;
+      if (tr.tagline) s.taglineKo = tr.tagline;
+      if (tr.when) s.whenKo = tr.when;
+    }
+    if (tr.positions) {
+      for (const p of s.positions) {
+        const pt = tr.positions[p.key];
+        if (!pt) continue;
+        if (lang === "ja") {
+          if (pt.label) p.labelJa = pt.label;
+          if (pt.desc) p.descJa = pt.desc;
+        } else {
+          if (pt.label) p.labelKo = pt.label;
+          if (pt.desc) p.descKo = pt.desc;
+        }
+      }
+    }
+  }
+}
+mergeSpreadTranslations(spreadsJa as SpreadTranslationMap, "ja");
+mergeSpreadTranslations(spreadsKo as SpreadTranslationMap, "ko");
 
 export const DEFAULT_SPREAD_ID = "three-card";
 

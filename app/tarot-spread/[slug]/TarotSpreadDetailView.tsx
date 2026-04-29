@@ -10,12 +10,11 @@ interface Props {
 }
 
 export default function TarotSpreadDetailView({ spread, heroImage }: Props) {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t } = useLanguage();
 
-  const sName = isZh ? spread.nameZh : spread.nameEn;
-  const sTagline = isZh ? spread.taglineZh : spread.taglineEn;
-  const sWhen = isZh ? spread.whenZh : spread.whenEn;
+  const sName = t(spread.nameZh, spread.nameEn, spread.nameJa, spread.nameKo);
+  const sTagline = t(spread.taglineZh, spread.taglineEn, spread.taglineJa, spread.taglineKo);
+  const sWhen = t(spread.whenZh, spread.whenEn, spread.whenJa, spread.whenKo);
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
@@ -115,8 +114,8 @@ export default function TarotSpreadDetailView({ spread, heroImage }: Props) {
           }}
         >
           {spread.positions.map((p, idx) => {
-            const pLabel = isZh ? p.labelZh : p.labelEn;
-            const pDesc = isZh ? p.descZh : p.descEn;
+            const pLabel = t(p.labelZh, p.labelEn, p.labelJa, p.labelKo);
+            const pDesc = t(p.descZh, p.descEn, p.descJa, p.descKo);
             return (
               <li
                 key={p.key}
@@ -235,7 +234,7 @@ export default function TarotSpreadDetailView({ spread, heroImage }: Props) {
                 textDecoration: "none",
               }}
             >
-              {isZh ? s.nameZh : s.nameEn}
+              {t(s.nameZh, s.nameEn, s.nameJa, s.nameKo)}
             </Link>
           ))}
         </div>

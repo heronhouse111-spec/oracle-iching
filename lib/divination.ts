@@ -71,22 +71,45 @@ export interface QuestionCategory {
   id: string;
   nameZh: string;
   nameEn: string;
+  nameJa: string;
+  nameKo: string;
   icon: string;
+  /** AI prompt 用的提示語 — 餵給 system prompt 用 */
   promptHintZh: string;
   promptHintEn: string;
+  promptHintJa: string;
+  promptHintKo: string;
 }
 
 export const questionCategories: QuestionCategory[] = [
-  { id: "love", nameZh: "感情", nameEn: "Love", icon: "💕",
-    promptHintZh: "關於感情、婚姻、人際關係方面", promptHintEn: "regarding love and relationships" },
-  { id: "career", nameZh: "事業", nameEn: "Career", icon: "💼",
-    promptHintZh: "關於工作、事業發展方面", promptHintEn: "regarding career and work" },
-  { id: "wealth", nameZh: "財運", nameEn: "Wealth", icon: "💰",
-    promptHintZh: "關於財運、投資方面", promptHintEn: "regarding wealth and finance" },
-  { id: "health", nameZh: "健康", nameEn: "Health", icon: "🌿",
-    promptHintZh: "關於身體健康方面", promptHintEn: "regarding health and wellness" },
-  { id: "study", nameZh: "學業", nameEn: "Study", icon: "📚",
-    promptHintZh: "關於學業、考試方面", promptHintEn: "regarding study and education" },
-  { id: "general", nameZh: "綜合", nameEn: "General", icon: "🔮",
-    promptHintZh: "關於一般性疑問", promptHintEn: "regarding a general question" },
+  { id: "love", nameZh: "感情", nameEn: "Love", nameJa: "恋愛", nameKo: "연애", icon: "💕",
+    promptHintZh: "關於感情、婚姻、人際關係方面",
+    promptHintEn: "regarding love and relationships",
+    promptHintJa: "恋愛・結婚・人間関係に関して",
+    promptHintKo: "연애·결혼·인간관계에 관하여" },
+  { id: "career", nameZh: "事業", nameEn: "Career", nameJa: "仕事", nameKo: "커리어", icon: "💼",
+    promptHintZh: "關於工作、事業發展方面",
+    promptHintEn: "regarding career and work",
+    promptHintJa: "仕事・キャリアに関して",
+    promptHintKo: "일·커리어 발전에 관하여" },
+  { id: "wealth", nameZh: "財運", nameEn: "Wealth", nameJa: "金運", nameKo: "재물운", icon: "💰",
+    promptHintZh: "關於財運、投資方面",
+    promptHintEn: "regarding wealth and finance",
+    promptHintJa: "金運・投資に関して",
+    promptHintKo: "재물운·투자에 관하여" },
+  { id: "health", nameZh: "健康", nameEn: "Health", nameJa: "健康", nameKo: "건강", icon: "🌿",
+    promptHintZh: "關於身體健康方面",
+    promptHintEn: "regarding health and wellness",
+    promptHintJa: "健康に関して",
+    promptHintKo: "건강에 관하여" },
+  { id: "study", nameZh: "學業", nameEn: "Study", nameJa: "学業", nameKo: "학업", icon: "📚",
+    promptHintZh: "關於學業、考試方面",
+    promptHintEn: "regarding study and education",
+    promptHintJa: "学業・受験に関して",
+    promptHintKo: "학업·시험에 관하여" },
+  { id: "general", nameZh: "綜合", nameEn: "General", nameJa: "総合", nameKo: "종합", icon: "🔮",
+    promptHintZh: "關於一般性疑問",
+    promptHintEn: "regarding a general question",
+    promptHintJa: "一般的な質問に関して",
+    promptHintKo: "일반적인 질문에 관하여" },
 ];

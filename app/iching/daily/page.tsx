@@ -50,7 +50,6 @@ export default function IChingDailyPage() {
   const ranRef = useRef(false);
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
-  const isZh = locale === "zh";
 
   useEffect(() => {
     if (ranRef.current) return;
@@ -167,20 +166,15 @@ export default function IChingDailyPage() {
     setPhase("ready");
   }
 
+  const dateLocaleTag =
+    locale === "zh" ? "zh-TW" : locale === "ja" ? "ja-JP" : locale === "ko" ? "ko-KR" : "en-US";
   const dateLabel = dateKey
-    ? locale === "zh"
-      ? new Date(dateKey + "T00:00:00+08:00").toLocaleDateString("zh-TW", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          weekday: "long",
-        })
-      : new Date(dateKey + "T00:00:00+08:00").toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          weekday: "long",
-        })
+    ? new Date(dateKey + "T00:00:00+08:00").toLocaleDateString(dateLocaleTag, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long",
+      })
     : "";
 
   return (
@@ -339,7 +333,12 @@ export default function IChingDailyPage() {
                       fontFamily: "'Noto Serif TC', serif",
                     }}
                   >
-                    {isZh ? hex.nameZh : hex.nameEn.split(" ")[0]}
+                    {t(
+                      hex.nameZh,
+                      hex.nameEn.split(" ")[0],
+                      hex.nameJa,
+                      hex.nameKo
+                    )}
                   </div>
                   <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 12, marginTop: 2 }}>
                     {t(
@@ -357,13 +356,12 @@ export default function IChingDailyPage() {
                 <UpperLowerTrigrams
                   upperCode={hex.upperTrigram}
                   lowerCode={hex.lowerTrigram}
-                  isZh={isZh}
                   t={t}
                 />
               )}
 
-              {/* 卦辭原文(僅中文使用者) */}
-              {phase === "ready" && isZh && (
+              {/* 卦辭原文(古漢語跨語系統一顯示)*/}
+              {phase === "ready" && (
                 <div
                   style={{
                     background: "rgba(13,13,43,0.5)",
@@ -382,7 +380,7 @@ export default function IChingDailyPage() {
                       marginBottom: 4,
                     }}
                   >
-                    卦辭
+                    {t("卦辭", "Judgment", "卦辞", "괘사")}
                   </div>
                   <div
                     style={{
@@ -548,19 +546,17 @@ function DailyHexagramLines({
 function UpperLowerTrigrams({
   upperCode,
   lowerCode,
-  isZh,
   t,
 }: {
   upperCode: string;
   lowerCode: string;
-  isZh: boolean;
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }) {
   const upper = trigramNames[upperCode];
   const lower = trigramNames[lowerCode];
   if (!upper || !lower) return null;
-  const upperName = isZh ? upper.zh : upper.en;
-  const lowerName = isZh ? lower.zh : lower.en;
+  const upperName = t(upper.zh, upper.en, upper.ja, upper.ko);
+  const lowerName = t(lower.zh, lower.en, lower.ja, lower.ko);
   return (
     <div
       style={{

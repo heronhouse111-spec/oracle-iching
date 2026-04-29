@@ -12,6 +12,9 @@
 // 牌義採 Rider-Waite-Smith 傳統詮釋之濃縮版本(公共領域),餵給 AI 解讀用
 // ============================================
 
+import tarotJa from "@/data/translations/tarot.ja.json";
+import tarotKo from "@/data/translations/tarot.ko.json";
+
 export type TarotSuit = "major" | "wands" | "cups" | "swords" | "pentacles";
 
 export interface TarotCard {
@@ -20,15 +23,27 @@ export interface TarotCard {
   number: number;         // major: 0-21, minor: 1-14(1=Ace、11=Page、12=Knight、13=Queen、14=King)
   nameZh: string;
   nameEn: string;
+  /** ja/ko 由 data/translations/tarot.{ja,ko}.json 在 module init 時填入。
+   *  缺值時 view 端的 t() 會 fallback 到 en。 */
+  nameJa?: string;
+  nameKo?: string;
   imagePath: string;      // /tarot/xxx.jpg (public 下的路徑)
   uprightMeaningZh: string;
   uprightMeaningEn: string;
+  uprightMeaningJa?: string;
+  uprightMeaningKo?: string;
   reversedMeaningZh: string;
   reversedMeaningEn: string;
+  reversedMeaningJa?: string;
+  reversedMeaningKo?: string;
   keywordsUprightZh: string[];
   keywordsUprightEn: string[];
+  keywordsUprightJa?: string[];
+  keywordsUprightKo?: string[];
   keywordsReversedZh: string[];
   keywordsReversedEn: string[];
+  keywordsReversedJa?: string[];
+  keywordsReversedKo?: string[];
 }
 
 export const CARD_BACK_IMAGE = "/tarot/CardBacks.jpg";
@@ -50,9 +65,27 @@ export const SUIT_NAMES_EN: Record<TarotSuit, string> = {
   pentacles: "Pentacles",
 };
 
-// 宮廷牌數字 → 中/英文
+export const SUIT_NAMES_JA: Record<TarotSuit, string> = {
+  major: "大アルカナ",
+  wands: "ワンド",
+  cups: "カップ",
+  swords: "ソード",
+  pentacles: "ペンタクル",
+};
+
+export const SUIT_NAMES_KO: Record<TarotSuit, string> = {
+  major: "메이저 아르카나",
+  wands: "완드",
+  cups: "컵",
+  swords: "소드",
+  pentacles: "펜타클",
+};
+
+// 宮廷牌數字 → 中/英/日/韓
 const COURT_ZH = ["侍者", "騎士", "王后", "國王"];
 const COURT_EN = ["Page", "Knight", "Queen", "King"];
+const COURT_JA = ["ペイジ", "ナイト", "クイーン", "キング"];
+const COURT_KO = ["페이지", "나이트", "퀸", "킹"];
 
 // ============ Major Arcana (22) ============
 const MAJOR: TarotCard[] = [
@@ -691,15 +724,39 @@ const PENTACLES: MinorData[] = [
     keywordsReversedZh: ["貪婪", "腐敗"], keywordsReversedEn: ["greed", "corruption"] },
 ];
 
-// 小牌名字生成
-function minorName(suit: "wands" | "cups" | "swords" | "pentacles", num: number): { zh: string; en: string } {
+// 小牌名字生成 — 4 語系
+function minorName(
+  suit: "wands" | "cups" | "swords" | "pentacles",
+  num: number
+): { zh: string; en: string; ja: string; ko: string } {
   const suitZh = SUIT_NAMES_ZH[suit];
   const suitEn = SUIT_NAMES_EN[suit];
-  if (num === 1) return { zh: `${suitZh}一`, en: `Ace of ${suitEn}` };
-  if (num >= 2 && num <= 10) return { zh: `${suitZh}${num}`, en: `${num} of ${suitEn}` };
+  const suitJa = SUIT_NAMES_JA[suit];
+  const suitKo = SUIT_NAMES_KO[suit];
+  if (num === 1) {
+    return {
+      zh: `${suitZh}一`,
+      en: `Ace of ${suitEn}`,
+      ja: `${suitJa}のエース`,
+      ko: `${suitKo} 에이스`,
+    };
+  }
+  if (num >= 2 && num <= 10) {
+    return {
+      zh: `${suitZh}${num}`,
+      en: `${num} of ${suitEn}`,
+      ja: `${suitJa}の${num}`,
+      ko: `${suitKo} ${num}`,
+    };
+  }
   // 11..14 → 宮廷
   const idx = num - 11;
-  return { zh: `${suitZh}${COURT_ZH[idx]}`, en: `${COURT_EN[idx]} of ${suitEn}` };
+  return {
+    zh: `${suitZh}${COURT_ZH[idx]}`,
+    en: `${COURT_EN[idx]} of ${suitEn}`,
+    ja: `${suitJa}の${COURT_JA[idx]}`,
+    ko: `${suitKo} ${COURT_KO[idx]}`,
+  };
 }
 
 function buildMinor(
@@ -716,6 +773,8 @@ function buildMinor(
       number: num,
       nameZh: names.zh,
       nameEn: names.en,
+      nameJa: names.ja,
+      nameKo: names.ko,
       imagePath: `/tarot/${imageSuit}${String(num).padStart(2, "0")}.jpg`,
       uprightMeaningZh: d.uprightZh,
       uprightMeaningEn: d.uprightEn,
@@ -737,6 +796,42 @@ export const tarotDeck: TarotCard[] = [
   ...buildMinor("swords", SWORDS, "Swords"),
   ...buildMinor("pentacles", PENTACLES, "Pentacles"),
 ];
+
+// ──────────────────────────────────────────
+// Module-init merge: data/translations/tarot.{ja,ko}.json → tarotDeck
+// 翻譯由 scripts/translate-static-data.mjs 產出。
+// 小牌的 nameJa/nameKo 在 buildMinor 時已合理推導出,JSON 翻譯若有覆寫值會優先採用。
+// ──────────────────────────────────────────
+interface TarotCardTranslation {
+  name?: string;
+  uprightMeaning?: string;
+  reversedMeaning?: string;
+  keywordsUpright?: string[];
+  keywordsReversed?: string[];
+}
+type TarotTranslationMap = Record<string, TarotCardTranslation>;
+
+function mergeTarotTranslations(map: TarotTranslationMap, lang: "ja" | "ko") {
+  for (const c of tarotDeck) {
+    const tr = map[c.id];
+    if (!tr) continue;
+    if (lang === "ja") {
+      if (tr.name) c.nameJa = tr.name;
+      if (tr.uprightMeaning) c.uprightMeaningJa = tr.uprightMeaning;
+      if (tr.reversedMeaning) c.reversedMeaningJa = tr.reversedMeaning;
+      if (Array.isArray(tr.keywordsUpright)) c.keywordsUprightJa = tr.keywordsUpright;
+      if (Array.isArray(tr.keywordsReversed)) c.keywordsReversedJa = tr.keywordsReversed;
+    } else {
+      if (tr.name) c.nameKo = tr.name;
+      if (tr.uprightMeaning) c.uprightMeaningKo = tr.uprightMeaning;
+      if (tr.reversedMeaning) c.reversedMeaningKo = tr.reversedMeaning;
+      if (Array.isArray(tr.keywordsUpright)) c.keywordsUprightKo = tr.keywordsUpright;
+      if (Array.isArray(tr.keywordsReversed)) c.keywordsReversedKo = tr.keywordsReversed;
+    }
+  }
+}
+mergeTarotTranslations(tarotJa as TarotTranslationMap, "ja");
+mergeTarotTranslations(tarotKo as TarotTranslationMap, "ko");
 
 // ============ Helper: 抽牌 ============
 // 從整副牌隨機抽三張(不重複),每張 50% 機率逆位

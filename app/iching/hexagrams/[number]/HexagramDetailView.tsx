@@ -15,13 +15,21 @@ import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { trigramNames, type Hexagram } from "@/data/hexagrams";
 
+interface PrevNextHex {
+  number: number;
+  nameZh: string;
+  nameEn: string;
+  nameJa?: string;
+  nameKo?: string;
+}
+
 interface Props {
   hexagram: Hexagram;
   /** 圖還沒上傳就 undefined,view 端用 Unicode 字 + 卦線占位 */
   heroUrl: string | undefined;
   /** 上一卦 / 下一卦資料(只取 number 和 name)*/
-  prev: { number: number; nameZh: string; nameEn: string } | null;
-  next: { number: number; nameZh: string; nameEn: string } | null;
+  prev: PrevNextHex | null;
+  next: PrevNextHex | null;
 }
 
 function HexagramLines({ lines, size = "md" }: { lines: number[]; size?: "sm" | "md" | "lg" }) {
@@ -65,20 +73,30 @@ function HexagramLines({ lines, size = "md" }: { lines: number[]; size?: "sm" | 
 }
 
 export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next }: Props) {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t } = useLanguage();
 
   const upper = trigramNames[hex.upperTrigram];
   const lower = trigramNames[hex.lowerTrigram];
 
-  const hName = isZh ? hex.nameZh : hex.nameEn;
-  // 卦辭 / 象辭原文不翻譯;白話翻譯中文用 vernacular 欄位,非中文使用 EN 欄位填(資料只有 ZH+EN)
+  const hName = t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
+  // 卦辭/象辭原文(古漢語)不翻譯,跨語系一律顯示
   const judgmentClassical = hex.judgmentZh;
-  const judgmentTranslated = isZh ? hex.judgmentVernacularZh : hex.judgmentEn;
   const imageClassical = hex.imageZh;
-  const imageTranslated = isZh ? hex.imageVernacularZh : hex.imageEn;
-  const upperName = upper ? (isZh ? upper.zh : upper.en) : "";
-  const lowerName = lower ? (isZh ? lower.zh : lower.en) : "";
+  // 白話翻譯/現代訳:zh 用 vernacular,其他語系用對應 lang 欄位 fallback 到 en
+  const judgmentTranslated = t(
+    hex.judgmentVernacularZh,
+    hex.judgmentEn,
+    hex.judgmentJa,
+    hex.judgmentKo
+  );
+  const imageTranslated = t(
+    hex.imageVernacularZh,
+    hex.imageEn,
+    hex.imageJa,
+    hex.imageKo
+  );
+  const upperName = upper ? t(upper.zh, upper.en, upper.ja, upper.ko) : "";
+  const lowerName = lower ? t(lower.zh, lower.en, lower.ja, lower.ko) : "";
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
@@ -424,8 +442,8 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
               {t(
                 `第 ${prev.number} 卦 ${prev.nameZh}`,
                 `${prev.number}. ${prev.nameEn.split(" ")[0]}`,
-                `第 ${prev.number} 卦 ${prev.nameZh}`,
-                `${prev.number}. ${prev.nameEn.split(" ")[0]}`
+                `第${prev.number}卦 ${prev.nameJa ?? prev.nameZh}`,
+                `제 ${prev.number}괘 ${prev.nameKo ?? prev.nameEn.split(" ")[0]}`
               )}
             </div>
           </Link>
@@ -450,8 +468,8 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
               {t(
                 `第 ${next.number} 卦 ${next.nameZh}`,
                 `${next.number}. ${next.nameEn.split(" ")[0]}`,
-                `第 ${next.number} 卦 ${next.nameZh}`,
-                `${next.number}. ${next.nameEn.split(" ")[0]}`
+                `第${next.number}卦 ${next.nameJa ?? next.nameZh}`,
+                `제 ${next.number}괘 ${next.nameKo ?? next.nameEn.split(" ")[0]}`
               )}
             </div>
           </Link>

@@ -8,6 +8,8 @@ import {
   type TarotCard,
   SUIT_NAMES_ZH,
   SUIT_NAMES_EN,
+  SUIT_NAMES_JA,
+  SUIT_NAMES_KO,
 } from "@/data/tarot";
 
 interface Props {
@@ -15,15 +17,44 @@ interface Props {
 }
 
 export default function TarotCardDetailView({ card }: Props) {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t, locale, cn } = useLanguage();
 
-  const suitName = isZh ? SUIT_NAMES_ZH[card.suit] : SUIT_NAMES_EN[card.suit];
-  const cardName = isZh ? card.nameZh : card.nameEn;
-  const upright = isZh ? card.uprightMeaningZh : card.uprightMeaningEn;
-  const reversed = isZh ? card.reversedMeaningZh : card.reversedMeaningEn;
-  const keywordsUpright = isZh ? card.keywordsUprightZh : card.keywordsUprightEn;
-  const keywordsReversed = isZh ? card.keywordsReversedZh : card.keywordsReversedEn;
+  const suitName = t(
+    SUIT_NAMES_ZH[card.suit],
+    SUIT_NAMES_EN[card.suit],
+    SUIT_NAMES_JA[card.suit],
+    SUIT_NAMES_KO[card.suit]
+  );
+  const cardName = t(card.nameZh, card.nameEn, card.nameJa, card.nameKo);
+  const upright = t(
+    card.uprightMeaningZh,
+    card.uprightMeaningEn,
+    card.uprightMeaningJa,
+    card.uprightMeaningKo
+  );
+  const reversed = t(
+    card.reversedMeaningZh,
+    card.reversedMeaningEn,
+    card.reversedMeaningJa,
+    card.reversedMeaningKo
+  );
+  // Keywords 的 zh 陣列要走 cn() 處理 zh-CN 的繁簡轉換;ja/ko/en 直接用 raw 陣列
+  const keywordsUpright =
+    locale === "zh"
+      ? card.keywordsUprightZh.map((k) => cn(k))
+      : locale === "ja"
+        ? card.keywordsUprightJa ?? card.keywordsUprightEn
+        : locale === "ko"
+          ? card.keywordsUprightKo ?? card.keywordsUprightEn
+          : card.keywordsUprightEn;
+  const keywordsReversed =
+    locale === "zh"
+      ? card.keywordsReversedZh.map((k) => cn(k))
+      : locale === "ja"
+        ? card.keywordsReversedJa ?? card.keywordsReversedEn
+        : locale === "ko"
+          ? card.keywordsReversedKo ?? card.keywordsReversedEn
+          : card.keywordsReversedEn;
 
   const sameSuit = tarotDeck
     .filter((c) => c.suit === card.suit && c.id !== card.id)
@@ -244,7 +275,7 @@ export default function TarotCardDetailView({ card }: Props) {
             }}
           >
             {sameSuit.map((c) => {
-              const cName = isZh ? c.nameZh : c.nameEn;
+              const cName = t(c.nameZh, c.nameEn, c.nameJa, c.nameKo);
               return (
                 <Link
                   key={c.id}

@@ -3,17 +3,22 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { tarotDeck, SUIT_NAMES_ZH, SUIT_NAMES_EN } from "@/data/tarot";
+import {
+  tarotDeck,
+  SUIT_NAMES_ZH,
+  SUIT_NAMES_EN,
+  SUIT_NAMES_JA,
+  SUIT_NAMES_KO,
+} from "@/data/tarot";
 
 const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
   "major", "wands", "cups", "swords", "pentacles",
 ];
 
 export default function TarotCardsIndexView() {
-  const { t, locale } = useLanguage();
-  const isZh = locale === "zh";
+  const { t } = useLanguage();
   const suitName = (s: typeof SUIT_ORDER[number]) =>
-    isZh ? SUIT_NAMES_ZH[s] : SUIT_NAMES_EN[s];
+    t(SUIT_NAMES_ZH[s], SUIT_NAMES_EN[s], SUIT_NAMES_JA[s], SUIT_NAMES_KO[s]);
 
   const grouped = SUIT_ORDER.map((suit) => ({
     suit,
@@ -113,7 +118,7 @@ export default function TarotCardsIndexView() {
                 >
                   <Image
                     src={card.imagePath}
-                    alt={isZh ? card.nameZh : card.nameEn}
+                    alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
                     width={300}
                     height={467}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -128,7 +133,7 @@ export default function TarotCardsIndexView() {
                   }}
                 >
                   <div style={{ fontWeight: 600 }}>
-                    {isZh ? card.nameZh : card.nameEn}
+                    {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
                   </div>
                 </div>
               </Link>

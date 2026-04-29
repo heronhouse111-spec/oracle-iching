@@ -141,15 +141,13 @@ export default function DailyPage() {
     }
   }
 
-  // 顯示「今天日期 中文」
+  // 顯示日期 — 走當下 locale 的 toLocaleDateString
+  const dateLocaleTag =
+    locale === "zh" ? "zh-TW" : locale === "ja" ? "ja-JP" : locale === "ko" ? "ko-KR" : "en-US";
   const dateLabel = dateKey
-    ? (locale === "zh"
-      ? new Date(dateKey + "T00:00:00+08:00").toLocaleDateString("zh-TW", {
-          year: "numeric", month: "long", day: "numeric", weekday: "long",
-        })
-      : new Date(dateKey + "T00:00:00+08:00").toLocaleDateString("en-US", {
-          year: "numeric", month: "long", day: "numeric", weekday: "long",
-        }))
+    ? new Date(dateKey + "T00:00:00+08:00").toLocaleDateString(dateLocaleTag, {
+        year: "numeric", month: "long", day: "numeric", weekday: "long",
+      })
     : "";
 
   return (

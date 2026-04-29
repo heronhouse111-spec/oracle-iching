@@ -1,21 +1,44 @@
+import hexagramsJa from "@/data/translations/hexagrams.ja.json";
+import hexagramsKo from "@/data/translations/hexagrams.ko.json";
+import trigramsJa from "@/data/translations/trigrams.ja.json";
+import trigramsKo from "@/data/translations/trigrams.ko.json";
+
 export interface Hexagram {
   number: number;
   nameZh: string;
   nameEn: string;
+  /** ja/ko 由 data/translations/hexagrams.{ja,ko}.json 在 module init 時填入。
+   *  缺值時 view 端的 t() 會 fallback 到 en。 */
+  nameJa?: string;
+  nameKo?: string;
   character: string; // Unicode hexagram character
   upperTrigram: string;
   lowerTrigram: string;
   lines: number[]; // 6 lines from bottom to top: 1=yang, 0=yin
+  /** 卦辭/象辭原文(古漢語) — 跨語系一律顯示原文,不翻譯 */
   judgmentZh: string;
-  judgmentEn: string;
   imageZh: string;
+  /** 卦辭/象辭白話翻譯 — 中文 = vernacular,其他語系直接套用對應 lang 欄位 */
+  judgmentEn: string;
   imageEn: string;
-  judgmentVernacularZh: string; // 卦辭白話翻譯
-  imageVernacularZh: string;   // 象辭白話翻譯
+  judgmentJa?: string;
+  imageJa?: string;
+  judgmentKo?: string;
+  imageKo?: string;
+  judgmentVernacularZh: string; // 卦辭白話翻譯(中文)
+  imageVernacularZh: string;    // 象辭白話翻譯(中文)
 }
 
 // Trigram names mapping
-export const trigramNames: Record<string, { zh: string; en: string; symbol: string }> = {
+export interface TrigramName {
+  zh: string;
+  en: string;
+  ja?: string;
+  ko?: string;
+  symbol: string;
+}
+
+export const trigramNames: Record<string, TrigramName> = {
   "111": { zh: "乾（天）", en: "Qian (Heaven)", symbol: "☰" },
   "000": { zh: "坤（地）", en: "Kun (Earth)", symbol: "☷" },
   "100": { zh: "震（雷）", en: "Zhen (Thunder)", symbol: "☳" },
@@ -25,6 +48,16 @@ export const trigramNames: Record<string, { zh: string; en: string; symbol: stri
   "101": { zh: "離（火）", en: "Li (Fire)", symbol: "☲" },
   "110": { zh: "兌（澤）", en: "Dui (Lake)", symbol: "☱" },
 };
+
+// 八卦名稱 ja/ko 翻譯 — 由 data/translations/trigrams.{ja,ko}.json 在 module init 時填入
+{
+  const jaMap = trigramsJa as Record<string, string>;
+  const koMap = trigramsKo as Record<string, string>;
+  for (const code of Object.keys(trigramNames)) {
+    if (jaMap[code]) trigramNames[code].ja = jaMap[code];
+    if (koMap[code]) trigramNames[code].ko = koMap[code];
+  }
+}
 
 // Full 64 hexagrams data
 export const hexagrams: Hexagram[] = [
@@ -517,3 +550,37 @@ export function findHexagram(lines: number[]): Hexagram | undefined {
 export function getHexagramByNumber(num: number): Hexagram | undefined {
   return hexagrams.find((h) => h.number === num);
 }
+
+// ──────────────────────────────────────────
+// Module-init merge: data/translations/hexagrams.{ja,ko}.json → hexagrams
+// 翻譯由 scripts/translate-static-data.mjs 產出。
+// 注意:judgmentJa/judgmentKo 是「現代訳」(對應原 judgmentEn),
+//      不是古漢語 judgmentZh — 那條跨語系一律顯示原文。
+// ──────────────────────────────────────────
+interface HexagramTranslation {
+  name?: string;
+  judgmentModern?: string;
+  imageModern?: string;
+}
+type HexagramTranslationMap = Record<string, HexagramTranslation>;
+
+function mergeHexagramTranslations(
+  map: HexagramTranslationMap,
+  lang: "ja" | "ko"
+) {
+  for (const h of hexagrams) {
+    const tr = map[String(h.number)];
+    if (!tr) continue;
+    if (lang === "ja") {
+      if (tr.name) h.nameJa = tr.name;
+      if (tr.judgmentModern) h.judgmentJa = tr.judgmentModern;
+      if (tr.imageModern) h.imageJa = tr.imageModern;
+    } else {
+      if (tr.name) h.nameKo = tr.name;
+      if (tr.judgmentModern) h.judgmentKo = tr.judgmentModern;
+      if (tr.imageModern) h.imageKo = tr.imageModern;
+    }
+  }
+}
+mergeHexagramTranslations(hexagramsJa as HexagramTranslationMap, "ja");
+mergeHexagramTranslations(hexagramsKo as HexagramTranslationMap, "ko");
