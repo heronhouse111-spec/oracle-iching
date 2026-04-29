@@ -63,7 +63,23 @@ function decideVerdict(card: TarotCard, isReversed: boolean): YesNoVerdict {
 const VERDICT_LABEL = {
   zh: { yes: "是", no: "否", depends: "看條件" },
   en: { yes: "Yes", no: "No", depends: "It depends" },
+  ja: { yes: "はい", no: "いいえ", depends: "条件次第" },
+  ko: { yes: "예", no: "아니오", depends: "조건부" },
 };
+
+type Locale = "zh" | "en" | "ja" | "ko";
+function pickStr(
+  locale: Locale,
+  zh: string,
+  en: string,
+  ja?: string | null,
+  ko?: string | null
+): string {
+  if (locale === "en") return en;
+  if (locale === "ja") return ja || en;
+  if (locale === "ko") return ko || en;
+  return zh;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,9 +101,12 @@ export async function POST(request: NextRequest) {
       cardId: string;
       isReversed: boolean;
       question: string;
-      locale: "zh" | "en";
+      locale: Locale;
       personaId?: string;
     } = body;
+    // 防呆:locale 落入未知值 → 視為 en
+    const safeLocale: Locale =
+      locale === "zh" || locale === "ja" || locale === "ko" ? locale : "en";
 
     const card = getCardById(cardId);
     if (!card) {
@@ -101,9 +120,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const isZh = locale === "zh";
     const verdict = decideVerdict(card, isReversed);
-    const verdictLabel = isZh ? VERDICT_LABEL.zh[verdict] : VERDICT_LABEL.en[verdict];
+    const verdictLabel = VERDICT_LABEL[safeLocale][verdict];
 
     // ──────────────────────────────────────────
     // 點數扣款 — 登入者每次 1 點;訪客本路徑允許 1 次免費(由前端 localStorage 限流)
@@ -139,7 +157,13 @@ export async function POST(request: NextRequest) {
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
               required: cost,
-              message: isZh ? "點數不足" : "Insufficient credits",
+              message: pickStr(
+                safeLocale,
+                "點數不足",
+                "Insufficient credits",
+                "ポイント不足",
+                "포인트 부족"
+              ),
             }),
             { status: 402, headers: { "Content-Type": "application/json" } }
           );
@@ -152,21 +176,55 @@ export async function POST(request: NextRequest) {
     }
 
     const meaning = isReversed
-      ? (isZh ? card.reversedMeaningZh : card.reversedMeaningEn)
-      : (isZh ? card.uprightMeaningZh : card.uprightMeaningEn);
-    const orientationZh = isReversed ? "逆位" : "正位";
-    const orientationEn = isReversed ? "Reversed" : "Upright";
-    const cardName = isZh ? card.nameZh : card.nameEn;
+      ? pickStr(
+          safeLocale,
+          card.reversedMeaningZh,
+          card.reversedMeaningEn,
+          card.reversedMeaningJa,
+          card.reversedMeaningKo
+        )
+      : pickStr(
+          safeLocale,
+          card.uprightMeaningZh,
+          card.uprightMeaningEn,
+          card.uprightMeaningJa,
+          card.uprightMeaningKo
+        );
+    const orientation = pickStr(
+      safeLocale,
+      isReversed ? "逆位" : "正位",
+      isReversed ? "Reversed" : "Upright",
+      isReversed ? "逆位置" : "正位置",
+      isReversed ? "역방향" : "정방향"
+    );
+    const cardName = pickStr(
+      safeLocale,
+      card.nameZh,
+      card.nameEn,
+      card.nameJa,
+      card.nameKo
+    );
 
-    const baseSystemPrompt = isZh
-      ? `你是一位塔羅占卜師,正在做 Yes/No 一張牌的快速占卜。系統已經根據抽到的牌與牌陣規則決定了「結論」(${verdictLabel}),你不需要重新判定 yes/no,你的任務是用約 80 字的一段話,溫暖地解釋「為什麼是這個答案」、「這張牌想提醒問事者什麼」。語氣自然口語,使用繁體中文,不要列點。先別重述問題,直接給出解釋。`
-      : `You are a tarot reader giving a quick one-card Yes/No reading. The verdict (${verdictLabel}) is already decided by the system based on the drawn card and rules — do NOT re-judge yes/no. Your task: in around 60 words, warmly explain WHY this is the answer and what the card wants to remind the querent. Conversational tone, no bullets.`;
+    // System prompt — 4 語系版本,要求 AI 用對應語言回覆
+    const baseSystemPrompt =
+      safeLocale === "zh"
+        ? `你是一位塔羅占卜師,正在做 Yes/No 一張牌的快速占卜。系統已經根據抽到的牌與牌陣規則決定了「結論」(${verdictLabel}),你不需要重新判定 yes/no,你的任務是用約 80 字的一段話,溫暖地解釋「為什麼是這個答案」、「這張牌想提醒問事者什麼」。語氣自然口語,使用繁體中文,不要列點。先別重述問題,直接給出解釋。`
+        : safeLocale === "ja"
+          ? `あなたはタロット占い師で、Yes/No 一枚引きの素早い占いをしています。引いたカードとルールに基づき、「結論」(${verdictLabel})はシステムが既に決定済み — yes/no を判定し直さないでください。あなたのタスクは約 80 字の段落で、なぜこの答えなのか、このカードが相談者に伝えたいことを温かく説明すること。会話的な口調で、日本語で書き、箇条書きは避けてください。質問を繰り返さず、直接解説に入ってください。`
+          : safeLocale === "ko"
+            ? `당신은 타로 점술사로, Yes/No 한 장 뽑기 빠른 점을 봐주고 있습니다. 뽑힌 카드와 규칙에 따라 시스템이 이미 "결론"(${verdictLabel})을 결정했습니다 — yes/no를 다시 판단하지 마세요. 당신의 임무는 약 80자 한 문단으로, 왜 이 답인지, 이 카드가 질문자에게 무엇을 일깨우는지 따뜻하게 설명하는 것입니다. 자연스러운 회화체로 한국어로 쓰고, 글머리 기호는 사용하지 마세요. 질문을 다시 말하지 말고 바로 설명을 시작하세요.`
+            : `You are a tarot reader giving a quick one-card Yes/No reading. The verdict (${verdictLabel}) is already decided by the system based on the drawn card and rules — do NOT re-judge yes/no. Your task: in around 60 words, warmly explain WHY this is the answer and what the card wants to remind the querent. Conversational tone in English, no bullets. Don't restate the question; jump straight into the explanation.`;
 
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, safeLocale);
 
-    const userMessage = isZh
-      ? `問題:${question}\n\n抽到的牌:${cardName}(${orientationZh})\n牌義:${meaning}\n\n結論:${verdictLabel}\n\n請用約 80 字解釋這個答案。`
-      : `Question: ${question}\n\nDrawn card: ${cardName} (${orientationEn})\nMeaning: ${meaning}\n\nVerdict: ${verdictLabel}\n\nPlease explain in ~60 words why.`;
+    const userMessage =
+      safeLocale === "zh"
+        ? `問題:${question}\n\n抽到的牌:${cardName}(${orientation})\n牌義:${meaning}\n\n結論:${verdictLabel}\n\n請用約 80 字解釋這個答案。`
+        : safeLocale === "ja"
+          ? `質問:${question}\n\n引いたカード:${cardName}(${orientation})\nカードの意味:${meaning}\n\n結論:${verdictLabel}\n\n約 80 字で、この答えになる理由を説明してください。`
+          : safeLocale === "ko"
+            ? `질문: ${question}\n\n뽑힌 카드: ${cardName}(${orientation})\n카드 의미: ${meaning}\n\n결론: ${verdictLabel}\n\n약 80자로 이 답이 나온 이유를 설명해 주세요.`
+            : `Question: ${question}\n\nDrawn card: ${cardName} (${orientation})\nMeaning: ${meaning}\n\nVerdict: ${verdictLabel}\n\nPlease explain in ~60 words why.`;
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -177,7 +235,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: withSafetyPreamble(systemPrompt, locale) },
+          { role: "system", content: withSafetyPreamble(systemPrompt, safeLocale) },
           { role: "user", content: userMessage },
         ],
         max_tokens: 300,

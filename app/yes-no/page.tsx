@@ -86,7 +86,12 @@ export default function YesNoPage() {
       }
       if (!res.ok) {
         setIsLoading(false);
-        setAiText(t("AI 服務暫時無法回應,請稍後再試。", "AI service is temporarily unavailable, please try again later."));
+        setAiText(t(
+          "AI 服務暫時無法回應,請稍後再試。",
+          "AI service is temporarily unavailable, please try again later.",
+          "AI サービスが一時的に利用できません。しばらくしてから再度お試しください。",
+          "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요."
+        ));
         return;
       }
 
@@ -104,7 +109,12 @@ export default function YesNoPage() {
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
-        setAiText(t("發生錯誤,請再試一次。", "Something went wrong, please retry."));
+        setAiText(t(
+          "發生錯誤,請再試一次。",
+          "Something went wrong, please retry.",
+          "エラーが発生しました。もう一度お試しください。",
+          "오류가 발생했습니다. 다시 시도해 주세요."
+        ));
       }
     } finally {
       setIsLoading(false);
@@ -143,7 +153,7 @@ export default function YesNoPage() {
             className="text-gold-gradient"
             style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 28, fontWeight: 700, margin: 0 }}
           >
-            {t("Yes/No 一張牌占卜", "Yes/No Tarot")}
+            {t("Yes/No 一張牌占卜", "Yes/No Tarot", "Yes/No 一枚引きタロット", "Yes/No 한 장 타로")}
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
             {t(
@@ -152,7 +162,12 @@ export default function YesNoPage() {
             )}
           </p>
           <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, marginTop: 6 }}>
-            {t("每次占卜消耗 1 點", "Each reading costs 1 credit")}
+            {t(
+              "每次占卜消耗 1 點",
+              "Each reading costs 1 credit",
+              "1 回の占いで 1 ポイント消費",
+              "1회 점 1 포인트 소모"
+            )}
           </div>
         </div>
 
@@ -169,7 +184,12 @@ export default function YesNoPage() {
                 <label
                   style={{ color: "#c0c0d0", fontSize: 13, display: "block", marginBottom: 6 }}
                 >
-                  {t("你想問什麼?(請以是/否能回答的方式)", "Your yes/no question:")}
+                  {t(
+                    "你想問什麼?(請以是/否能回答的方式)",
+                    "Your yes/no question:",
+                    "何を聞きたいですか?(はい/いいえで答えられる形で)",
+                    "무엇을 묻고 싶나요?(예/아니오로 답할 수 있게)"
+                  )}
                 </label>
                 <textarea
                   value={question}
@@ -213,7 +233,7 @@ export default function YesNoPage() {
                   boxShadow: question.trim() ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
                 }}
               >
-                {t("✦ 抽一張牌", "✦ Draw One Card")}
+                {t("✦ 抽一張牌", "✦ Draw One Card", "✦ 1 枚引く", "✦ 한 장 뽑기")}
               </button>
             </motion.div>
           )}
@@ -302,7 +322,9 @@ export default function YesNoPage() {
                   >
                     {t(card.nameZh, card.nameEn)}
                     <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginLeft: 6 }}>
-                      ({isReversed ? t("逆位", "Reversed") : t("正位", "Upright")})
+                      ({isReversed
+                        ? t("逆位", "Reversed", "逆位置", "역방향")
+                        : t("正位", "Upright", "正位置", "정방향")})
                     </span>
                   </div>
 
@@ -336,10 +358,10 @@ export default function YesNoPage() {
                       }}
                     >
                       {verdict === "yes"
-                        ? t("YES · 是", "YES")
+                        ? t("YES · 是", "YES", "YES · はい", "YES · 예")
                         : verdict === "no"
-                          ? t("NO · 否", "NO")
-                          : t("看條件 · DEPENDS", "DEPENDS")}
+                          ? t("NO · 否", "NO", "NO · いいえ", "NO · 아니오")
+                          : t("看條件 · DEPENDS", "DEPENDS", "条件次第 · DEPENDS", "조건부 · DEPENDS")}
                     </motion.div>
                   )}
 
@@ -360,7 +382,12 @@ export default function YesNoPage() {
                   >
                     {aiText ||
                       (isLoading
-                        ? t("塔羅師正在解讀…", "Tarot reader is interpreting…")
+                        ? t(
+                            "塔羅師正在解讀…",
+                            "Tarot reader is interpreting…",
+                            "タロット占い師が解読中…",
+                            "타로 점술사가 해석 중…"
+                          )
                         : "")}
                     {isLoading && <span style={{ color: "#d4a855" }}> ▌</span>}
                   </div>
@@ -379,7 +406,12 @@ export default function YesNoPage() {
                         fontFamily: "inherit",
                       }}
                     >
-                      {t("✦ 再問一個", "✦ Ask another")}
+                      {t(
+                        "✦ 再問一個",
+                        "✦ Ask another",
+                        "✦ もう一つ質問",
+                        "✦ 또 하나 묻기"
+                      )}
                     </button>
                     <Link
                       href="/"
@@ -389,7 +421,12 @@ export default function YesNoPage() {
                         textDecoration: "underline",
                       }}
                     >
-                      {t("想看更深入的解讀?試試完整占卜 →", "Want a deeper reading? Try a full divination →")}
+                      {t(
+                        "想看更深入的解讀?試試完整占卜 →",
+                        "Want a deeper reading? Try a full divination →",
+                        "より深い解読が見たい?完全な占いを試す →",
+                        "더 깊은 해석을 보고 싶나요? 완전한 점을 시도하세요 →"
+                      )}
                     </Link>
                   </div>
                 </>

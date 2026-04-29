@@ -50,10 +50,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const { locale, personaId } = body as {
-      locale?: "zh" | "en";
+      locale?: "zh" | "en" | "ja" | "ko";
       personaId?: string;
     };
-    const isZh = locale === "zh" || locale === undefined;
+    type Locale = "zh" | "en" | "ja" | "ko";
+    const safeLocale: Locale =
+      locale === "zh" || locale === "en" || locale === "ja" || locale === "ko"
+        ? locale
+        : "zh";
+    const pickStr = (
+      zh: string,
+      en: string,
+      ja?: string | null,
+      ko?: string | null
+    ): string => {
+      if (safeLocale === "en") return en;
+      if (safeLocale === "ja") return ja || en;
+      if (safeLocale === "ko") return ko || en;
+      return zh;
+    };
 
     const supabase = await createClient();
     const {
@@ -104,7 +119,12 @@ export async function POST(request: NextRequest) {
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
               required: CREDIT_COSTS.DAILY,
-              message: isZh ? "點數不足" : "Insufficient credits",
+              message: pickStr(
+                "點數不足",
+                "Insufficient credits",
+                "ポイント不足",
+                "포인트 부족"
+              ),
             }),
             { status: 402, headers: { "Content-Type": "application/json" } }
           );
@@ -117,20 +137,40 @@ export async function POST(request: NextRequest) {
     }
 
     const hex = drawHexagramForUser(user.id, dateKey);
-    const hexName = isZh ? hex.nameZh : hex.nameEn;
+    const hexName = pickStr(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
     const judgmentClassical = hex.judgmentZh;
-    const judgmentTranslated = isZh ? hex.judgmentVernacularZh : hex.judgmentEn;
-    const imageVernacular = isZh ? hex.imageVernacularZh : hex.imageEn;
+    const judgmentModern = pickStr(
+      hex.judgmentVernacularZh,
+      hex.judgmentEn,
+      hex.judgmentJa,
+      hex.judgmentKo
+    );
+    const imageModern = pickStr(
+      hex.imageVernacularZh,
+      hex.imageEn,
+      hex.imageJa,
+      hex.imageKo
+    );
 
-    const baseSystemPrompt = isZh
-      ? `你是一位深諳易經的占卜師,正在給問事者「今日一卦」的鼓勵訊息。請用約 120 字寫一段溫暖、有畫面感的「今日訊息」,把今天抽到的這一卦與「今天的能量、可以留意什麼、可以做什麼」串起來。語氣像一封朋友的早安訊息,自然口語、繁體中文、不要列點、不要先重述卦名。`
-      : `You are an I Ching diviner giving a "Today's Hexagram" message. Write a warm, image-rich 100-word "today's message" weaving today's drawn hexagram into "today's energy, what to notice, what to do". Like a friend's good-morning text — conversational, no bullets, don't restate the hexagram name first.`;
+    const baseSystemPrompt =
+      safeLocale === "zh"
+        ? `你是一位深諳易經的占卜師,正在給問事者「今日一卦」的鼓勵訊息。請用約 120 字寫一段溫暖、有畫面感的「今日訊息」,把今天抽到的這一卦與「今天的能量、可以留意什麼、可以做什麼」串起來。語氣像一封朋友的早安訊息,自然口語、繁體中文、不要列點、不要先重述卦名。`
+        : safeLocale === "ja"
+          ? `あなたは易経に精通した占い師で、相談者に「今日の一卦」の励ましメッセージを届けています。約 120 字で、温かく情景の浮かぶ「今日のメッセージ」を書き、今日引いた卦と「今日のエネルギー、気を配るべきこと、できること」を織り交ぜてください。友人からの朝の挨拶のような口調で、自然な日本語、箇条書きなし、最初に卦名を繰り返さないでください。`
+          : safeLocale === "ko"
+            ? `당신은 주역에 정통한 점술사로, 질문자에게 "오늘의 한 괘" 격려 메시지를 전합니다. 약 120자로 따뜻하고 그림이 그려지는 "오늘의 메시지"를 써주세요. 오늘 뽑힌 괘와 "오늘의 에너지, 살필 것, 할 수 있는 것"을 엮어주세요. 친구의 아침 인사 같은 어조로, 자연스러운 한국어, 글머리 기호 없음, 첫머리에 괘 이름을 반복하지 마세요.`
+            : `You are an I Ching diviner giving a "Today's Hexagram" message. Write a warm, image-rich 100-word "today's message" weaving today's drawn hexagram into "today's energy, what to notice, what to do". Like a friend's good-morning text — conversational English, no bullets, don't restate the hexagram name first.`;
 
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale ?? "zh");
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, safeLocale);
 
-    const userMessage = isZh
-      ? `今天抽到的卦:第 ${hex.number} 卦 ${hex.nameZh}(${hex.nameEn})\n卦辭原文:${judgmentClassical}\n白話:${judgmentTranslated}\n象辭白話:${imageVernacular}\n\n請寫一段約 120 字的今日訊息。`
-      : `Today's hexagram: ${hex.number}. ${hexName}\nJudgment (classical): ${judgmentClassical}\nJudgment (modern): ${judgmentTranslated}\nImage: ${imageVernacular}\n\nPlease write a ~100-word message for today.`;
+    const userMessage =
+      safeLocale === "zh"
+        ? `今天抽到的卦:第 ${hex.number} 卦 ${hex.nameZh}(${hex.nameEn})\n卦辭原文:${judgmentClassical}\n白話:${judgmentModern}\n象辭白話:${imageModern}\n\n請寫一段約 120 字的今日訊息。`
+        : safeLocale === "ja"
+          ? `今日引いた卦:第 ${hex.number} 卦 ${hexName}\n卦辞(原文):${judgmentClassical}\n卦辞(現代訳):${judgmentModern}\n象辞(現代訳):${imageModern}\n\n約 120 字の今日のメッセージを書いてください。`
+          : safeLocale === "ko"
+            ? `오늘 뽑힌 괘: 제 ${hex.number}괘 ${hexName}\n괘사(원문): ${judgmentClassical}\n괘사(현대 번역): ${judgmentModern}\n상사(현대 번역): ${imageModern}\n\n약 120자의 오늘의 메시지를 써주세요.`
+            : `Today's hexagram: ${hex.number}. ${hexName}\nJudgment (classical): ${judgmentClassical}\nJudgment (modern): ${judgmentModern}\nImage (modern): ${imageModern}\n\nPlease write a ~100-word message for today.`;
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -141,7 +181,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: withSafetyPreamble(systemPrompt, locale ?? "zh") },
+          { role: "system", content: withSafetyPreamble(systemPrompt, safeLocale) },
           { role: "user", content: userMessage },
         ],
         max_tokens: 400,

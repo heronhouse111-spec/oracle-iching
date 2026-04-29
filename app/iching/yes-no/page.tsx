@@ -98,7 +98,12 @@ export default function IChingYesNoPage() {
       }
       if (!res.ok) {
         setIsLoading(false);
-        setAiText(t("AI 服務暫時無法回應,請稍後再試。", "AI service is temporarily unavailable, please try again later."));
+        setAiText(t(
+          "AI 服務暫時無法回應,請稍後再試。",
+          "AI service is temporarily unavailable, please try again later.",
+          "AI サービスが一時的に利用できません。しばらくしてから再度お試しください。",
+          "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요."
+        ));
         return;
       }
 
@@ -116,7 +121,12 @@ export default function IChingYesNoPage() {
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
-        setAiText(t("發生錯誤,請再試一次。", "Something went wrong, please retry."));
+        setAiText(t(
+          "發生錯誤,請再試一次。",
+          "Something went wrong, please retry.",
+          "エラーが発生しました。もう一度お試しください。",
+          "오류가 발생했습니다. 다시 시도해 주세요."
+        ));
       }
     } finally {
       setIsLoading(false);

@@ -277,13 +277,25 @@ export function resolvePersona(
  * 把 persona 個人風格指令拼到既有 systemPrompt 之後。
  * 順序:withSafetyPreamble(systemPrompt + personaSuffix, locale)
  *   = SAFETY (最高層,不可被覆寫) + 任務 prompt + 個人風格
+ *
+ * 多語系:persona 描述本身只有 zh/en(內容是個性 + 語氣指引,英文版描述
+ * 給日韓使用者也能正確塑造模型表演),日韓語系沿用 en 描述,但分隔線標題
+ * 用對應語系。
  */
 export function appendPersonaPrompt(
   basePrompt: string,
   persona: Persona,
-  locale: "zh" | "en"
+  locale: "zh" | "en" | "ja" | "ko"
 ): string {
-  const personaText = locale === "zh" ? persona.promptZh : persona.promptEn;
-  const sep = locale === "zh" ? "\n\n— 個人風格 —\n" : "\n\n— Persona —\n";
+  const personaText =
+    locale === "zh" ? persona.promptZh : persona.promptEn;
+  const sep =
+    locale === "zh"
+      ? "\n\n— 個人風格 —\n"
+      : locale === "ja"
+        ? "\n\n— ペルソナ —\n"
+        : locale === "ko"
+          ? "\n\n— 페르소나 —\n"
+          : "\n\n— Persona —\n";
   return `${basePrompt}${sep}${personaText}`;
 }

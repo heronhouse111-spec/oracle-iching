@@ -84,7 +84,23 @@ function decideVerdict(hex: Hexagram, hasChangingLine: boolean): YesNoVerdict {
 const VERDICT_LABEL = {
   zh: { yes: "是", no: "否", depends: "看條件" },
   en: { yes: "Yes", no: "No", depends: "It depends" },
+  ja: { yes: "はい", no: "いいえ", depends: "条件次第" },
+  ko: { yes: "예", no: "아니오", depends: "조건부" },
 };
+
+type Locale = "zh" | "en" | "ja" | "ko";
+function pickStr(
+  locale: Locale,
+  zh: string,
+  en: string,
+  ja?: string | null,
+  ko?: string | null
+): string {
+  if (locale === "en") return en;
+  if (locale === "ja") return ja || en;
+  if (locale === "ko") return ko || en;
+  return zh;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,9 +122,11 @@ export async function POST(request: NextRequest) {
       hexagramNumber: number;
       hasChangingLine?: boolean;
       question: string;
-      locale: "zh" | "en";
+      locale: Locale;
       personaId?: string;
     } = body;
+    const safeLocale: Locale =
+      locale === "zh" || locale === "ja" || locale === "ko" ? locale : "en";
 
     const hex = getHexagramByNumber(hexagramNumber);
     if (!hex) {
@@ -122,9 +140,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const isZh = locale === "zh";
     const verdict = decideVerdict(hex, Boolean(hasChangingLine));
-    const verdictLabel = isZh ? VERDICT_LABEL.zh[verdict] : VERDICT_LABEL.en[verdict];
+    const verdictLabel = VERDICT_LABEL[safeLocale][verdict];
 
     // ──────────────────────────────────────────
     // 點數扣款 — 跟塔羅 yes/no 同規則
@@ -166,7 +183,13 @@ export async function POST(request: NextRequest) {
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
               required: cost,
-              message: isZh ? "點數不足" : "Insufficient credits",
+              message: pickStr(
+                safeLocale,
+                "點數不足",
+                "Insufficient credits",
+                "ポイント不足",
+                "포인트 부족"
+              ),
             }),
             { status: 402, headers: { "Content-Type": "application/json" } }
           );
@@ -178,19 +201,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const hexName = isZh ? hex.nameZh : hex.nameEn;
-    const judgment = isZh ? hex.judgmentVernacularZh : hex.judgmentEn;
+    const hexName = pickStr(safeLocale, hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
+    const judgmentModern = pickStr(
+      safeLocale,
+      hex.judgmentVernacularZh,
+      hex.judgmentEn,
+      hex.judgmentJa,
+      hex.judgmentKo
+    );
     const classicalJudgment = hex.judgmentZh;
 
-    const baseSystemPrompt = isZh
-      ? `你是一位深諳易經的占卜師,正在做 Yes/No 一卦的快速占卜。系統已根據卦象的傳統吉凶傾向決定了「結論」(${verdictLabel}),你不需要重新判定 yes/no,你的任務是用約 80 字的一段話,溫暖地解釋「為什麼是這個答案」、「這一卦想提醒問事者什麼」。語氣自然口語,使用繁體中文,不要列點。先別重述問題,直接給出解釋。`
-      : `You are an I Ching diviner giving a quick one-hexagram Yes/No reading. The verdict (${verdictLabel}) is already decided by the system based on the traditional auspicious/inauspicious tendency of the hexagram — do NOT re-judge yes/no. Your task: in around 60 words, warmly explain WHY this is the answer and what this hexagram wants to remind the querent. Conversational tone, no bullets.`;
+    const baseSystemPrompt =
+      safeLocale === "zh"
+        ? `你是一位深諳易經的占卜師,正在做 Yes/No 一卦的快速占卜。系統已根據卦象的傳統吉凶傾向決定了「結論」(${verdictLabel}),你不需要重新判定 yes/no,你的任務是用約 80 字的一段話,溫暖地解釋「為什麼是這個答案」、「這一卦想提醒問事者什麼」。語氣自然口語,使用繁體中文,不要列點。先別重述問題,直接給出解釋。`
+        : safeLocale === "ja"
+          ? `あなたは易経に精通した占い師で、Yes/No 一卦の素早い占いをしています。卦象の伝統的な吉凶傾向に基づき、「結論」(${verdictLabel})はシステムが既に決定済み — yes/no を判定し直さないでください。あなたのタスクは約 80 字の段落で、なぜこの答えなのか、この卦が相談者に伝えたいことを温かく説明すること。会話的な口調で、日本語で書き、箇条書きは避けてください。質問を繰り返さず、直接解説に入ってください。`
+          : safeLocale === "ko"
+            ? `당신은 주역에 정통한 점술사로, Yes/No 한 괘 빠른 점을 봐주고 있습니다. 괘상의 전통적인 길흉 경향에 따라 시스템이 이미 "결론"(${verdictLabel})을 결정했습니다 — yes/no를 다시 판단하지 마세요. 당신의 임무는 약 80자 한 문단으로, 왜 이 답인지, 이 괘가 질문자에게 무엇을 일깨우는지 따뜻하게 설명하는 것입니다. 자연스러운 회화체로 한국어로 쓰고, 글머리 기호는 사용하지 마세요. 질문을 다시 말하지 말고 바로 설명을 시작하세요.`
+            : `You are an I Ching diviner giving a quick one-hexagram Yes/No reading. The verdict (${verdictLabel}) is already decided by the system based on the traditional auspicious/inauspicious tendency of the hexagram — do NOT re-judge yes/no. Your task: in around 60 words, warmly explain WHY this is the answer and what this hexagram wants to remind the querent. Conversational tone in English, no bullets. Don't restate the question; jump straight in.`;
 
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, safeLocale);
 
-    const userMessage = isZh
-      ? `問題:${question}\n\n抽到的卦:第 ${hex.number} 卦 ${hex.nameZh}(${hex.nameEn})\n卦辭:${classicalJudgment}\n白話:${judgment}\n\n結論:${verdictLabel}\n\n請用約 80 字解釋這個答案。`
-      : `Question: ${question}\n\nDrawn hexagram: ${hex.number}. ${hexName}\nJudgment (classical): ${classicalJudgment}\nJudgment (modern): ${judgment}\n\nVerdict: ${verdictLabel}\n\nPlease explain in ~60 words why.`;
+    const userMessage =
+      safeLocale === "zh"
+        ? `問題:${question}\n\n抽到的卦:第 ${hex.number} 卦 ${hex.nameZh}(${hex.nameEn})\n卦辭:${classicalJudgment}\n白話:${judgmentModern}\n\n結論:${verdictLabel}\n\n請用約 80 字解釋這個答案。`
+        : safeLocale === "ja"
+          ? `質問:${question}\n\n引いた卦:第 ${hex.number} 卦 ${hexName}\n卦辞(原文):${classicalJudgment}\n卦辞(現代訳):${judgmentModern}\n\n結論:${verdictLabel}\n\n約 80 字で、この答えになる理由を説明してください。`
+          : safeLocale === "ko"
+            ? `질문: ${question}\n\n뽑힌 괘: 제 ${hex.number}괘 ${hexName}\n괘사(원문): ${classicalJudgment}\n괘사(현대 번역): ${judgmentModern}\n\n결론: ${verdictLabel}\n\n약 80자로 이 답이 나온 이유를 설명해 주세요.`
+            : `Question: ${question}\n\nDrawn hexagram: ${hex.number}. ${hexName}\nJudgment (classical): ${classicalJudgment}\nJudgment (modern): ${judgmentModern}\n\nVerdict: ${verdictLabel}\n\nPlease explain in ~60 words why.`;
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -201,7 +240,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: withSafetyPreamble(systemPrompt, locale) },
+          { role: "system", content: withSafetyPreamble(systemPrompt, safeLocale) },
           { role: "user", content: userMessage },
         ],
         max_tokens: 300,

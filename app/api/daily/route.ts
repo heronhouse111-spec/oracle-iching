@@ -21,6 +21,20 @@ import {
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
+type Locale = "zh" | "en" | "ja" | "ko";
+function pickStr(
+  locale: Locale,
+  zh: string,
+  en: string,
+  ja?: string | null,
+  ko?: string | null
+): string {
+  if (locale === "en") return en;
+  if (locale === "ja") return ja || en;
+  if (locale === "ko") return ko || en;
+  return zh;
+}
+
 /** 取台北今天日期字串(YYYY-MM-DD,UTC+8) */
 function taipeiTodayKey(): string {
   const now = new Date();
@@ -51,10 +65,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const { locale, personaId } = body as {
-      locale?: "zh" | "en";
+      locale?: Locale;
       personaId?: string;
     };
-    const isZh = locale === "zh" || locale === undefined;
+    // 防呆 + 預設:無值 / 未知值 → zh(沿用先前的預設行為)
+    const safeLocale: Locale =
+      locale === "zh" || locale === "en" || locale === "ja" || locale === "ko"
+        ? locale
+        : "zh";
 
     const supabase = await createClient();
     const {
@@ -105,7 +123,13 @@ export async function POST(request: NextRequest) {
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
               required: CREDIT_COSTS.DAILY,
-              message: isZh ? "點數不足" : "Insufficient credits",
+              message: pickStr(
+                safeLocale,
+                "點數不足",
+                "Insufficient credits",
+                "ポイント不足",
+                "포인트 부족"
+              ),
             }),
             { status: 402, headers: { "Content-Type": "application/json" } }
           );
@@ -123,21 +147,48 @@ export async function POST(request: NextRequest) {
     const isReversed = drawn.isReversed;
 
     const meaning = isReversed
-      ? (isZh ? card.reversedMeaningZh : card.reversedMeaningEn)
-      : (isZh ? card.uprightMeaningZh : card.uprightMeaningEn);
-    const orientationZh = isReversed ? "逆位" : "正位";
-    const orientationEn = isReversed ? "Reversed" : "Upright";
-    const cardName = isZh ? card.nameZh : card.nameEn;
+      ? pickStr(
+          safeLocale,
+          card.reversedMeaningZh,
+          card.reversedMeaningEn,
+          card.reversedMeaningJa,
+          card.reversedMeaningKo
+        )
+      : pickStr(
+          safeLocale,
+          card.uprightMeaningZh,
+          card.uprightMeaningEn,
+          card.uprightMeaningJa,
+          card.uprightMeaningKo
+        );
+    const orientation = pickStr(
+      safeLocale,
+      isReversed ? "逆位" : "正位",
+      isReversed ? "Reversed" : "Upright",
+      isReversed ? "逆位置" : "正位置",
+      isReversed ? "역방향" : "정방향"
+    );
+    const cardName = pickStr(safeLocale, card.nameZh, card.nameEn, card.nameJa, card.nameKo);
 
-    const baseSystemPrompt = isZh
-      ? `你是一位塔羅占卜師,正在給問事者「今日一卡」的鼓勵訊息。請用約 120 字寫一段溫暖、有畫面感的「今日訊息」,把今天抽到的這張牌與「今天的能量、可以留意什麼、可以做什麼」串起來。語氣像一封朋友的早安訊息,自然口語、繁體中文、不要列點、不要先重述牌名。`
-      : `You are a tarot reader giving a "Today's Card" message. Write a warm, image-rich 100-word "today's message" weaving today's drawn card into "today's energy, what to notice, what to do". Like a friend's good-morning text — conversational, no bullets, don't restate the card name first.`;
+    const baseSystemPrompt =
+      safeLocale === "zh"
+        ? `你是一位塔羅占卜師,正在給問事者「今日一卡」的鼓勵訊息。請用約 120 字寫一段溫暖、有畫面感的「今日訊息」,把今天抽到的這張牌與「今天的能量、可以留意什麼、可以做什麼」串起來。語氣像一封朋友的早安訊息,自然口語、繁體中文、不要列點、不要先重述牌名。`
+        : safeLocale === "ja"
+          ? `あなたはタロット占い師で、相談者に「今日の一枚」の励ましメッセージを届けています。約 120 字で、温かく情景の浮かぶ「今日のメッセージ」を書き、今日引いたカードと「今日のエネルギー、気を配るべきこと、できること」を織り交ぜてください。友人からの朝の挨拶のような口調で、自然な日本語、箇条書きなし、最初にカード名を繰り返さないでください。`
+          : safeLocale === "ko"
+            ? `당신은 타로 점술사로, 질문자에게 "오늘의 한 장" 격려 메시지를 전합니다. 약 120자로 따뜻하고 그림이 그려지는 "오늘의 메시지"를 써주세요. 오늘 뽑힌 카드와 "오늘의 에너지, 살필 것, 할 수 있는 것"을 엮어주세요. 친구의 아침 인사 같은 어조로, 자연스러운 한국어, 글머리 기호 없음, 첫머리에 카드 이름을 반복하지 마세요.`
+            : `You are a tarot reader giving a "Today's Card" message. Write a warm, image-rich 100-word "today's message" weaving today's drawn card into "today's energy, what to notice, what to do". Like a friend's good-morning text — conversational English, no bullets, don't restate the card name first.`;
 
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale ?? "zh");
+    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, safeLocale);
 
-    const userMessage = isZh
-      ? `今天抽到的牌:${cardName}(${orientationZh})\n牌義:${meaning}\n\n請寫一段約 120 字的今日訊息。`
-      : `Today's card: ${cardName} (${orientationEn})\nMeaning: ${meaning}\n\nPlease write a ~100-word message for today.`;
+    const userMessage =
+      safeLocale === "zh"
+        ? `今天抽到的牌:${cardName}(${orientation})\n牌義:${meaning}\n\n請寫一段約 120 字的今日訊息。`
+        : safeLocale === "ja"
+          ? `今日引いたカード:${cardName}(${orientation})\nカードの意味:${meaning}\n\n約 120 字の今日のメッセージを書いてください。`
+          : safeLocale === "ko"
+            ? `오늘 뽑힌 카드: ${cardName}(${orientation})\n카드 의미: ${meaning}\n\n약 120자의 오늘의 메시지를 써주세요.`
+            : `Today's card: ${cardName} (${orientation})\nMeaning: ${meaning}\n\nPlease write a ~100-word message for today.`;
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -148,7 +199,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: [
-          { role: "system", content: withSafetyPreamble(systemPrompt, locale ?? "zh") },
+          { role: "system", content: withSafetyPreamble(systemPrompt, safeLocale) },
           { role: "user", content: userMessage },
         ],
         max_tokens: 400,

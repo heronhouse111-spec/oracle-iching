@@ -107,7 +107,12 @@ export default function DailyPage() {
       if (!res.ok) {
         setIsStreaming(false);
         setPhase("guest");
-        setAiText(t("AI 服務暫時無法回應,請稍後再試。", "AI service is temporarily unavailable."));
+        setAiText(t(
+          "AI 服務暫時無法回應,請稍後再試。",
+          "AI service is temporarily unavailable.",
+          "AI サービスが一時的に利用できません。",
+          "AI 서비스가 일시적으로 응답하지 않습니다."
+        ));
         return;
       }
 
@@ -135,7 +140,12 @@ export default function DailyPage() {
       if (!isReread) notifyCreditsChanged();
     } catch (e) {
       console.error(e);
-      setAiText(t("發生錯誤,請再試一次。", "Something went wrong, please retry."));
+      setAiText(t(
+        "發生錯誤,請再試一次。",
+        "Something went wrong, please retry.",
+        "エラーが発生しました。もう一度お試しください。",
+        "오류가 발생했습니다. 다시 시도해 주세요."
+      ));
     } finally {
       setIsStreaming(false);
     }
@@ -160,7 +170,7 @@ export default function DailyPage() {
             className="text-gold-gradient"
             style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 28, fontWeight: 700, margin: 0 }}
           >
-            {t("每日一卡", "Daily Card")}
+            {t("每日一卡", "Daily Card", "今日の一枚", "오늘의 카드")}
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
             {t(
@@ -173,7 +183,12 @@ export default function DailyPage() {
               {dateLabel}
               {reread && (
                 <span style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginLeft: 8 }}>
-                  {t("(今日已抽過,不再扣點)", "(already drawn today, no charge)")}
+                  {t(
+                    "(今日已抽過,不再扣點)",
+                    "(already drawn today, no charge)",
+                    "(今日は既に引いています。再課金なし)",
+                    "(오늘 이미 뽑았습니다. 추가 요금 없음)"
+                  )}
                 </span>
               )}
             </div>
@@ -216,10 +231,20 @@ export default function DailyPage() {
                   fontFamily: "inherit",
                 }}
               >
-                {t("✦ 登入抽今日卡", "✦ Sign in for today's card")}
+                {t(
+                  "✦ 登入抽今日卡",
+                  "✦ Sign in for today's card",
+                  "✦ ログインして今日のカードを引く",
+                  "✦ 로그인하여 오늘의 카드 뽑기"
+                )}
               </button>
               <div style={{ color: "rgba(212,168,85,0.6)", fontSize: 11, marginTop: 12 }}>
-                {t("每天 1 點(同日重抽免費)", "1 credit per day (no recharge on re-open)")}
+                {t(
+                  "每天 1 點(同日重抽免費)",
+                  "1 credit per day (no recharge on re-open)",
+                  "1 日 1 ポイント(同日の再表示は無料)",
+                  "하루 1 포인트(같은 날 재표시 무료)"
+                )}
               </div>
             </motion.div>
           )}
@@ -231,7 +256,12 @@ export default function DailyPage() {
               animate={{ opacity: 1 }}
               style={{ textAlign: "center", padding: "40px 0", color: "#c0c0d0" }}
             >
-              {t("正在為你抽今日卡 …", "Drawing your card for today …")}
+              {t(
+                "正在為你抽今日卡 …",
+                "Drawing your card for today …",
+                "今日のカードを引いています …",
+                "오늘의 카드를 뽑고 있습니다 …"
+              )}
             </motion.div>
           )}
 
@@ -295,7 +325,9 @@ export default function DailyPage() {
               >
                 {t(card.nameZh, card.nameEn)}
                 <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginLeft: 6 }}>
-                  ({isReversed ? t("逆位", "Reversed") : t("正位", "Upright")})
+                  ({isReversed
+                    ? t("逆位", "Reversed", "逆位置", "역방향")
+                    : t("正位", "Upright", "正位置", "정방향")})
                 </span>
               </div>
 
@@ -308,7 +340,15 @@ export default function DailyPage() {
                   color: "#e8e8f0", fontSize: 15, minHeight: 100,
                 }}
               >
-                {aiText || (isStreaming ? t("塔羅師正在寫今日訊息…", "Reader is writing today's message…") : "")}
+                {aiText ||
+                  (isStreaming
+                    ? t(
+                        "塔羅師正在寫今日訊息…",
+                        "Reader is writing today's message…",
+                        "占い師が今日のメッセージを書いています…",
+                        "점술사가 오늘의 메시지를 쓰고 있습니다…"
+                      )
+                    : "")}
                 {isStreaming && <span style={{ color: "#d4a855" }}> ▌</span>}
               </div>
 
@@ -321,7 +361,12 @@ export default function DailyPage() {
                     textDecoration: "underline",
                   }}
                 >
-                  {t("有具體問題?試試 Yes/No 占卜 →", "Got a specific question? Try Yes/No →")}
+                  {t(
+                    "有具體問題?試試 Yes/No 占卜 →",
+                    "Got a specific question? Try Yes/No →",
+                    "具体的な質問がある? Yes/No 占いを試す →",
+                    "구체적인 질문이 있나요? Yes/No 점을 시도하세요 →"
+                  )}
                 </Link>
                 <Link
                   href="/"
@@ -331,7 +376,12 @@ export default function DailyPage() {
                     textDecoration: "underline",
                   }}
                 >
-                  {t("想要完整解讀?去主流程 →", "Want a full reading? Go to main flow →")}
+                  {t(
+                    "想要完整解讀?去主流程 →",
+                    "Want a full reading? Go to main flow →",
+                    "完全な解読が見たい?メインフローへ →",
+                    "완전한 해석을 보고 싶나요? 메인 플로우로 →"
+                  )}
                 </Link>
               </div>
             </motion.div>
