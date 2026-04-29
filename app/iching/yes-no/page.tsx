@@ -274,7 +274,9 @@ export default function IChingYesNoPage() {
                   revealedCount={step === "result" ? 6 : revealedLines}
                 />
 
-                {/* 卦象 Unicode 大字 + 卦名 — 全部揭示後才顯現 */}
+                {/* 卦名 — 全部揭示後才顯現
+                    (原本上方還有一個 Unicode 卦象字 `{hex.character}`,
+                     因為跟 HexagramLines 的六爻重複了,移除避免大小雙重顯示) */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{
@@ -283,16 +285,6 @@ export default function IChingYesNoPage() {
                   transition={{ duration: 0.4, delay: step === "result" ? 0 : 0.1 }}
                   style={{ marginTop: 16 }}
                 >
-                  <div
-                    style={{
-                      fontSize: 44,
-                      color: "rgba(212,168,85,0.9)",
-                      lineHeight: 1,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {hex.character}
-                  </div>
                   <div
                     style={{
                       color: "#e8e8f0",

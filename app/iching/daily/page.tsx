@@ -309,22 +309,14 @@ export default function IChingDailyPage() {
                   lines={hex.lines}
                   revealedCount={phase === "ready" ? 6 : revealedLines}
                 />
+                {/* 卦名;原本上方還有 Unicode 卦象字 `{hex.character}`,
+                    跟 DailyHexagramLines 重複,移除。 */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: phase === "ready" || revealedLines >= 6 ? 1 : 0 }}
                   transition={{ duration: 0.4 }}
                   style={{ marginTop: 18 }}
                 >
-                  <div
-                    style={{
-                      fontSize: 48,
-                      color: "rgba(212,168,85,0.9)",
-                      lineHeight: 1,
-                      marginBottom: 10,
-                    }}
-                  >
-                    {hex.character}
-                  </div>
                   <div
                     style={{
                       color: "#e8e8f0",

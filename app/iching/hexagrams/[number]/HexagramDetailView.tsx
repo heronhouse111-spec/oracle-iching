@@ -204,9 +204,7 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
                 borderTop: "1px dashed rgba(212,168,85,0.2)",
               }}
             >
-              <span style={{ fontSize: 36, color: "rgba(212,168,85,0.85)", lineHeight: 1 }}>
-                {hex.character}
-              </span>
+              {/* HexagramLines 已經視覺化六爻,Unicode 卦象字(`{hex.character}`)是同一資訊的小一號重複,移除。 */}
               <HexagramLines lines={hex.lines} size="sm" />
             </div>
           )}
