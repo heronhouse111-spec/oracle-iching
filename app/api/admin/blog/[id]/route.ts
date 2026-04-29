@@ -1,6 +1,6 @@
 /**
  * GET    /api/admin/blog/[id] — 取單篇(admin 用,含 unpublished)
- * PUT    /api/admin/blog/[id] — 更新(整篇覆蓋)
+ * PUT    /api/admin/blog/[id] — 更新:admin 改完中文,server 重新翻譯三語覆蓋
  * DELETE /api/admin/blog/[id] — 刪除
  *
  * 寫入用 service_role,寫完 revalidateTag('blog-posts') 戳掉 cache。
@@ -11,9 +11,11 @@ import { revalidateTag } from "next/cache";
 import { assertAdmin } from "@/lib/admin/apiAuth";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { translatePostToAllLangs } from "@/lib/translate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,80}$/;
 const ALLOWED_CATEGORIES = new Set(["intro", "spread", "card", "topic", "ai"]);
@@ -25,11 +27,8 @@ interface UpdateBody {
   published?: boolean;
   heroImageUrl?: string | null;
   titleZh?: string;
-  titleEn?: string;
   excerptZh?: string;
-  excerptEn?: string;
   bodyZh?: string[];
-  bodyEn?: string[];
 }
 
 function validate(body: UpdateBody): string | null {
@@ -42,18 +41,13 @@ function validate(body: UpdateBody): string | null {
   if (!body.publishedAt || !/^\d{4}-\d{2}-\d{2}$/.test(body.publishedAt)) {
     return "publishedAt 必須是 YYYY-MM-DD 日期格式";
   }
-  for (const f of ["titleZh", "titleEn", "excerptZh", "excerptEn"] as const) {
-    if (typeof body[f] !== "string" || !body[f]) {
-      return `${f} required`;
-    }
+  if (typeof body.titleZh !== "string" || !body.titleZh) return "titleZh required";
+  if (typeof body.excerptZh !== "string" || !body.excerptZh) return "excerptZh required";
+  if (!Array.isArray(body.bodyZh) || body.bodyZh.length === 0) {
+    return "bodyZh 至少需要一個段落";
   }
-  for (const f of ["bodyZh", "bodyEn"] as const) {
-    if (!Array.isArray(body[f]) || body[f]!.length === 0) {
-      return `${f} 至少需要一個段落`;
-    }
-    if (body[f]!.some((p) => typeof p !== "string")) {
-      return `${f} 內容必須全部是字串`;
-    }
+  if (body.bodyZh.some((p) => typeof p !== "string")) {
+    return "bodyZh 內容必須全部是字串";
   }
   return null;
 }
@@ -101,22 +95,44 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
     return NextResponse.json({ error: "validation", detail: validationError }, { status: 400 });
   }
 
+  // 重新從 zh 翻譯三語(覆蓋既有翻譯)— 確保所有語系都跟最新中文版同步
+  const translations = await translatePostToAllLangs({
+    title: body.titleZh!,
+    excerpt: body.excerptZh!,
+    body: body.bodyZh!,
+  });
+
   const supabase = createAdminClient();
+  // 只覆寫翻譯成功的語系欄位 — 失敗的語系保留 DB 既有值,不要把舊翻譯洗掉
+  const updatePayload: Record<string, unknown> = {
+    slug: body.slug!,
+    category: body.category!,
+    published_at: body.publishedAt!,
+    published: body.published ?? true,
+    hero_image_url: body.heroImageUrl ?? null,
+    title_zh: body.titleZh!,
+    excerpt_zh: body.excerptZh!,
+    body_zh: body.bodyZh!,
+  };
+  if (translations.en) {
+    updatePayload.title_en = translations.en.title;
+    updatePayload.excerpt_en = translations.en.excerpt;
+    updatePayload.body_en = translations.en.body;
+  }
+  if (translations.ja) {
+    updatePayload.title_ja = translations.ja.title;
+    updatePayload.excerpt_ja = translations.ja.excerpt;
+    updatePayload.body_ja = translations.ja.body;
+  }
+  if (translations.ko) {
+    updatePayload.title_ko = translations.ko.title;
+    updatePayload.excerpt_ko = translations.ko.excerpt;
+    updatePayload.body_ko = translations.ko.body;
+  }
+
   const { data, error } = await supabase
     .from("blog_posts")
-    .update({
-      slug: body.slug!,
-      category: body.category!,
-      published_at: body.publishedAt!,
-      published: body.published ?? true,
-      hero_image_url: body.heroImageUrl ?? null,
-      title_zh: body.titleZh!,
-      title_en: body.titleEn!,
-      excerpt_zh: body.excerptZh!,
-      excerpt_en: body.excerptEn!,
-      body_zh: body.bodyZh!,
-      body_en: body.bodyEn!,
-    })
+    .update(updatePayload)
     .eq("id", id)
     .select()
     .single();
@@ -135,12 +151,20 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
     action: "blog.post.update",
     targetType: "blog_post",
     targetId: data.id,
-    payload: { slug: data.slug, published: data.published },
+    payload: {
+      slug: data.slug,
+      published: data.published,
+      translationErrors: translations.errors.length > 0 ? translations.errors : undefined,
+    },
   });
 
   revalidateTag("blog-posts");
 
-  return NextResponse.json({ ok: true, post: data });
+  return NextResponse.json({
+    ok: true,
+    post: data,
+    translationWarnings: translations.errors,
+  });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteParams) {
@@ -150,7 +174,6 @@ export async function DELETE(_req: NextRequest, ctx: RouteParams) {
   const { id } = await ctx.params;
 
   const supabase = createAdminClient();
-  // 先撈起來給 audit log 用,再刪
   const { data: existing } = await supabase
     .from("blog_posts")
     .select("id, slug")

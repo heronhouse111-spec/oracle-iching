@@ -13,11 +13,8 @@ const empty: BlogPostFormValue = {
   published: true,
   heroImageUrl: null,
   titleZh: "",
-  titleEn: "",
   excerptZh: "",
-  excerptEn: "",
   bodyZhText: "",
-  bodyEnText: "",
 };
 
 export default function NewBlogPostPage() {
@@ -49,7 +46,7 @@ export default function NewBlogPostPage() {
           新增文章
         </h1>
         <p style={{ fontSize: 12, color: "rgba(192,192,208,0.55)", marginBottom: 24 }}>
-          填好下面欄位後按「建立文章」。Slug 一旦發布就最好不要改(會影響 SEO 與已分享的連結)。
+          只需要填中文,系統會自動翻譯成英 / 日 / 韓。Slug 一旦發布就最好不要改(會影響 SEO 與已分享的連結)。
         </p>
         <BlogPostEditor mode="new" initial={empty} />
       </main>

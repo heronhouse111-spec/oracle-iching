@@ -1,6 +1,6 @@
 /**
  * GET  /api/admin/blog — 列全部文章(含 unpublished),按 published_at desc
- * POST /api/admin/blog — 新增一篇
+ * POST /api/admin/blog — 新增一篇:admin 只給中文,server 自動翻譯成 en/ja/ko 後一起存。
  *
  * 寫入用 service_role,繞過 RLS。寫完 revalidateTag('blog-posts') 戳掉
  * lib/blog.ts 的 unstable_cache,讓前台 /blog 立即看到新內容。
@@ -11,9 +11,12 @@ import { revalidateTag } from "next/cache";
 import { assertAdmin } from "@/lib/admin/apiAuth";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { translatePostToAllLangs } from "@/lib/translate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// 翻譯三語平行可能 ~10s,放寬 timeout
+export const maxDuration = 60;
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,80}$/;
 const ALLOWED_CATEGORIES = new Set(["intro", "spread", "card", "topic", "ai"]);
@@ -25,11 +28,8 @@ interface CreateBody {
   published?: boolean;
   heroImageUrl?: string | null;
   titleZh?: string;
-  titleEn?: string;
   excerptZh?: string;
-  excerptEn?: string;
   bodyZh?: string[];
-  bodyEn?: string[];
 }
 
 function validate(body: CreateBody): string | null {
@@ -42,18 +42,13 @@ function validate(body: CreateBody): string | null {
   if (!body.publishedAt || !/^\d{4}-\d{2}-\d{2}$/.test(body.publishedAt)) {
     return "publishedAt 必須是 YYYY-MM-DD 日期格式";
   }
-  for (const f of ["titleZh", "titleEn", "excerptZh", "excerptEn"] as const) {
-    if (typeof body[f] !== "string" || !body[f]) {
-      return `${f} required`;
-    }
+  if (typeof body.titleZh !== "string" || !body.titleZh) return "titleZh required";
+  if (typeof body.excerptZh !== "string" || !body.excerptZh) return "excerptZh required";
+  if (!Array.isArray(body.bodyZh) || body.bodyZh.length === 0) {
+    return "bodyZh 至少需要一個段落";
   }
-  for (const f of ["bodyZh", "bodyEn"] as const) {
-    if (!Array.isArray(body[f]) || body[f]!.length === 0) {
-      return `${f} 至少需要一個段落`;
-    }
-    if (body[f]!.some((p) => typeof p !== "string")) {
-      return `${f} 內容必須全部是字串`;
-    }
+  if (body.bodyZh.some((p) => typeof p !== "string")) {
+    return "bodyZh 內容必須全部是字串";
   }
   return null;
 }
@@ -93,6 +88,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "validation", detail: validationError }, { status: 400 });
   }
 
+  // ── AI 翻譯 zh → en / ja / ko ────────────────────────────
+  // 任一語系失敗 → 該欄位存 null,前台會 fallback 到其他語系或 zh。
+  // 整體永不 throw — admin save 不會被翻譯失敗擋住。
+  const translations = await translatePostToAllLangs({
+    title: body.titleZh!,
+    excerpt: body.excerptZh!,
+    body: body.bodyZh!,
+  });
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("blog_posts")
@@ -103,18 +107,24 @@ export async function POST(req: NextRequest) {
       published: body.published ?? true,
       hero_image_url: body.heroImageUrl ?? null,
       title_zh: body.titleZh!,
-      title_en: body.titleEn!,
       excerpt_zh: body.excerptZh!,
-      excerpt_en: body.excerptEn!,
       body_zh: body.bodyZh!,
-      body_en: body.bodyEn!,
+      // schema 有 NOT NULL on en — 翻譯失敗時用 zh 當佔位讓 insert 成功
+      title_en: translations.en?.title ?? body.titleZh!,
+      excerpt_en: translations.en?.excerpt ?? body.excerptZh!,
+      body_en: translations.en?.body ?? body.bodyZh!,
+      title_ja: translations.ja?.title ?? null,
+      excerpt_ja: translations.ja?.excerpt ?? null,
+      body_ja: translations.ja?.body ?? null,
+      title_ko: translations.ko?.title ?? null,
+      excerpt_ko: translations.ko?.excerpt ?? null,
+      body_ko: translations.ko?.body ?? null,
       created_by: actor.id,
     })
     .select()
     .single();
 
   if (error) {
-    // 23505 = unique_violation (slug 重複)
     const status = error.code === "23505" ? 409 : 500;
     return NextResponse.json(
       { error: status === 409 ? "duplicate_slug" : "db_error", detail: error.message },
@@ -128,10 +138,19 @@ export async function POST(req: NextRequest) {
     action: "blog.post.create",
     targetType: "blog_post",
     targetId: data.id,
-    payload: { slug: data.slug, category: data.category, published: data.published },
+    payload: {
+      slug: data.slug,
+      category: data.category,
+      published: data.published,
+      translationErrors: translations.errors.length > 0 ? translations.errors : undefined,
+    },
   });
 
   revalidateTag("blog-posts");
 
-  return NextResponse.json({ ok: true, post: data });
+  return NextResponse.json({
+    ok: true,
+    post: data,
+    translationWarnings: translations.errors,
+  });
 }

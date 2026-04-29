@@ -14,11 +14,8 @@ interface RawPost {
   published: boolean;
   hero_image_url: string | null;
   title_zh: string;
-  title_en: string;
   excerpt_zh: string;
-  excerpt_en: string;
   body_zh: string[] | null;
-  body_en: string[] | null;
 }
 
 function rawToForm(p: RawPost): BlogPostFormValue {
@@ -29,11 +26,8 @@ function rawToForm(p: RawPost): BlogPostFormValue {
     published: p.published,
     heroImageUrl: p.hero_image_url,
     titleZh: p.title_zh,
-    titleEn: p.title_en,
     excerptZh: p.excerpt_zh,
-    excerptEn: p.excerpt_en,
     bodyZhText: (p.body_zh ?? []).join("\n\n"),
-    bodyEnText: (p.body_en ?? []).join("\n\n"),
   };
 }
 

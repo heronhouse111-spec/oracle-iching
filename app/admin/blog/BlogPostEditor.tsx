@@ -4,10 +4,11 @@
  * BlogPostEditor — /admin/blog/new 與 /admin/blog/[id]/edit 共用的編輯表單
  *
  * 設計:
- *   - body 用 textarea,使用者輸入時用空行分段 — 提交時 split('\n\n') 變 string[],
- *     存進 DB 的 body_zh / body_en 欄位
+ *   - admin 只填**中文** — 標題、摘要、內文
+ *   - 儲存時 server 自動 AI 翻譯成 en / ja / ko 並一起存進 DB
+ *   - body 用 textarea,使用者輸入時用空行分段 — 提交時 split('\n\n') 變 string[]
  *   - 載入時把 string[] 用 join('\n\n') 還原成 textarea 內容
- *   - hero 圖片走既有的 /api/admin/upload (folder='blog'),回 url 後存進 hero_image_url
+ *   - hero 圖片走既有的 /api/admin/upload (folder='blog')
  *   - 提示使用者 paragraph 開頭 "## " = h2、inline "**xxx**" = bold(沿用現行渲染慣例)
  */
 
@@ -22,12 +23,9 @@ export interface BlogPostFormValue {
   published: boolean;
   heroImageUrl: string | null;
   titleZh: string;
-  titleEn: string;
   excerptZh: string;
-  excerptEn: string;
   /** 在表單裡 body 用一段「空行分段」的純文字儲存,提交時 split */
   bodyZhText: string;
-  bodyEnText: string;
 }
 
 interface Props {
@@ -82,6 +80,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [translationWarning, setTranslationWarning] = useState<string | null>(null);
 
   // edit 模式:initial 從 parent 拉到後再 set 一次
   useEffect(() => {
@@ -118,8 +117,8 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
   const handleSave = async () => {
     setSaving(true);
     setError(null);
+    setTranslationWarning(null);
     try {
-      // textarea 用空行分段成 paragraph 陣列;空行去掉
       const splitParagraphs = (text: string) =>
         text
           .split(/\n\s*\n/)
@@ -133,11 +132,8 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
         published: form.published,
         heroImageUrl: form.heroImageUrl,
         titleZh: form.titleZh.trim(),
-        titleEn: form.titleEn.trim(),
         excerptZh: form.excerptZh.trim(),
-        excerptEn: form.excerptEn.trim(),
         bodyZh: splitParagraphs(form.bodyZhText),
-        bodyEn: splitParagraphs(form.bodyEnText),
       };
 
       const url = mode === "edit" ? `/api/admin/blog/${postId}` : "/api/admin/blog";
@@ -154,6 +150,25 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
         }
         throw new Error(j.detail ?? j.error ?? `HTTP ${res.status}`);
       }
+
+      // 翻譯部分失敗的話 server 會回 translationWarnings array
+      const data = (await res.json().catch(() => ({}))) as {
+        translationWarnings?: { lang: string; message: string }[];
+      };
+      if (data.translationWarnings && data.translationWarnings.length > 0) {
+        const langs = data.translationWarnings.map((w) => w.lang.toUpperCase()).join(", ");
+        setTranslationWarning(
+          `已儲存,但部分語系翻譯失敗(${langs})— 該語系前台會 fallback 到中文。可在文章列表重新編輯觸發再次翻譯。`
+        );
+        setSaving(false);
+        // 給使用者看 1.5s 警告再轉走
+        setTimeout(() => {
+          router.push("/admin/blog");
+          router.refresh();
+        }, 1500);
+        return;
+      }
+
       router.push("/admin/blog");
       router.refresh();
     } catch (e) {
@@ -182,6 +197,42 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
           {error}
         </div>
       )}
+
+      {translationWarning && (
+        <div
+          style={{
+            padding: 12,
+            border: "1px solid rgba(253,230,138,0.4)",
+            background: "rgba(253,230,138,0.08)",
+            borderRadius: 8,
+            color: "#fde68a",
+            fontSize: 13,
+            marginBottom: 16,
+          }}
+        >
+          ⚠ {translationWarning}
+        </div>
+      )}
+
+      {/* AI 翻譯說明 */}
+      <div
+        style={{
+          padding: "10px 14px",
+          border: "1px solid rgba(74,222,128,0.3)",
+          background: "rgba(74,222,128,0.06)",
+          borderRadius: 10,
+          color: "rgba(232,232,240,0.85)",
+          fontSize: 12,
+          marginBottom: 16,
+          lineHeight: 1.6,
+        }}
+      >
+        <strong style={{ color: "#86efac" }}>✦ AI 自動翻譯</strong>:你只需要寫中文。儲存時系統會自動翻成 English / 日本語 / 한국어,前台會依使用者選的語言顯示。
+        <br />
+        <span style={{ color: "rgba(192,192,208,0.6)", fontSize: 11 }}>
+          翻譯需要 ~10 秒,儲存時請稍等。
+        </span>
+      </div>
 
       {/* Section: meta */}
       <section style={sectionStyle}>
@@ -332,12 +383,14 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
         </div>
       </section>
 
-      {/* Section: zh */}
+      {/* Section: 中文內容(唯一要填的內容欄位) */}
       <section style={sectionStyle}>
-        <h2 style={{ fontSize: 14, color: "#d4a855", margin: "0 0 14px" }}>中文內容</h2>
+        <h2 style={{ fontSize: 14, color: "#d4a855", margin: "0 0 14px" }}>
+          中文內容(其他語系自動翻譯)
+        </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={labelStyle}>標題(中)</label>
+            <label style={labelStyle}>標題</label>
             <input
               type="text"
               value={form.titleZh}
@@ -346,7 +399,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
             />
           </div>
           <div>
-            <label style={labelStyle}>摘要(中,索引頁卡片用)</label>
+            <label style={labelStyle}>摘要(索引頁卡片用,1-2 句話)</label>
             <textarea
               value={form.excerptZh}
               onChange={(e) => updateField("excerptZh", e.target.value)}
@@ -355,11 +408,11 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
             />
           </div>
           <div>
-            <label style={labelStyle}>內文(中)</label>
+            <label style={labelStyle}>內文</label>
             <textarea
               value={form.bodyZhText}
               onChange={(e) => updateField("bodyZhText", e.target.value)}
-              rows={16}
+              rows={20}
               placeholder={
                 "用空行分段。範例:\n\n第一段內容...\n\n## 這是 h2 標題\n\n第二段...,可以用 **粗體** 強調關鍵字。"
               }
@@ -368,45 +421,8 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
             <p style={{ fontSize: 11, color: "rgba(192,192,208,0.5)", marginTop: 6, lineHeight: 1.7 }}>
               用<strong style={{ color: "#fde68a" }}>空行</strong>分段(連按兩次 Enter)。每段開頭打{" "}
               <code style={{ color: "#fde68a" }}>## </code>會渲染成 h2 標題;段落內{" "}
-              <code style={{ color: "#fde68a" }}>**文字**</code> 會變粗體。
+              <code style={{ color: "#fde68a" }}>**文字**</code> 會變粗體。AI 翻譯會保留這些格式。
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Section: en */}
-      <section style={sectionStyle}>
-        <h2 style={{ fontSize: 14, color: "#d4a855", margin: "0 0 14px" }}>English Content</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Title (EN)</label>
-            <input
-              type="text"
-              value={form.titleEn}
-              onChange={(e) => updateField("titleEn", e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Excerpt (EN, used on index card)</label>
-            <textarea
-              value={form.excerptEn}
-              onChange={(e) => updateField("excerptEn", e.target.value)}
-              rows={2}
-              style={{ ...inputStyle, resize: "vertical" }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Body (EN)</label>
-            <textarea
-              value={form.bodyEnText}
-              onChange={(e) => updateField("bodyEnText", e.target.value)}
-              rows={16}
-              placeholder={
-                "Separate paragraphs with a blank line.\n\n## Use ## prefix for h2 headings\n\nUse **double asterisks** for bold."
-              }
-              style={{ ...inputStyle, resize: "vertical", lineHeight: 1.8 }}
-            />
           </div>
         </div>
       </section>
@@ -419,8 +435,14 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
           justifyContent: "flex-end",
           marginTop: 16,
           flexWrap: "wrap",
+          alignItems: "center",
         }}
       >
+        {saving && (
+          <span style={{ color: "rgba(212,168,85,0.85)", fontSize: 12, marginRight: 4 }}>
+            ✦ AI 翻譯中,大約 10 秒…
+          </span>
+        )}
         <Link
           href="/admin/blog"
           style={{
@@ -448,7 +470,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
             fontFamily: "inherit",
           }}
         >
-          {saving ? "儲存中…" : mode === "edit" ? "儲存變更" : "建立文章"}
+          {saving ? "翻譯 + 儲存中…" : mode === "edit" ? "儲存變更" : "建立文章"}
         </button>
       </div>
     </div>
