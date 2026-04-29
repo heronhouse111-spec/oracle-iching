@@ -22,12 +22,36 @@
  *   - 每篇 print 進度 (✓ / ✗),最後印總結。
  */
 
-import { config } from "dotenv";
+import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
+import { setDefaultResultOrder } from "node:dns";
 
+// IPv4 first(同 run-sql.mjs)— Supabase REST 走 HTTPS,但保險起見也加上
+setDefaultResultOrder("ipv4first");
+
+// 自己 parse .env.local,不依賴 dotenv 套件(避免要求使用者額外 npm install)
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, "..", ".env.local") });
+function loadEnvLocal() {
+  const envFile = resolve(__dirname, "..", ".env.local");
+  if (!existsSync(envFile)) return;
+  const raw = readFileSync(envFile, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line || line.trim().startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    let val = line.slice(eq + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+loadEnvLocal();
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
