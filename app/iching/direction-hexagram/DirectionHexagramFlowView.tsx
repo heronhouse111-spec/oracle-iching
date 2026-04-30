@@ -31,7 +31,7 @@ import {
   trigramRelationship,
   findHexagram,
 } from "@/data/hexagrams";
-import { trigramImageKey } from "@/lib/ichingImages";
+import { trigramImageKey, hexagramImageKey } from "@/lib/ichingImages";
 import { questionCategories } from "@/lib/divination";
 import {
   notifyCreditsChanged,
@@ -926,9 +926,53 @@ export default function DirectionHexagramFlowView({ images }: Props) {
                     marginBottom: 10,
                   }}
                 >
-                  <span style={{ fontSize: 32, color: "#d4a855", lineHeight: 1 }}>
-                    {directionTg.symbol}
-                  </span>
+                  {/* 八卦圖片 — 跟「方位卜得」結果頁、八卦速覽同一份資料,
+                      9:14 直幅,沒上傳就 fallback 顯示 Unicode 卦符。 */}
+                  {(() => {
+                    const imgUrl = directionTrigram
+                      ? images[trigramImageKey(directionTrigram)]
+                      : undefined;
+                    return (
+                      <div
+                        style={{
+                          width: 64,
+                          aspectRatio: "9 / 14",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.3)",
+                          background:
+                            "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {imgUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imgUrl}
+                            alt={t(
+                              directionTg.zh,
+                              directionTg.en,
+                              directionTg.ja,
+                              directionTg.ko
+                            )}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 30, color: "#d4a855", lineHeight: 1 }}>
+                            {directionTg.symbol}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div>
                     <div
                       style={{
@@ -1007,104 +1051,150 @@ export default function DirectionHexagramFlowView({ images }: Props) {
                     "2단 · 육효 괘상"
                   )}
                 </div>
+                {/* 64 卦圖片 + 文字並排 — 跟 /iching/hexagrams/[number] 的 hero 同 9:14 規格,
+                    沒上傳就 fallback 留白(不放 Unicode 卦象字),避免日後上傳真圖時的視覺跳動。 */}
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 10,
-                    flexWrap: "wrap",
+                    display: "grid",
+                    gridTemplateColumns: "minmax(96px, 120px) 1fr",
+                    gap: 14,
+                    alignItems: "start",
                     marginBottom: 8,
                   }}
                 >
-                  <span style={{ fontSize: 11, color: "rgba(212,168,85,0.7)" }}>
-                    {t(
-                      `第 ${hex.number} 卦`,
-                      `Hexagram ${hex.number}`,
-                      `第 ${hex.number} 卦`,
-                      `제 ${hex.number} 괘`
-                    )}
-                  </span>
-                  <h2
-                    className="text-gold-gradient"
-                    style={{
-                      fontFamily: "'Noto Serif TC', serif",
-                      fontSize: 24,
-                      margin: 0,
-                    }}
-                  >
-                    {t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)}
-                  </h2>
-                  {auspice && (
-                    <span
+                  {(() => {
+                    const hexImgUrl = images[hexagramImageKey(hex.number)];
+                    return (
+                      <div
+                        style={{
+                          width: "100%",
+                          aspectRatio: "9 / 14",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.3)",
+                          background:
+                            "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+                        }}
+                      >
+                        {hexImgUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={hexImgUrl}
+                            alt={t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain",
+                              display: "block",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div style={{ minWidth: 0 }}>
+                    <div
                       style={{
-                        background: AUSPICE_STYLE[auspice].bg,
-                        color: AUSPICE_STYLE[auspice].text,
-                        fontSize: 11,
-                        padding: "2px 9px",
-                        borderRadius: 100,
-                        fontWeight: 600,
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        marginBottom: 4,
                       }}
                     >
-                      {auspice === "great"
-                        ? t("大吉", "Auspicious", "大吉", "대길")
-                        : auspice === "challenge"
-                          ? t("艱難", "Challenging", "艱難", "험난")
-                          : t("中性", "Mixed", "中性", "중성")}
-                    </span>
-                  )}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "rgba(192,192,208,0.7)",
-                    marginBottom: 10,
-                  }}
-                >
-                  {upper.symbol}{" "}
-                  {t(
-                    `上 ${upper.zh}`,
-                    `Upper ${upper.en.split(" ")[0]}`,
-                    `上 ${upper.zh}`,
-                    `상 ${upper.zh}`
-                  )}
-                  　/　{lower.symbol}{" "}
-                  {t(
-                    `下 ${lower.zh}`,
-                    `Lower ${lower.en.split(" ")[0]}`,
-                    `下 ${lower.zh}`,
-                    `하 ${lower.zh}`
-                  )}
-                  {relatingNumber && (
-                    <>
-                      　·
-                      <span style={{ color: "#fca5a5" }}>
+                      <span style={{ fontSize: 11, color: "rgba(212,168,85,0.7)" }}>
                         {t(
-                          `之卦：第 ${relatingNumber} 卦`,
-                          `Relating: ${relatingNumber}`,
-                          `之卦:第 ${relatingNumber} 卦`,
-                          `지괘: 제 ${relatingNumber} 괘`
+                          `第 ${hex.number} 卦`,
+                          `Hexagram ${hex.number}`,
+                          `第 ${hex.number} 卦`,
+                          `제 ${hex.number} 괘`
                         )}
                       </span>
-                    </>
-                  )}
+                      {auspice && (
+                        <span
+                          style={{
+                            background: AUSPICE_STYLE[auspice].bg,
+                            color: AUSPICE_STYLE[auspice].text,
+                            fontSize: 11,
+                            padding: "2px 9px",
+                            borderRadius: 100,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {auspice === "great"
+                            ? t("大吉", "Auspicious", "大吉", "대길")
+                            : auspice === "challenge"
+                              ? t("艱難", "Challenging", "艱難", "험난")
+                              : t("中性", "Mixed", "中性", "중성")}
+                        </span>
+                      )}
+                    </div>
+                    <h2
+                      className="text-gold-gradient"
+                      style={{
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontSize: 24,
+                        margin: "0 0 8px",
+                      }}
+                    >
+                      {t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)}
+                    </h2>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "rgba(192,192,208,0.7)",
+                        marginBottom: 10,
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      {upper.symbol}{" "}
+                      {t(
+                        `上 ${upper.zh}`,
+                        `Upper ${upper.en.split(" ")[0]}`,
+                        `上 ${upper.zh}`,
+                        `상 ${upper.zh}`
+                      )}
+                      　/　{lower.symbol}{" "}
+                      {t(
+                        `下 ${lower.zh}`,
+                        `Lower ${lower.en.split(" ")[0]}`,
+                        `下 ${lower.zh}`,
+                        `하 ${lower.zh}`
+                      )}
+                      {relatingNumber && (
+                        <>
+                          <br />
+                          <span style={{ color: "#fca5a5" }}>
+                            {t(
+                              `之卦：第 ${relatingNumber} 卦`,
+                              `Relating: ${relatingNumber}`,
+                              `之卦:第 ${relatingNumber} 卦`,
+                              `지괘: 제 ${relatingNumber} 괘`
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <Link
+                      href={`/iching/hexagrams/${hex.number}`}
+                      target="_blank"
+                      style={{
+                        color: "#d4a855",
+                        fontSize: 12,
+                        textDecoration: "underline",
+                        textUnderlineOffset: 2,
+                      }}
+                    >
+                      {t(
+                        "看本卦完整介紹 →",
+                        "Read full hexagram entry →",
+                        "本卦の詳細を見る →",
+                        "본괘 자세히 보기 →"
+                      )}
+                    </Link>
+                  </div>
                 </div>
-                <Link
-                  href={`/iching/hexagrams/${hex.number}`}
-                  target="_blank"
-                  style={{
-                    color: "#d4a855",
-                    fontSize: 12,
-                    textDecoration: "underline",
-                    textUnderlineOffset: 2,
-                  }}
-                >
-                  {t(
-                    "看本卦完整介紹 →",
-                    "Read full hexagram entry →",
-                    "本卦の詳細を見る →",
-                    "본괘 자세히 보기 →"
-                  )}
-                </Link>
               </section>
 
               {/* AI 合參解讀 */}
