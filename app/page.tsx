@@ -356,6 +356,30 @@ export default function Home() {
     }
   }, []);
 
+  // ── /?type= & /?category= deep-link ───────────────────
+  // /categories 頁挑完分類後跳回 /?type=iching|tarot&category=<id>。
+  // 這個 effect 把 state 寫好、step 直接跳到 "question",讓使用者從首頁無縫接到輸入問題那步。
+  // 跟上面 /?spread= effect 分兩個 useEffect 是因為兩條深度連結各自獨立、可同時存在(雖少見)。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tp = params.get("type");
+    const cat = params.get("category");
+    if (!cat) return;
+    if (!questionCategories.some((c) => c.id === cat)) return;
+    setSelectedCategory(cat);
+    if (tp === "iching" || tp === "tarot") setDivineType(tp);
+    setStep("question");
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("type");
+      url.searchParams.delete("category");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // 切換占卜系統(易經 / 塔羅)時,若目前 persona 不在新系統的清單裡,自動切到該系統預設
   // 解決「先選塔羅人格、再切去易經,picker 找不到 active card」的情況
   useEffect(() => {
@@ -1151,11 +1175,6 @@ export default function Home() {
 
     return [rootQ, rootBlock, ...followBlocks].filter(Boolean).join("\n\n");
   }, [rootSnapshot, followUps, t]);
-
-  const handleCategorySelect = (catId: string) => {
-    setSelectedCategory(catId);
-    setStep("question");
-  };
 
   const handleQuestionSubmit = () => {
     // 訪客限 2 次占卜 — 第 3 次觸發登入 gate。
@@ -2233,7 +2252,9 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* ===== 直接入口 CTA ===== */}
+              {/* ===== 直接入口 CTA — 點下去跳到 /categories?type=...,
+                    分類選完再帶 ?type & ?category 回首頁進到 question step。
+                    舊版本是同一頁 scroll-into-view + 分類 grid,易誤點且資訊密度過高。 ===== */}
               <p
                 style={{
                   textAlign: "center",
@@ -2244,42 +2265,24 @@ export default function Home() {
                 }}
               >
                 {t(
-                  "已有偏好?直接選擇占卜方式",
-                  "Have a preference? Pick a method",
-                  "好みが決まっていますか?方法を直接選択",
-                  "선호하는 방식이 있나요? 바로 선택"
+                  "選擇占卜方式,接著挑問事類別",
+                  "Pick a method, then a topic",
+                  "占いの方法を選び、次にテーマを",
+                  "방식을 고르고, 이어서 주제를"
                 )}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    setDivineType("iching");
-                    if (typeof window !== "undefined") {
-                      const el = document.getElementById("category-grid");
-                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                  }}
+                <Link
+                  href="/categories?type=iching"
                   style={{
                     display: "block",
                     padding: 0,
                     textAlign: "left",
-                    cursor: "pointer",
+                    textDecoration: "none",
                     borderRadius: 14,
                     overflow: "hidden",
-                    border:
-                      divineType === "iching"
-                        ? "1.5px solid rgba(212,168,85,0.85)"
-                        : "1px solid rgba(212,168,85,0.25)",
-                    background:
-                      divineType === "iching"
-                        ? "rgba(212,168,85,0.12)"
-                        : "rgba(13,13,43,0.8)",
-                    boxShadow:
-                      divineType === "iching"
-                        ? "0 0 24px rgba(212,168,85,0.25)"
-                        : "none",
+                    border: "1px solid rgba(212,168,85,0.25)",
+                    background: "rgba(13,13,43,0.8)",
                     fontFamily: "inherit",
                   }}
                 >
@@ -2297,36 +2300,18 @@ export default function Home() {
                       )}
                     </div>
                   </div>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    setDivineType("tarot");
-                    if (typeof window !== "undefined") {
-                      const el = document.getElementById("category-grid");
-                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                  }}
+                </Link>
+                <Link
+                  href="/categories?type=tarot"
                   style={{
                     display: "block",
                     padding: 0,
                     textAlign: "left",
-                    cursor: "pointer",
+                    textDecoration: "none",
                     borderRadius: 14,
                     overflow: "hidden",
-                    border:
-                      divineType === "tarot"
-                        ? "1.5px solid rgba(212,168,85,0.85)"
-                        : "1px solid rgba(212,168,85,0.25)",
-                    background:
-                      divineType === "tarot"
-                        ? "rgba(212,168,85,0.12)"
-                        : "rgba(13,13,43,0.8)",
-                    boxShadow:
-                      divineType === "tarot"
-                        ? "0 0 24px rgba(212,168,85,0.25)"
-                        : "none",
+                    border: "1px solid rgba(212,168,85,0.25)",
+                    background: "rgba(13,13,43,0.8)",
                     fontFamily: "inherit",
                   }}
                 >
@@ -2344,7 +2329,7 @@ export default function Home() {
                       )}
                     </div>
                   </div>
-                </motion.button>
+                </Link>
               </div>
 
               {/* ===== Trust signal strip ===== */}
@@ -2412,89 +2397,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ===== Category picker ===== */}
-              <div id="category-grid">
-                {divineType && (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      marginBottom: 10,
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: "rgba(212,168,85,0.08)",
-                      border: "1px dashed rgba(212,168,85,0.3)",
-                    }}
-                  >
-                    <span style={{ color: "rgba(192,192,208,0.85)", fontSize: 12 }}>
-                      {t("已選:", "Selected: ", "選択中:", "선택됨: ")}
-                      <strong style={{ color: "#d4a855" }}>
-                        {divineType === "iching"
-                          ? t("易經占卜", "I Ching", "易経占い", "주역 점")
-                          : t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
-                      </strong>
-                    </span>
-                    <button
-                      onClick={() => setDivineType(null)}
-                      style={{
-                        marginLeft: 10,
-                        background: "none",
-                        border: "none",
-                        color: "rgba(212,168,85,0.7)",
-                        fontSize: 11,
-                        textDecoration: "underline",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {t("清除", "Clear", "クリア", "지우기")}
-                    </button>
-                  </div>
-                )}
-                <p style={{ textAlign: "center", color: "#c0c0d0", fontSize: 14, marginBottom: 12 }}>
-                  {divineType
-                    ? t(
-                        "挑一個你想問的方向",
-                        "Pick a topic to ask about",
-                        "聞きたいテーマを一つ選ぶ",
-                        "묻고 싶은 주제 하나 선택"
-                      )
-                    : t(
-                        "請選擇問事類別,稍後再選占卜工具",
-                        "Pick a topic — choose your method next",
-                        "テーマを選んでから方法を選択",
-                        "주제를 먼저, 방법은 다음에"
-                      )}
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  {questionCategories.map((cat) => (
-                    <motion.button
-                      key={cat.id}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleCategorySelect(cat.id)}
-                      style={{
-                        padding: 0,
-                        textAlign: "center",
-                        cursor: "pointer",
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        border: "1px solid rgba(212,168,85,0.2)",
-                        background: "rgba(13,13,43,0.8)",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      <HeroImage
-                        url={uiImages[`category.${cat.id}`]}
-                        aspectRatio="4/3"
-                      />
-                      <div style={{ padding: "10px 8px 12px" }}>
-                        <span style={{ color: "#d4a855", fontWeight: 600, fontSize: 14 }}>
-                          {t(cat.nameZh, cat.nameEn, cat.nameJa, cat.nameKo)}
-                        </span>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
+              {/* 分類 grid 已搬到 /categories;首頁不再內嵌 — 由上方 CTA 帶過去。 */}
 
               {/* ===== Free tools ===== */}
               <div style={{ marginTop: 36 }}>
