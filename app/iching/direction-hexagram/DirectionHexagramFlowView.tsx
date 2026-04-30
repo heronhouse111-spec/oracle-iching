@@ -1176,23 +1176,6 @@ export default function DirectionHexagramFlowView({ images }: Props) {
                         </>
                       )}
                     </div>
-                    <Link
-                      href={`/iching/hexagrams/${hex.number}`}
-                      target="_blank"
-                      style={{
-                        color: "#d4a855",
-                        fontSize: 12,
-                        textDecoration: "underline",
-                        textUnderlineOffset: 2,
-                      }}
-                    >
-                      {t(
-                        "看本卦完整介紹 →",
-                        "Read full hexagram entry →",
-                        "本卦の詳細を見る →",
-                        "본괘 자세히 보기 →"
-                      )}
-                    </Link>
                   </div>
                 </div>
               </section>
