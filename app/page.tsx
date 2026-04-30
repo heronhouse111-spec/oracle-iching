@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
@@ -158,6 +159,7 @@ function FreeToolCard({
 export default function Home() {
   const { locale, t } = useLanguage();
   const uiImages = useUiImages();
+  const router = useRouter();
 
   const [step, setStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -378,6 +380,45 @@ export default function Home() {
     } catch {
       // ignore
     }
+  }, []);
+
+  // ── /?resumeFlow=mode-select deep-link ─────────────────
+  // 從 /iching 選了「全卦六爻 · 三錢法」回來時帶著這個 param。
+  // sessionStorage("iching_resume_state") 是上一輪在 question 步驟暫存的 q + cat。
+  // 兩者都齊 → 直接落到 mode-select,跳過 category / question 兩步。
+  // 缺一不可;若直接打 URL 進來但 sessionStorage 是空的,就走正常 category 開頭。
+  // 跟 ?resume=<id> 是不同 param 名稱,避免跟「resume saved divination」打架。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resumeFlow") !== "mode-select") return;
+
+    let resumeState: { question?: string; category?: string } | null = null;
+    try {
+      const raw = sessionStorage.getItem("iching_resume_state");
+      if (raw) resumeState = JSON.parse(raw);
+      sessionStorage.removeItem("iching_resume_state");
+    } catch {
+      /* ignore */
+    }
+
+    // 先把 URL param 清掉,避免使用者按上一頁等動作再次觸發
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("resumeFlow");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
+    } catch {
+      /* ignore */
+    }
+
+    if (!resumeState?.question || !resumeState?.category) return;
+    if (!questionCategories.some((c) => c.id === resumeState.category)) return;
+
+    setSelectedCategory(resumeState.category);
+    setUserQuestion(resumeState.question);
+    setDivineType("iching");
+    setDrawnCards([]);
+    setStep("mode-select");
   }, []);
 
   // 切換占卜系統(易經 / 塔羅)時,若目前 persona 不在新系統的清單裡,自動切到該系統預設
@@ -1199,8 +1240,23 @@ export default function Home() {
     setRevealedCount(0);
 
     if (divineType === "iching") {
+      // 新流程:不直接跳 mode-select,先帶到 /iching 讓使用者選占法
+      // (三錢全卦 / 梅花易數 / 方位卦象合參)。三錢法那條會帶 ?resumeFlow=mode-select
+      // 回來,本頁 mount effect 會復原問題與類別,並把 step 直接落到 mode-select。
+      try {
+        sessionStorage.setItem(
+          "iching_resume_state",
+          JSON.stringify({
+            question: userQuestion,
+            category: selectedCategory,
+          })
+        );
+      } catch {
+        /* sessionStorage 寫不進就放棄,回到 /iching 後使用者再點三錢法會走 fresh start */
+      }
       setDrawnCards([]);
-      setStep("mode-select");
+      router.push("/iching");
+      return;
     } else if (divineType === "tarot") {
       // 已從 ?spread=<id> 預選好就直接抽該牌陣;否則進牌陣選單
       if (selectedSpreadId) {
@@ -2768,7 +2824,14 @@ export default function Home() {
                   </button>
                   <button onClick={handleQuestionSubmit} disabled={!userQuestion.trim()}
                     className="btn-gold" style={{ flex: 1, fontSize: 16 }}>
-                    {t("開始占卜", "Begin Divination", "占いを始める", "점 시작")}
+                    {divineType === "iching"
+                      ? t(
+                          "下一步 · 選擇占卜方式",
+                          "Next · Choose Method",
+                          "次へ · 占卜方法を選ぶ",
+                          "다음 · 점법 선택"
+                        )
+                      : t("開始占卜", "Begin Divination", "占いを始める", "점 시작")}
                   </button>
                 </div>
 

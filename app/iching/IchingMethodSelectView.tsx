@@ -36,7 +36,10 @@ interface MethodEntry {
 const METHODS: MethodEntry[] = [
   {
     id: "main",
-    href: "/",
+    // resumeFlow=mode-select → 把使用者帶回首頁的「自動 / 手動」選擇步驟,
+    // 並從 sessionStorage 復原前一頁輸入過的 question + category。
+    // 直接打 /iching 進來再點(沒前置 state)的人,首頁會自動 fallback 到 category step。
+    href: "/?resumeFlow=mode-select",
     badgeZh: "全",
     badgeEn: "Full",
     nameZh: "全卦六爻 · 三錢法",
