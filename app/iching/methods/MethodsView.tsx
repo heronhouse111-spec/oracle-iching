@@ -74,13 +74,14 @@ const METHODS: Method[] = [
     taglineJa: "宋代の邵雍が創始 — 時刻や数字から直接卦を立てる",
     taglineKo: "송대 소옹이 창안 — 시간이나 숫자로 바로 괘를 세웁니다",
     bodyZh:
-      "宋代邵雍所創,核心是「萬物皆數」。最知名是「時間起卦」:用問事當下的年月日時數字,經模 8 / 模 6 算出上卦、下卦與動爻。也可用任意三個數字(出生日期、隨機數、聲音次數等)起卦。優勢是「不需要工具」,看到突發狀況立刻能起卦,適合即時應對。缺點是依賴運算技巧,需要記住起卦公式。本 app 沒做時間起卦的入口,但你可以把算出來的卦號直接到 64 卦介紹頁查。",
+      "宋代邵雍所創,核心是「萬物皆數」。最知名是「時間起卦」:用問事當下的年月日時分數字,經模 8 / 模 6 算出上卦、下卦與動爻。優勢是「不需要工具」,看到突發狀況立刻能起卦,適合即時應對。缺點是依賴運算技巧,需要記住起卦公式 — 本 app 把公式自動化並全部攤開給你看,不必死記。",
     bodyEn:
-      "Created by Shao Yong in the Song dynasty; core idea: 'all things are numbers'. The most famous is 'time-based casting': use the date-time of the question, applying mod-8 and mod-6 arithmetic to derive upper trigram, lower trigram, and changing line. You can also use any three numbers (birthday, random, sound counts). The advantage: no tools needed — you can cast for sudden situations immediately. The downside: requires memorizing the formulas. We haven't built a time-casting entry point, but you can look up the resulting hexagram on the 64-Hexagram encyclopedia.",
+      "Created by Shao Yong in the Song dynasty; core idea: 'all things are numbers'. The most famous variant is 'time-based casting': from the year, month, day, hour, and minute of the question, applying mod-8 and mod-6 to derive upper trigram, lower trigram, and changing line. The advantage: no tools needed — you can cast for sudden situations immediately. The downside: it traditionally requires memorizing the formulas — but this app automates the math and lays it bare so you don't have to.",
     bodyJa:
-      "宋代の邵雍が創始した方法で、「万物は数」を中心思想とします。最も有名なのは「時間起卦」:質問時の年月日時を使い、8で割った余り・6で割った余りで上卦、下卦、動爻を導出します。任意の3つの数字(誕生日、ランダム、音の回数など)でも可能。利点は「道具不要」 — 急な場面で即座に立卦できます。欠点は計算方法を覚える必要があること。本アプリには時間起卦の入口はありませんが、得られた卦番号を64卦解説ページで調べられます。",
+      "宋代の邵雍が創始した方法で、「万物は数」を中心思想とします。最も有名なのは「時間起卦」:質問時の年月日時分を使い、8で割った余り・6で割った余りで上卦・下卦・動爻を導出します。利点は「道具不要」 — 急な場面で即座に立卦できます。欠点は計算方法を覚える必要があること — 本アプリは公式を自動化し、全て見える形で示すので暗記不要。",
     bodyKo:
-      "송대 소옹이 창안한 방법으로, '만물은 수' 사상을 핵심으로 합니다. 가장 유명한 것은 '시간 기괘': 질문 당시의 연월일시 숫자를 모듈로 8 / 모듈로 6으로 계산해 상괘·하괘·동효를 도출합니다. 임의의 세 숫자(생일·랜덤·소리 횟수 등)도 사용 가능합니다. 장점은 '도구 불필요' — 갑작스런 상황에서 즉시 점칠 수 있습니다. 단점은 공식을 외워야 한다는 점. 본 앱에는 시간 기괘 입구가 없지만, 도출된 괘 번호를 64괘 백과에서 찾아볼 수 있습니다.",
+      "송대 소옹이 창안한 방법으로, '만물은 수' 사상을 핵심으로 합니다. 가장 유명한 것은 '시간 기괘': 질문 당시의 연월일시분 숫자를 모듈로 8 / 모듈로 6으로 계산해 상괘·하괘·동효를 도출합니다. 장점은 '도구 불필요' — 갑작스런 상황에서 즉시 점칠 수 있습니다. 단점은 공식을 외워야 한다는 점이지만, 본 앱이 공식을 자동화하고 전부 펼쳐 보여주므로 외울 필요가 없습니다.",
+    detailHref: "/iching/methods/plum-blossom",
   },
   {
     id: "instant-draw",
