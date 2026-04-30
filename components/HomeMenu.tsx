@@ -59,6 +59,21 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    heading: { tw: "開始占卜", en: "Start a reading", ja: "占いを始める", ko: "점 시작" },
+    items: [
+      {
+        key: "iching-cast",
+        href: "/categories?type=iching",
+        label: { tw: "易經占卜", en: "I Ching Reading", ja: "易経占い", ko: "주역 점" },
+      },
+      {
+        key: "tarot-cast",
+        href: "/categories?type=tarot",
+        label: { tw: "塔羅占卜", en: "Tarot Reading", ja: "タロット占い", ko: "타로 점" },
+      },
+    ],
+  },
+  {
     heading: { tw: "輕量占卜", en: "Quick readings", ja: "クイック占い", ko: "간편 점" },
     items: [
       {
