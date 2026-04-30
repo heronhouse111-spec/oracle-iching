@@ -40,6 +40,8 @@ export const CREDIT_COSTS = {
   /** 方位卦象合參 — 兩段式占法(羅盤方位 + 完整六爻),含 AI 合參解讀。
    *  比一般 DIVINE 多一段卜方位的解讀,但又比 DIVINE_FOLLOWUP 簡單,定 6 點。 */
   DIRECTION_HEX: 6,
+  /** 梅花易數 — 時間起卦不擲錢,但仍是完整六爻 + AI 解卦,跟 DIVINE 同價。 */
+  PLUM_BLOSSOM: 5,
 } as const;
 
 export type CreditReason =
@@ -51,6 +53,7 @@ export type CreditReason =
   | "spend_yesno"
   | "spend_daily"
   | "spend_direction_hex"
+  | "spend_plum_blossom"
   | "refund_api_error"
   | "signup_bonus"
   | "onboarding_bonus"

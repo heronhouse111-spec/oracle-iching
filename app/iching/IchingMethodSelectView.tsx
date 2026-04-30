@@ -30,9 +30,7 @@ interface MethodEntry {
   taglineJa: string;
   taglineKo: string;
   /** badge tier — 跟 /iching/methods 同色系 */
-  tier: "main" | "quick" | "daily" | "advanced";
-  /** 是否需要登入(daily 才需要) */
-  requiresLogin?: boolean;
+  tier: "main" | "instant" | "advanced";
 }
 
 const METHODS: MethodEntry[] = [
@@ -53,37 +51,20 @@ const METHODS: MethodEntry[] = [
     tier: "main",
   },
   {
-    id: "yes-no",
-    href: "/iching/yes-no",
-    badgeZh: "速",
-    badgeEn: "Quick",
-    nameZh: "Yes / No 一卦速答",
-    nameEn: "Yes / No · Quick Answer",
-    nameJa: "Yes / No 一卦速答",
-    nameKo: "Yes / No 한 괘 속답",
-    taglineZh: "想快速看一個方向，抽一卦，AI 告訴你是、否、還是看條件",
+    id: "plum-blossom",
+    href: "/iching/plum-blossom",
+    badgeZh: "梅",
+    badgeEn: "Plum",
+    nameZh: "梅花易數 · 時間起卦",
+    nameEn: "Plum Blossom · Time Casting",
+    nameJa: "梅花易数 · 時間起卦",
+    nameKo: "매화역수 · 시간 기괘",
+    taglineZh: "宋代邵雍創 — 不擲錢，用問事當下的時間直接起卦，AI 解讀含動爻變化",
     taglineEn:
-      "Need a fast direction? Draw one hexagram and the AI gives you yes, no, or it depends",
-    taglineJa: "サクッと方向性を見たい時に。一卦を引き、はい・いいえ・条件次第を答える",
-    taglineKo: "빠르게 방향을 보고 싶을 때. 한 괘를 뽑아 예·아니오·조건부로 답함",
-    tier: "quick",
-  },
-  {
-    id: "daily",
-    href: "/iching/daily",
-    badgeZh: "日",
-    badgeEn: "Daily",
-    nameZh: "每日一占卜",
-    nameEn: "Daily Hexagram",
-    nameJa: "毎日の卦",
-    nameKo: "오늘의 괘",
-    taglineZh: "今天屬於你的一卦 — 同一天看到的是同一卦，作為每日的提醒",
-    taglineEn:
-      "Today's hexagram for you — the same hexagram all day, a daily reminder",
-    taglineJa: "今日のあなたの一卦 — 同じ日には同じ卦、日々の呼びかけとして",
-    taglineKo: "오늘 당신의 한 괘 — 같은 날에는 같은 괘, 매일의 일깨움",
-    tier: "daily",
-    requiresLogin: true,
+      "Created by Shao Yong — no coins; cast a hexagram from the current time and let the AI read it",
+    taglineJa: "宋代の邵雍が創始 — 銭を投げず、問いを立てた時刻から卦を起こし、AIが読み解く",
+    taglineKo: "송대 소옹이 창안 — 동전 없이 질문 시점의 시간으로 괘를 세우고 AI가 풀이",
+    tier: "instant",
   },
   {
     id: "direction-hexagram",
@@ -115,21 +96,13 @@ const TIER_BADGE: Record<
     labelJa: "メイン",
     labelKo: "메인",
   },
-  quick: {
-    bg: "rgba(74,222,128,0.18)",
-    color: "#86efac",
-    labelZh: "輕量",
-    labelEn: "Quick",
-    labelJa: "軽量",
-    labelKo: "가벼움",
-  },
-  daily: {
+  instant: {
     bg: "rgba(139,92,246,0.18)",
     color: "#c4b5fd",
-    labelZh: "每日",
-    labelEn: "Daily",
-    labelJa: "毎日",
-    labelKo: "매일",
+    labelZh: "即時",
+    labelEn: "Instant",
+    labelJa: "即時",
+    labelKo: "즉시",
   },
   advanced: {
     bg: "rgba(99,179,237,0.18)",
@@ -189,10 +162,10 @@ export default function IchingMethodSelectView() {
           }}
         >
           {t(
-            "不同問題適合不同占法 — 全卦六爻看深度脈絡、Yes/No 看當下方向、每日一卦做提醒、方位卦象合參用兩段式合看「在哪裡」+「怎麼走」。",
-            "Different questions call for different methods. Full hexagram for depth, Yes/No for direction, Daily for a reminder, Direction × Hexagram for a two-stage look at 'where' and 'how'.",
-            "質問によって適切な占法は異なります。全卦六爻は深い脈絡、Yes/No は当下の方向、毎日の卦は呼びかけ、方位×卦象は二段で「どこ」と「どう」を見る。",
-            "질문마다 어울리는 점법이 다릅니다. 전괘 육효는 깊은 흐름, Yes/No는 현재 방향, 매일의 괘는 일깨움, 방위·괘상 합참은 '어디서'와 '어떻게'를 두 단계로."
+            "不同問題適合不同占法 — 全卦六爻看深度脈絡、梅花易數用時間直接起卦、方位卦象合參用兩段式合看「在哪裡」+「怎麼走」。",
+            "Different questions call for different methods. Full hexagram for depth, plum blossom for casting from time alone, direction × hexagram for a two-stage look at 'where' and 'how'.",
+            "質問によって適切な占法は異なります。全卦六爻は深い脈絡、梅花易数は時刻から直接立卦、方位×卦象は二段で「どこ」と「どう」を見る。",
+            "질문마다 어울리는 점법이 다릅니다. 전괘 육효는 깊은 흐름, 매화역수는 시간만으로 기괘, 방위·괘상 합참은 '어디서'와 '어떻게'를 두 단계로."
           )}
         </p>
       </header>
@@ -316,22 +289,6 @@ export default function IchingMethodSelectView() {
                 >
                   {tierLabel}
                 </span>
-                {m.requiresLogin && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(192,192,208,0.7)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {t(
-                      "需登入",
-                      "Login required",
-                      "ログイン必須",
-                      "로그인 필요"
-                    )}
-                  </span>
-                )}
               </div>
               <p
                 style={{
