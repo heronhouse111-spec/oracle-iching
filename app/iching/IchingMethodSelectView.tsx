@@ -154,12 +154,6 @@ const MIND_NOTES: { zh: string; en: string; ja: string; ko: string }[] = [
     ja: "質問は具体的に — 「今回の協業は順調に進むか」のほうが「最近の運勢はどうか」より良い。",
     ko: "질문은 구체적으로 — '이번 협업이 순조로울 것인가'가 '요즘 내 운세가 어떨까'보다 낫습니다.",
   },
-  {
-    zh: "同一事不宜反覆占問 — 「初筮告，再三瀆，瀆則不告」。",
-    en: "Don't divine the same matter repeatedly — 'The first cast tells; further casts profane it, and the profaned does not speak.'",
-    ja: "同一事を繰り返し占うべからず — 「初筮告ぐ、再三瀆す、瀆さば告げず」。",
-    ko: "같은 일을 반복해 점치지 마세요 — '처음 점은 알리지만, 거듭하면 모독이 되어 알리지 않는다.'",
-  },
 ];
 
 export default function IchingMethodSelectView() {
