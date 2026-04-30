@@ -37,6 +37,9 @@ export const CREDIT_COSTS = {
   TAROT_12_CARD: 14,
   /** Deep Insight 模式加成(訂閱戶才能用,免費版鎖在 Quick) */
   DEEP_INSIGHT_SURCHARGE: 3,
+  /** 方位卦象合參 — 兩段式占法(羅盤方位 + 完整六爻),含 AI 合參解讀。
+   *  比一般 DIVINE 多一段卜方位的解讀,但又比 DIVINE_FOLLOWUP 簡單,定 6 點。 */
+  DIRECTION_HEX: 6,
 } as const;
 
 export type CreditReason =
@@ -47,6 +50,7 @@ export type CreditReason =
   | "spend_chat"
   | "spend_yesno"
   | "spend_daily"
+  | "spend_direction_hex"
   | "refund_api_error"
   | "signup_bonus"
   | "onboarding_bonus"

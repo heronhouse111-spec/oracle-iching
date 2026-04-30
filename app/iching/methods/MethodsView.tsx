@@ -350,8 +350,27 @@ export default function MethodsView() {
             >
               {pickBody(m)}
             </p>
-            {/* m.detailHref → 詳細介紹頁連結 — 由 Phase 3 接上,
-                此處先不 render 避免 404。 */}
+            {m.detailHref && (
+              <div style={{ marginTop: 14 }}>
+                <Link
+                  href={m.detailHref}
+                  style={{
+                    display: "inline-block",
+                    color: "#d4a855",
+                    fontSize: 13,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  {t(
+                    "看詳細介紹 →",
+                    "Read full details →",
+                    "詳細紹介を見る →",
+                    "자세히 보기 →"
+                  )}
+                </Link>
+              </div>
+            )}
           </article>
         ))}
       </div>

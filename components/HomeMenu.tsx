@@ -92,6 +92,26 @@ const GROUPS: NavGroup[] = [
     heading: { tw: "易經", en: "I-Ching", ja: "易経", ko: "역경" },
     items: [
       {
+        key: "iching-select",
+        href: "/iching",
+        label: {
+          tw: "占卜方法選擇",
+          en: "Choose Method",
+          ja: "占卜の方法選択",
+          ko: "점법 선택",
+        },
+      },
+      {
+        key: "iching-direction-hex",
+        href: "/iching/direction-hexagram",
+        label: {
+          tw: "方位卦象合參",
+          en: "Direction × Hexagram",
+          ja: "方位×卦象 合参",
+          ko: "방위·괘상 합참",
+        },
+      },
+      {
         key: "iching-64",
         href: "/iching/hexagrams",
         label: { tw: "64 卦圖鑑", en: "64 Hexagrams", ja: "64卦図鑑", ko: "64괘 도감" },
