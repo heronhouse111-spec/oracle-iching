@@ -38,7 +38,12 @@ import {
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
 
-type Phase = "question" | "compass" | "coins" | "reveal";
+type Phase =
+  | "question"
+  | "compass"
+  | "compass-result" // 羅盤停定後的「方位卜得」結果頁,使用者按下一步才進入 coins
+  | "coins"
+  | "reveal";
 
 interface CoinTossEntry {
   coins: [number, number, number];
@@ -109,8 +114,9 @@ export default function DirectionHexagramFlowPage() {
 
   function onCompassDone(code: string) {
     setDirectionTrigram(code);
-    // 短暫停留讓使用者看到結果,再進入 coins 階段
-    setTimeout(() => setPhase("coins"), 1200);
+    // 羅盤停定後再停 2 秒(讓使用者看完指針指向哪),
+    // 才轉場到「方位卜得」結果頁。使用者按下一步才會進入 coins。
+    setTimeout(() => setPhase("compass-result"), 2000);
   }
 
   async function startCoinTosses() {
@@ -280,9 +286,11 @@ export default function DirectionHexagramFlowPage() {
               ? t("靜心設問", "Frame Your Question", "静心して問いを定める", "마음을 가라앉히고 묻기")
               : phase === "compass"
                 ? t("第一步 · 卜方位", "Step 1 · Spin the Compass", "第一段 · 方位を占う", "1단계 · 방위 점치기")
-                : phase === "coins"
-                  ? t("第二步 · 卜六爻", "Step 2 · Cast Six Lines", "第二段 · 六爻を立てる", "2단계 · 육효 세우기")
-                  : t("合參結果", "Combined Reading", "合参の結果", "합참 결과")}
+                : phase === "compass-result"
+                  ? t("方位卜得", "Direction Drawn", "方位を得たり", "방위를 얻다")
+                  : phase === "coins"
+                    ? t("第二步 · 卜六爻", "Step 2 · Cast Six Lines", "第二段 · 六爻を立てる", "2단계 · 육효 세우기")
+                    : t("合參結果", "Combined Reading", "合参の結果", "합참 결과")}
           </h1>
         </header>
 
@@ -519,77 +527,182 @@ export default function DirectionHexagramFlowPage() {
 
               <CompassWheel onResult={onCompassDone} disabled={!!directionTrigram} />
 
-              {/* 結果展示 — 在停下後顯示 */}
-              {directionTg && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.4 }}
+              {/* 停定後不在這頁顯示結果 — onCompassDone 會延遲 2 秒後切到 compass-result phase。
+                  期間圖上指針還停在剛指到的方位,使用者看得到「指到哪」這個瞬間。 */}
+              {directionTrigram && (
+                <div
                   style={{
-                    marginTop: 24,
-                    padding: 16,
-                    background: "rgba(13,13,43,0.6)",
-                    border: "1px solid #d4a855",
-                    borderRadius: 12,
-                    display: "inline-block",
-                    minWidth: 280,
+                    marginTop: 18,
+                    fontSize: 12,
+                    color: "rgba(212,168,85,0.7)",
+                    fontStyle: "italic",
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      letterSpacing: 2,
-                      color: "rgba(212,168,85,0.7)",
-                      marginBottom: 6,
-                    }}
-                  >
-                    {t("方位卜得", "Direction Drawn", "得た方位", "얻은 방위")}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 28,
-                      color: "#d4a855",
-                      lineHeight: 1,
-                      marginBottom: 4,
-                    }}
-                  >
-                    {directionTg.symbol}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Noto Serif TC', serif",
-                      fontSize: 18,
-                      color: "#fde68a",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {t(directionTg.zh, directionTg.en, directionTg.ja, directionTg.ko)}
-                    　·
-                    {t(
-                      directionTg.directionZh,
-                      directionTg.directionEn,
-                      directionTg.directionJa,
-                      directionTg.directionKo
-                    )}
-                  </div>
-                  <p
-                    style={{
-                      color: "rgba(192,192,208,0.85)",
-                      fontSize: 12.5,
-                      marginTop: 6,
-                      lineHeight: 1.6,
-                      maxWidth: 320,
-                    }}
-                  >
+                  {t(
+                    "指針已停定 · 整理結果中…",
+                    "Pointer settled · preparing the result…",
+                    "指針停止 · 結果を整えています…",
+                    "바늘이 멈춤 · 결과 정리 중…"
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ────────── Phase 2.5: 方位卜得結果 ────────── */}
+          {phase === "compass-result" && directionTg && (
+            <motion.div
+              key="compass-result"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.4 }}
+              style={{ textAlign: "center" }}
+            >
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, ease: [0.17, 0.67, 0.3, 0.99] }}
+                style={{
+                  display: "inline-block",
+                  padding: "32px 28px",
+                  background:
+                    "linear-gradient(135deg, rgba(13,13,43,0.85), rgba(40,30,80,0.85))",
+                  border: "1px solid #d4a855",
+                  borderRadius: 18,
+                  boxShadow:
+                    "0 8px 32px rgba(212,168,85,0.25), inset 0 0 24px rgba(212,168,85,0.06)",
+                  minWidth: 300,
+                  maxWidth: 480,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: 3,
+                    color: "rgba(212,168,85,0.7)",
+                    marginBottom: 14,
+                  }}
+                >
+                  {t(
+                    "方位卜得",
+                    "DIRECTION DRAWN",
+                    "得た方位",
+                    "얻은 방위"
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 64,
+                    color: "#d4a855",
+                    lineHeight: 1,
+                    marginBottom: 12,
+                    filter: "drop-shadow(0 0 16px rgba(212,168,85,0.5))",
+                  }}
+                >
+                  {directionTg.symbol}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Noto Serif TC', serif",
+                    fontSize: 26,
+                    color: "#fde68a",
+                    fontWeight: 700,
+                    marginBottom: 4,
+                  }}
+                >
+                  {t(directionTg.zh, directionTg.en, directionTg.ja, directionTg.ko)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    color: "rgba(212,168,85,0.85)",
+                    marginBottom: 18,
+                  }}
+                >
+                  {t(
+                    directionTg.directionZh,
+                    directionTg.directionEn,
+                    directionTg.directionJa,
+                    directionTg.directionKo
+                  )}
+                </div>
+                <div
+                  style={{
+                    textAlign: "left",
+                    fontSize: 13,
+                    color: "#c0c0d0",
+                    lineHeight: 1.85,
+                    paddingTop: 14,
+                    borderTop: "1px dashed rgba(212,168,85,0.25)",
+                  }}
+                >
+                  <div style={{ marginBottom: 4 }}>
+                    <strong style={{ color: "rgba(212,168,85,0.9)" }}>
+                      {t("人事", "People", "人事", "인사")}
+                    </strong>
+                    ：
                     {t(
                       directionTg.peopleZh,
                       directionTg.peopleEn,
                       directionTg.peopleJa,
                       directionTg.peopleKo
                     )}
-                  </p>
-                </motion.div>
-              )}
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong style={{ color: "rgba(212,168,85,0.9)" }}>
+                      {t("事理", "Matters", "事理", "사리")}
+                    </strong>
+                    ：
+                    {t(
+                      directionTg.mattersZh,
+                      directionTg.mattersEn,
+                      directionTg.mattersJa,
+                      directionTg.mattersKo
+                    )}
+                  </div>
+                  <div>
+                    <strong style={{ color: "rgba(212,168,85,0.9)" }}>
+                      {t("提示", "Advice", "助言", "조언")}
+                    </strong>
+                    ：
+                    <span style={{ color: "#e8e8f0" }}>
+                      {t(
+                        directionTg.adviceZh,
+                        directionTg.adviceEn,
+                        directionTg.adviceJa,
+                        directionTg.adviceKo
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div style={{ marginTop: 28 }}>
+                <button
+                  type="button"
+                  onClick={() => setPhase("coins")}
+                  style={{
+                    padding: "12px 30px",
+                    background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+                    color: "#0a0a1a",
+                    border: "none",
+                    borderRadius: 10,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    minWidth: 220,
+                  }}
+                >
+                  {t(
+                    "下一步 · 占卜 64 卦 →",
+                    "Next · Cast the Hexagram →",
+                    "次へ · 64卦を占う →",
+                    "다음 · 64괘 점치기 →"
+                  )}
+                </button>
+              </div>
             </motion.div>
           )}
 
