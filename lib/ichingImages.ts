@@ -46,3 +46,12 @@ export const getIchingImages = unstable_cache(fetchIchingImages, ["iching-images
 export function hexagramImageKey(num: number): string {
   return String(num);
 }
+
+/**
+ * 八卦圖片 key 形式:`trigram:<3-bit code>`(例 `trigram:111` = 乾)。
+ * 跟 64 卦共用同一個 app_content row,prefix 避開 1..64 數字 key 的 namespace,
+ * 不需要新增資料表 / migration。
+ */
+export function trigramImageKey(code: string): string {
+  return `trigram:${code}`;
+}

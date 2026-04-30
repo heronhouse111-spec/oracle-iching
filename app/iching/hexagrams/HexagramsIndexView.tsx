@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { hexagrams, trigramNames } from "@/data/hexagrams";
+import { trigramImageKey } from "@/lib/ichingImages";
 
 interface Props {
   /** key 是 hexagram.number 字串 ("1" .. "64"),value 是 storage 上的圖 url */
@@ -135,27 +136,67 @@ export default function HexagramsIndexView({ images }: Props) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
-            gap: 10,
+            // 跟 64 卦同 grid 設定:auto-fill 140px、間距 16
+            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+            gap: 16,
           }}
         >
-          {Object.entries(trigramNames).map(([code, tg]) => (
-            <div
-              key={code}
-              style={{
-                padding: 12,
-                background: "rgba(13,13,43,0.5)",
-                border: "1px solid rgba(212,168,85,0.18)",
-                borderRadius: 10,
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: 28, color: "#d4a855", lineHeight: 1 }}>{tg.symbol}</div>
-              <div style={{ fontSize: 13, color: "#e8e8f0", marginTop: 6, fontWeight: 600 }}>
-                {t(tg.zh, tg.en, tg.ja, tg.ko)}
+          {Object.entries(trigramNames).map(([code, tg]) => {
+            const imgUrl = images[trigramImageKey(code)];
+            return (
+              <div
+                key={code}
+                style={{
+                  background: "rgba(13,13,43,0.5)",
+                  border: "1px solid rgba(212,168,85,0.15)",
+                  borderRadius: 10,
+                  padding: 8,
+                }}
+              >
+                {/* 圖片框 — 仿 64 卦 9:14 直幅。
+                    未上傳圖時刻意留白(不放 Unicode 卦象字),
+                    避免日後上傳真圖時的視覺跳動。 */}
+                <div
+                  style={{
+                    width: "100%",
+                    aspectRatio: "9 / 14",
+                    borderRadius: 6,
+                    overflow: "hidden",
+                    marginBottom: 6,
+                    border: "1px solid rgba(212,168,85,0.2)",
+                    background:
+                      "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
+                  }}
+                >
+                  {imgUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imgUrl}
+                      alt={tg.zh}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        display: "block",
+                      }}
+                    />
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#e8e8f0",
+                    lineHeight: 1.4,
+                    textAlign: "center",
+                    fontWeight: 600,
+                    fontFamily: "'Noto Serif TC', serif",
+                  }}
+                >
+                  {t(tg.zh, tg.en, tg.ja, tg.ko)}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

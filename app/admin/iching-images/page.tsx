@@ -10,7 +10,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { hexagrams } from "@/data/hexagrams";
+import { hexagrams, trigramNames } from "@/data/hexagrams";
+import { trigramImageKey } from "@/lib/ichingImages";
 
 type ImagesMap = Record<string, string>;
 
@@ -101,6 +102,52 @@ export default function AdminIchingImagesPage() {
     }
   };
 
+  // 八卦 (8 個 trigram) 跟 64 卦共用同一個 app_content row,
+  // 只是 key 加 `trigram:` prefix(見 lib/ichingImages.ts)避免跟 1..64 數字 key 撞名。
+  const handleTrigramUpload = async (code: string, file: File) => {
+    const slotId = trigramImageKey(code);
+    setBusySlot(slotId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "iching-images");
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
+      fd.append("filename", `trigram_${code}_${Date.now()}.${ext}`);
+
+      const upRes = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      if (!upRes.ok) {
+        const j = (await upRes.json()) as { detail?: string };
+        throw new Error(j.detail ?? `upload HTTP ${upRes.status}`);
+      }
+      const { url } = (await upRes.json()) as { url: string };
+
+      const next = { ...images, [slotId]: url };
+      await persist(next);
+      setImages(next);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusySlot(null);
+    }
+  };
+
+  const handleTrigramRemove = async (code: string) => {
+    const slotId = trigramImageKey(code);
+    const tg = trigramNames[code];
+    if (!confirm(`移除「${tg.zh}」的圖片？`)) return;
+    setBusySlot(slotId);
+    try {
+      const next = { ...images };
+      delete next[slotId];
+      await persist(next);
+      setImages(next);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusySlot(null);
+    }
+  };
+
   // 按上經 (1-30) / 下經 (31-64) 分兩組,跟 public 介紹頁排版一致,admin 看圖時更好對應
   const upper = hexagrams.filter((h) => h.number <= 30);
   const lower = hexagrams.filter((h) => h.number > 30);
@@ -109,7 +156,13 @@ export default function AdminIchingImagesPage() {
     { title: "下經（31–64）", items: lower },
   ];
 
-  const filledCount = Object.values(images).filter((v) => v).length;
+  const trigramEntries = Object.entries(trigramNames);
+  const trigramFilledCount = trigramEntries.filter(
+    ([code]) => images[trigramImageKey(code)]
+  ).length;
+  const hexFilledCount = Object.entries(images).filter(
+    ([k, v]) => v && !k.startsWith("trigram:")
+  ).length;
 
   return (
     <div className="min-h-screen">
@@ -143,7 +196,7 @@ export default function AdminIchingImagesPage() {
           每張圖建議用 1:1 或 4:5 比例的 JPG / PNG / WebP。沒上傳的卦在介紹頁會顯示卦象 Unicode 字元 + 靜態卦線占位,不會空白。
         </p>
         <p style={{ fontSize: 11, color: "rgba(212,168,85,0.7)", marginBottom: 24 }}>
-          已上傳 {filledCount} / 64
+          八卦速覽 {trigramFilledCount} / 8 · 64 卦 {hexFilledCount} / 64
         </p>
 
         {loading && <div style={{ color: "rgba(192,192,208,0.5)" }}>載入中…</div>}
@@ -162,6 +215,100 @@ export default function AdminIchingImagesPage() {
             {error}
           </div>
         )}
+
+        {/* 八卦速覽 — 8 個 trigram。圖像顯示邏輯跟 64 卦一致(9:14 直幅);
+            空 slot 顯示 trigram unicode 符號(☰☷ etc.)幫助 admin 辨識。 */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 14, color: "#d4a855", marginBottom: 12 }}>八卦速覽（8 個）</h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+              gap: 10,
+            }}
+          >
+            {trigramEntries.map(([code, tg]) => {
+              const slotId = trigramImageKey(code);
+              const url = images[slotId];
+              const isBusy = busySlot === slotId;
+              return (
+                <div key={code} className="mystic-card" style={{ padding: 10 }}>
+                  <div
+                    style={{
+                      width: "100%",
+                      aspectRatio: "9 / 14",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      marginBottom: 8,
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px dashed rgba(212,168,85,0.25)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={url}
+                        alt={tg.zh}
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 72, color: "rgba(212,168,85,0.6)", lineHeight: 1 }}>
+                        {tg.symbol}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#e8e8f0", textAlign: "center", marginBottom: 6 }}>
+                    <div style={{ fontWeight: 600 }}>{tg.zh}</div>
+                    <div style={{ fontSize: 10, color: "rgba(192,192,208,0.5)", marginTop: 2 }}>
+                      {tg.en.split(" ")[0]}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <label
+                      style={{
+                        flex: 1,
+                        ...smallBtnStyle,
+                        textAlign: "center",
+                        cursor: isBusy ? "wait" : "pointer",
+                        opacity: isBusy ? 0.5 : 1,
+                      }}
+                    >
+                      {isBusy ? "…" : url ? "更換" : "上傳"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleTrigramUpload(code, f);
+                          e.currentTarget.value = "";
+                        }}
+                        disabled={isBusy}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                    {url && (
+                      <button
+                        onClick={() => handleTrigramRemove(code)}
+                        disabled={isBusy}
+                        style={{
+                          ...smallBtnStyle,
+                          borderColor: "rgba(248,113,113,0.4)",
+                          color: "#fca5a5",
+                          background: "rgba(248,113,113,0.08)",
+                        }}
+                      >
+                        移除
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {sections.map((sec) => (
           <section key={sec.title} style={{ marginBottom: 28 }}>
