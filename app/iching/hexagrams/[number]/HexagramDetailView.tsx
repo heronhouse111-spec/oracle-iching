@@ -13,7 +13,97 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { trigramNames, type Hexagram } from "@/data/hexagrams";
+import {
+  trigramNames,
+  hexagramAuspice,
+  trigramRelationship,
+  type Hexagram,
+  type HexagramAuspice,
+  type TrigramRelationship,
+} from "@/data/hexagrams";
+
+// 吉凶 badge 設定 — 跟 MethodsView 的 tier badge 同色系
+const AUSPICE_STYLE: Record<HexagramAuspice, { bg: string; text: string }> = {
+  great: { bg: "rgba(74,222,128,0.18)", text: "#86efac" },
+  mixed: { bg: "rgba(212,168,85,0.20)", text: "#fde68a" },
+  challenge: { bg: "rgba(248,113,113,0.18)", text: "#fca5a5" },
+};
+
+// 上下卦關係 → 五行氣象 + 該卦氣象短評
+const RELATIONSHIP_INFO: Record<
+  TrigramRelationship,
+  {
+    labelZh: string;
+    labelEn: string;
+    labelJa: string;
+    labelKo: string;
+    descZh: string;
+    descEn: string;
+    descJa: string;
+    descKo: string;
+  }
+> = {
+  harmonious: {
+    labelZh: "比和（同氣）",
+    labelEn: "Harmonious (Same Element)",
+    labelJa: "比和（同気）",
+    labelKo: "비화(같은 기운)",
+    descZh: "上下卦五行相同，氣象一致，事情走勢平穩、力量集中。",
+    descEn:
+      "Upper and lower trigrams share the same element — energy is unified, the matter unfolds steadily with concentrated force.",
+    descJa: "上下卦の五行が同じで気象が一致。事の流れは安定し、力が集中する。",
+    descKo:
+      "상괘와 하괘의 오행이 같아 기운이 일치합니다. 일이 안정적으로 흐르고 힘이 집중됩니다.",
+  },
+  ascending: {
+    labelZh: "下生上（內滋外）",
+    labelEn: "Ascending (Inner Nourishes Outer)",
+    labelJa: "下が上を生ず（内が外を養う）",
+    labelKo: "하생상(안이 밖을 살림)",
+    descZh: "下卦五行生上卦，內力由下而上順生，事情漸入佳境，得勢之象。",
+    descEn:
+      "The lower trigram generates the upper — inner force flows upward, the matter gathers momentum into a favorable phase.",
+    descJa: "下卦の五行が上卦を生ず。内なる力が下から上へ順に流れ、事は次第に好転する得勢の象。",
+    descKo:
+      "하괘의 오행이 상괘를 살립니다. 안의 힘이 아래에서 위로 순조롭게 흘러, 일이 점차 좋아지는 상입니다.",
+  },
+  descending: {
+    labelZh: "上生下（外養內）",
+    labelEn: "Descending (Outer Feeds Inner)",
+    labelJa: "上が下を生ず（外が内を養う）",
+    labelKo: "상생하(밖이 안을 살림)",
+    descZh: "上卦生下卦，外部資源滋養內部，得他人助力，但需慎防被動。",
+    descEn:
+      "The upper trigram nourishes the lower — outer resources support the inner; help arrives, but beware of becoming passive.",
+    descJa: "上卦が下卦を生ず。外の資源が内を養い、他者の助力を得るが、受け身にならぬよう注意。",
+    descKo:
+      "상괘가 하괘를 살립니다. 외부 자원이 안을 양육해 타인의 도움을 받지만, 수동적이 되지 않도록 주의해야 합니다.",
+  },
+  rebellious: {
+    labelZh: "下剋上（內反外）",
+    labelEn: "Rebellious (Inner Resists Outer)",
+    labelJa: "下が上を剋す（内が外に反す）",
+    labelKo: "하극상(안이 밖을 거스름)",
+    descZh: "下卦剋上卦，內部欲突破外部框架，主動有衝突，宜謀而後動。",
+    descEn:
+      "The lower trigram restrains the upper — the inner pushes against the outer frame; conflict arises from initiative, plan before acting.",
+    descJa: "下卦が上卦を剋す。内が外の枠を突破しようとし、主体的衝突あり。謀ってから動くべし。",
+    descKo:
+      "하괘가 상괘를 극합니다. 안이 밖의 틀을 깨려 하여 주도적 충돌이 있으니, 도모한 뒤 움직이세요.",
+  },
+  oppressive: {
+    labelZh: "上剋下（外壓內）",
+    labelEn: "Oppressive (Outer Restrains Inner)",
+    labelJa: "上が下を剋す（外が内を圧す）",
+    labelKo: "상극하(밖이 안을 누름)",
+    descZh: "上卦剋下卦，外部壓力強過內部，事情受制於人，宜守不宜進。",
+    descEn:
+      "The upper trigram restrains the lower — outer pressure exceeds inner strength; the matter is constrained, hold rather than advance.",
+    descJa: "上卦が下卦を剋す。外圧が内を上回り、事は他者に制せられる。守って進まず。",
+    descKo:
+      "상괘가 하괘를 극합니다. 외압이 안의 힘을 넘어 일이 제약받으니, 지키고 나아가지 마세요.",
+  },
+};
 
 interface PrevNextHex {
   number: number;
@@ -98,6 +188,23 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
   const upperName = upper ? t(upper.zh, upper.en, upper.ja, upper.ko) : "";
   const lowerName = lower ? t(lower.zh, lower.en, lower.ja, lower.ko) : "";
 
+  // 吉凶分類 + 上下卦五行關係 — 用於下方獨立區塊
+  const auspice = hexagramAuspice[hex.number];
+  const auspiceLabel =
+    auspice === "great"
+      ? t("大吉之卦", "Auspicious", "大吉の卦", "대길의 괘")
+      : auspice === "challenge"
+        ? t("艱難之卦", "Challenging", "艱難の卦", "험난의 괘")
+        : t("中性之卦", "Mixed", "中性の卦", "중성의 괘");
+  const relationship = trigramRelationship(hex.upperTrigram, hex.lowerTrigram);
+  const relInfo = relationship ? RELATIONSHIP_INFO[relationship] : null;
+  const upperDirection = upper
+    ? t(upper.directionZh, upper.directionEn, upper.directionJa, upper.directionKo)
+    : "";
+  const lowerDirection = lower
+    ? t(lower.directionZh, lower.directionEn, lower.directionJa, lower.directionKo)
+    : "";
+
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "16px" }}>
       <nav style={{ fontSize: 12, color: "rgba(192,192,208,0.6)", marginBottom: 16 }}>
@@ -153,17 +260,42 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
               `제 ${hex.number} 괘`
             )}
           </div>
-          <h1
-            className="text-gold-gradient"
+          <div
             style={{
-              fontFamily: "'Noto Serif TC', serif",
-              fontSize: 32,
-              fontWeight: 700,
-              margin: 0,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 10,
+              flexWrap: "wrap",
             }}
           >
-            {hName}
-          </h1>
+            <h1
+              className="text-gold-gradient"
+              style={{
+                fontFamily: "'Noto Serif TC', serif",
+                fontSize: 32,
+                fontWeight: 700,
+                margin: 0,
+              }}
+            >
+              {hName}
+            </h1>
+            {auspice && (
+              <span
+                style={{
+                  background: AUSPICE_STYLE[auspice].bg,
+                  color: AUSPICE_STYLE[auspice].text,
+                  fontSize: 11,
+                  padding: "3px 10px",
+                  borderRadius: 100,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  alignSelf: "center",
+                }}
+              >
+                {auspiceLabel}
+              </span>
+            )}
+          </div>
 
           <div
             style={{
@@ -350,6 +482,137 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
           </p>
         </div>
       </section>
+
+      {/* 上下卦關係 — 五行相生剋 + 後天八卦方位,合參方位卦象用 */}
+      {relInfo && upper && lower && (
+        <section style={{ marginBottom: 32 }}>
+          <h2
+            style={{
+              fontFamily: "'Noto Serif TC', serif",
+              fontSize: 22,
+              color: "#d4a855",
+              marginBottom: 12,
+              borderLeft: "3px solid #d4a855",
+              paddingLeft: 12,
+            }}
+          >
+            {t(
+              "上下卦關係",
+              "Upper / Lower Trigram Relationship",
+              "上下卦の関係",
+              "상괘 / 하괘의 관계"
+            )}
+          </h2>
+          <div
+            style={{
+              background: "rgba(13,13,43,0.55)",
+              border: "1px solid rgba(212,168,85,0.2)",
+              borderRadius: 10,
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 14,
+                marginBottom: 14,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "rgba(212,168,85,0.7)",
+                    letterSpacing: 1,
+                    marginBottom: 4,
+                  }}
+                >
+                  {t("上卦（外）", "Upper · Outer", "上卦(外)", "상괘 · 외")}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Noto Serif TC', serif",
+                    fontSize: 16,
+                    color: "#fde68a",
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span style={{ marginRight: 6 }}>{upper.symbol}</span>
+                  {upperName}
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(192,192,208,0.75)", marginTop: 2 }}>
+                  {t("方位", "Direction", "方位", "방위")}：{upperDirection}
+                </div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "rgba(212,168,85,0.7)",
+                    letterSpacing: 1,
+                    marginBottom: 4,
+                  }}
+                >
+                  {t("下卦（內）", "Lower · Inner", "下卦(内)", "하괘 · 내")}
+                </div>
+                <div
+                  style={{
+                    fontFamily: "'Noto Serif TC', serif",
+                    fontSize: 16,
+                    color: "#fde68a",
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <span style={{ marginRight: 6 }}>{lower.symbol}</span>
+                  {lowerName}
+                </div>
+                <div style={{ fontSize: 12, color: "rgba(192,192,208,0.75)", marginTop: 2 }}>
+                  {t("方位", "Direction", "方位", "방위")}：{lowerDirection}
+                </div>
+              </div>
+            </div>
+            <div
+              style={{
+                paddingTop: 14,
+                borderTop: "1px dashed rgba(212,168,85,0.2)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "rgba(212,168,85,0.7)",
+                  letterSpacing: 1,
+                  marginBottom: 6,
+                }}
+              >
+                {t("五行氣象", "Five-Element Dynamic", "五行の気象", "오행 기운")}
+              </div>
+              <div
+                style={{
+                  fontFamily: "'Noto Serif TC', serif",
+                  fontSize: 16,
+                  color: "#fde68a",
+                  fontWeight: 600,
+                  marginBottom: 6,
+                }}
+              >
+                {t(
+                  relInfo.labelZh,
+                  relInfo.labelEn,
+                  relInfo.labelJa,
+                  relInfo.labelKo
+                )}
+              </div>
+              <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.85, margin: 0 }}>
+                {t(relInfo.descZh, relInfo.descEn, relInfo.descJa, relInfo.descKo)}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section

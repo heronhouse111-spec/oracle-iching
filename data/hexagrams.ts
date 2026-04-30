@@ -29,34 +29,241 @@ export interface Hexagram {
   imageVernacularZh: string;    // 象辭白話翻譯(中文)
 }
 
-// Trigram names mapping
+// Trigram names + 方位 / 人事 / 事理 / 占斷提示 / 五行
+//
+// 方位採後天八卦(文王八卦):
+//   乾=西北、坎=北、艮=東北、震=東、巽=東南、離=南、坤=西南、兌=西
+//
+// element 用於計算上下卦五行相生剋關係(見 trigramRelationship 函式)。
+export type TrigramElement = "metal" | "wood" | "water" | "fire" | "earth";
+
 export interface TrigramName {
   zh: string;
   en: string;
   ja?: string;
   ko?: string;
   symbol: string;
+  element: TrigramElement;
+  // 方位 — 後天八卦
+  directionZh: string;
+  directionEn: string;
+  directionJa?: string;
+  directionKo?: string;
+  // 人事象徵 — 應於誰
+  peopleZh: string;
+  peopleEn: string;
+  peopleJa?: string;
+  peopleKo?: string;
+  // 事理象徵 — 應於什麼事
+  mattersZh: string;
+  mattersEn: string;
+  mattersJa?: string;
+  mattersKo?: string;
+  // 占斷提示 — 該怎麼做
+  adviceZh: string;
+  adviceEn: string;
+  adviceJa?: string;
+  adviceKo?: string;
 }
 
 export const trigramNames: Record<string, TrigramName> = {
-  "111": { zh: "乾（天）", en: "Qian (Heaven)", symbol: "☰" },
-  "000": { zh: "坤（地）", en: "Kun (Earth)", symbol: "☷" },
-  "100": { zh: "震（雷）", en: "Zhen (Thunder)", symbol: "☳" },
-  "010": { zh: "坎（水）", en: "Kan (Water)", symbol: "☵" },
-  "001": { zh: "艮（山）", en: "Gen (Mountain)", symbol: "☶" },
-  "011": { zh: "巽（風）", en: "Xun (Wind)", symbol: "☴" },
-  "101": { zh: "離（火）", en: "Li (Fire)", symbol: "☲" },
-  "110": { zh: "兌（澤）", en: "Dui (Lake)", symbol: "☱" },
+  "111": {
+    zh: "乾（天）", en: "Qian (Heaven)", symbol: "☰", element: "metal",
+    directionZh: "西北", directionEn: "Northwest",
+    peopleZh: "父親、長輩、上司、官員、政府機關",
+    peopleEn: "Father, elders, superiors, officials, government",
+    mattersZh: "權威、領導、決策、剛健",
+    mattersEn: "Authority, leadership, decision-making, vigor",
+    adviceZh: "宜主動進取、果斷決策，但需防剛愎自用",
+    adviceEn: "Take initiative and decide firmly, but guard against stubbornness",
+  },
+  "000": {
+    zh: "坤（地）", en: "Kun (Earth)", symbol: "☷", element: "earth",
+    directionZh: "西南", directionEn: "Southwest",
+    peopleZh: "母親、年長女性、群眾",
+    peopleEn: "Mother, elder women, the masses",
+    mattersZh: "土地、包容、養育、財富累積",
+    mattersEn: "Land, inclusion, nurture, accumulating wealth",
+    adviceZh: "厚德順承，靜待時機而不爭",
+    adviceEn: "Carry with broad virtue and yield to circumstance — do not contend",
+  },
+  "100": {
+    zh: "震（雷）", en: "Zhen (Thunder)", symbol: "☳", element: "wood",
+    directionZh: "正東", directionEn: "East",
+    peopleZh: "長男、行動派",
+    peopleEn: "Eldest son, the man of action",
+    mattersZh: "雷、行動、新生事物、突發變化",
+    mattersEn: "Thunder, action, new beginnings, sudden change",
+    adviceZh: "順勢而為、把握啟動之機，但防驚擾過度",
+    adviceEn: "Move with the surge and seize the start, but beware of overreaction",
+  },
+  "010": {
+    zh: "坎（水）", en: "Kan (Water)", symbol: "☵", element: "water",
+    directionZh: "正北", directionEn: "North",
+    peopleZh: "中年男性、智者、隱者",
+    peopleEn: "Middle-aged man, the wise, the hidden one",
+    mattersZh: "水、暗藏、險難、智謀",
+    mattersEn: "Water, hidden things, danger, strategy",
+    adviceZh: "謹慎潛行、深思熟慮，不宜張揚",
+    adviceEn: "Move carefully and think deeply — do not show off",
+  },
+  "001": {
+    zh: "艮（山）", en: "Gen (Mountain)", symbol: "☶", element: "earth",
+    directionZh: "東北", directionEn: "Northeast",
+    peopleZh: "少男、轉折中的人",
+    peopleEn: "Youngest son, someone at a turning point",
+    mattersZh: "山、靜止、阻礙、終止與開始的交界",
+    mattersEn: "Mountain, stillness, obstruction, the threshold of ending and beginning",
+    adviceZh: "守不宜進，等待時機方能轉化",
+    adviceEn: "Hold rather than advance — wait for the right moment to turn",
+  },
+  "011": {
+    zh: "巽（風）", en: "Xun (Wind)", symbol: "☴", element: "wood",
+    directionZh: "東南", directionEn: "Southeast",
+    peopleZh: "長女、商人、傳遞訊息者",
+    peopleEn: "Eldest daughter, merchants, messengers",
+    mattersZh: "風、商業往來、文書、人際傳達",
+    mattersEn: "Wind, commerce, documents, communications",
+    adviceZh: "柔和婉轉、深入細節，忌猶豫不決",
+    adviceEn: "Be supple and thorough — do not waver",
+  },
+  "101": {
+    zh: "離（火）", en: "Li (Fire)", symbol: "☲", element: "fire",
+    directionZh: "正南", directionEn: "South",
+    peopleZh: "中年女性、藝文界人士、公眾人物",
+    peopleEn: "Middle-aged woman, artists, public figures",
+    mattersZh: "火、光明、名聲、文化藝術、公開之事",
+    mattersEn: "Fire, illumination, reputation, culture and art, public matters",
+    adviceZh: "光明正大、坦蕩示人，防虛而不實",
+    adviceEn: "Act in the open with integrity — guard against showy emptiness",
+  },
+  "110": {
+    zh: "兌（澤）", en: "Dui (Lake)", symbol: "☱", element: "metal",
+    directionZh: "正西", directionEn: "West",
+    peopleZh: "少女、社交圈、同事友人",
+    peopleEn: "Youngest daughter, social circles, peers and friends",
+    mattersZh: "口舌、喜悅、金錢、社交歡聚、缺損",
+    mattersEn: "Speech, joy, money, social gatherings, defects",
+    adviceZh: "享其歡聚但言辭謹慎，防口舌是非",
+    adviceEn: "Enjoy the company but speak with care — beware of gossip and dispute",
+  },
 };
 
-// 八卦名稱 ja/ko 翻譯 — 由 data/translations/trigrams.{ja,ko}.json 在 module init 時填入
+// 八卦多語翻譯 — 由 data/translations/trigrams.{ja,ko}.json 在 module init 時填入
+interface TrigramTranslation {
+  name?: string;
+  direction?: string;
+  people?: string;
+  matters?: string;
+  advice?: string;
+}
 {
-  const jaMap = trigramsJa as Record<string, string>;
-  const koMap = trigramsKo as Record<string, string>;
-  for (const code of Object.keys(trigramNames)) {
-    if (jaMap[code]) trigramNames[code].ja = jaMap[code];
-    if (koMap[code]) trigramNames[code].ko = koMap[code];
-  }
+  const merge = (
+    map: Record<string, TrigramTranslation>,
+    lang: "ja" | "ko"
+  ) => {
+    for (const code of Object.keys(trigramNames)) {
+      const tr = map[code];
+      if (!tr) continue;
+      const t = trigramNames[code];
+      if (lang === "ja") {
+        if (tr.name) t.ja = tr.name;
+        if (tr.direction) t.directionJa = tr.direction;
+        if (tr.people) t.peopleJa = tr.people;
+        if (tr.matters) t.mattersJa = tr.matters;
+        if (tr.advice) t.adviceJa = tr.advice;
+      } else {
+        if (tr.name) t.ko = tr.name;
+        if (tr.direction) t.directionKo = tr.direction;
+        if (tr.people) t.peopleKo = tr.people;
+        if (tr.matters) t.mattersKo = tr.matters;
+        if (tr.advice) t.adviceKo = tr.advice;
+      }
+    }
+  };
+  merge(trigramsJa as Record<string, TrigramTranslation>, "ja");
+  merge(trigramsKo as Record<string, TrigramTranslation>, "ko");
+}
+
+// ──────────────────────────────────────────
+// 64 卦吉凶分類
+//
+// great    = 大吉之卦(33):元亨利貞、亨通、進取之卦
+// mixed    = 中性之卦(7) :小亨、有利有弊、需視動爻
+// challenge = 艱難凶險之卦(24):有阻、有險、需謹慎或暫止
+//
+// 此分類為「卦本身的氣象傾向」,不等於最終吉凶 ——
+// 解卦仍需結合所問之事、動爻、上下卦關係。
+// 例如〈否〉卦對問「是否該停損」反為好兆頭。
+// ──────────────────────────────────────────
+export type HexagramAuspice = "great" | "mixed" | "challenge";
+
+export const hexagramAuspice: Record<number, HexagramAuspice> = {
+  1: "great", 2: "great", 3: "challenge", 4: "challenge", 5: "challenge",
+  6: "challenge", 7: "challenge", 8: "challenge", 9: "mixed", 10: "mixed",
+  11: "great", 12: "challenge", 13: "mixed", 14: "great", 15: "great",
+  16: "great", 17: "great", 18: "mixed", 19: "great", 20: "great",
+  21: "mixed", 22: "mixed", 23: "challenge", 24: "challenge", 25: "great",
+  26: "great", 27: "great", 28: "mixed", 29: "challenge", 30: "challenge",
+  31: "great", 32: "great", 33: "challenge", 34: "challenge", 35: "great",
+  36: "challenge", 37: "great", 38: "challenge", 39: "challenge", 40: "challenge",
+  41: "great", 42: "great", 43: "great", 44: "great", 45: "great",
+  46: "great", 47: "challenge", 48: "great", 49: "great", 50: "great",
+  51: "challenge", 52: "challenge", 53: "great", 54: "challenge", 55: "great",
+  56: "challenge", 57: "great", 58: "great", 59: "great", 60: "great",
+  61: "great", 62: "challenge", 63: "great", 64: "challenge",
+};
+
+// ──────────────────────────────────────────
+// 上下卦五行關係
+//
+// 五行相生:木→火→土→金→水→木
+// 五行相剋:木→土→水→火→金→木
+//
+// 以「下卦」為主動方(內、近、自己):
+//   harmonious     = 同氣(比和):上下卦同五行
+//   ascending      = 下生上:下卦生上卦,內滋養外,順
+//   descending     = 上生下:上卦生下卦,外養內,順但耗外
+//   rebellious     = 下剋上:下卦剋上卦,內反外,衝突
+//   oppressive     = 上剋下:上卦剋下卦,外壓內,受制
+//
+// 用於 64 卦詳細頁顯示「上下卦關係」一欄,合參方位卦象用。
+// ──────────────────────────────────────────
+export type TrigramRelationship =
+  | "harmonious"
+  | "ascending"
+  | "descending"
+  | "rebellious"
+  | "oppressive";
+
+const elementGenerates: Record<TrigramElement, TrigramElement> = {
+  wood: "fire",
+  fire: "earth",
+  earth: "metal",
+  metal: "water",
+  water: "wood",
+};
+const elementRestrains: Record<TrigramElement, TrigramElement> = {
+  wood: "earth",
+  earth: "water",
+  water: "fire",
+  fire: "metal",
+  metal: "wood",
+};
+
+export function trigramRelationship(
+  upperCode: string,
+  lowerCode: string
+): TrigramRelationship | null {
+  const u = trigramNames[upperCode];
+  const l = trigramNames[lowerCode];
+  if (!u || !l) return null;
+  if (u.element === l.element) return "harmonious";
+  if (elementGenerates[l.element] === u.element) return "ascending";
+  if (elementGenerates[u.element] === l.element) return "descending";
+  if (elementRestrains[l.element] === u.element) return "rebellious";
+  if (elementRestrains[u.element] === l.element) return "oppressive";
+  return null;
 }
 
 // Full 64 hexagrams data

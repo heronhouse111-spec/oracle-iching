@@ -31,8 +31,10 @@ interface Method {
   bodyEn: string;
   bodyJa?: string;
   bodyKo?: string;
-  /** 主要難度:simple / classical / instant */
-  tier: "simple" | "classical" | "instant";
+  /** 主要難度:simple / classical / instant / advanced */
+  tier: "simple" | "classical" | "instant" | "advanced";
+  /** 若有獨立詳細介紹頁,放路徑;否則 undefined */
+  detailHref?: string;
 }
 
 const METHODS: Method[] = [
@@ -146,24 +148,51 @@ const METHODS: Method[] = [
     bodyKo:
       "현대의 단순화 버전: 동전을 던지지 않고 변효도 계산하지 않으며, 64괘에서 하나를 바로 뽑아 그 괘의 길흉 경향으로 답합니다. 의식성이 가장 낮고 결정 시간이 가장 짧아 일상의 '방향만 잠깐 보고 싶은' 소소한 일에 적합합니다. 본 앱의 'Yes/No 속답'과 '오늘의 괘'가 이 방식 — 후자는 '사용자 ID + 오늘 날짜'를 난수 씨드로 사용해 같은 사람이 같은 날에 같은 괘를 보도록 하여 매일 메시지의 의식성을 유지합니다.",
   },
+  {
+    id: "direction-hexagram",
+    numberZh: "6",
+    numberEn: "6",
+    nameZh: "方位卦象合參",
+    nameEn: "Direction × Hexagram Combined",
+    nameJa: "方位×卦象 合参",
+    nameKo: "방위·괘상 합참",
+    tier: "advanced",
+    taglineZh: "先卜方位定「事之所在」,再卜卦象明「事之走向」",
+    taglineEn:
+      "First divine the direction (where the matter lies); then the hexagram (how it unfolds)",
+    taglineJa: "先に方位で「事の在処」を定め、卦象で「事の行方」を見る",
+    taglineKo: "먼저 방위로 '일의 자리'를 정하고, 괘상으로 '일의 흐름'을 봅니다",
+    bodyZh:
+      "結合後天八卦方位與六十四卦的兩段式占法。第一步用羅盤式轉動取得後天八卦其一,定位「事之所在 / 應於誰」;第二步用三錢法擲六次取得完整六十四卦,讀「事情如何演變」。最後合參:方位告訴你在哪裡、向哪個方向、應於什麼人,卦象告訴你事情的本質與走勢。例如方位卜得巽(東南、商業、長女),卦象卜得水山蹇(阻難之卦),合參即「商業合作對象柔和,但事情本身有險阻,宜暫緩」。比單卦更立體,適合人事與環境交織的複雜問題。",
+    bodyEn:
+      "A two-stage method combining the Later-Heaven (King Wen) directions with the 64 hexagrams. Step 1: spin a compass to obtain one of the eight directions, locating where the matter lies and who is involved. Step 2: toss three coins six times to derive a full hexagram, revealing how the matter unfolds. Read both together: the direction tells you 'where and who'; the hexagram tells you 'how and where to'. For example, drawing Xun (southeast, commerce, eldest daughter) for the direction and Jian (Obstruction) for the hexagram suggests: a soft commercial partner, but the matter itself has serious blocks — slow down. Richer than a single-hexagram reading, suited to questions where people and environment interweave.",
+    bodyJa:
+      "後天八卦(文王八卦)の方位と六十四卦を組み合わせた二段階の占い。第一段は羅盤式の回転で八卦の一つを得て「事の在処 / 誰に応じるか」を定め、第二段は三銭法で六回投げ六十四卦を得て「事の行方」を読む。最後に両者を合わせて読む — 方位は「どこで、誰に」を、卦象は「本質と推移」を示す。例えば方位で巽(東南・商取引・長女)、卦象で水山蹇(阻難の卦)が出た場合、「柔和な商取引相手だが事自体は険阻あり、暫時控えるべし」と解する。単卦より立体的で、人事と環境が絡む複雑な問いに向く。",
+    bodyKo:
+      "후천팔괘(문왕팔괘) 방위와 64괘를 결합한 두 단계 점법입니다. 1단계는 나침반식으로 돌려 팔괘 중 하나를 얻어 '일의 자리 / 누구에게 해당하는가'를 정합니다. 2단계는 삼전법으로 여섯 번 던져 64괘를 얻어 '일의 흐름'을 읽습니다. 마지막으로 양자를 합쳐 봅니다 — 방위는 '어디서, 누구'를 알려주고 괘상은 '본질과 추이'를 알려줍니다. 예를 들어 방위로 손(남동·상업·장녀), 괘상으로 수산건(阻難의 괘)이 나오면 '부드러운 거래 상대지만 일 자체에 험조가 있으니 잠시 보류'로 해석합니다. 단괘보다 입체적이고, 사람과 환경이 얽힌 복잡한 질문에 적합합니다.",
+    detailHref: "/iching/methods/direction-hexagram",
+  },
 ];
 
 const TIER_LABELS = {
   simple: { zh: "易上手", en: "Easy", ja: "簡単", ko: "쉬움" },
   classical: { zh: "古法", en: "Classical", ja: "古典", ko: "고전" },
   instant: { zh: "即時", en: "Instant", ja: "即時", ko: "즉시" },
+  advanced: { zh: "進階", en: "Advanced", ja: "上級", ko: "심화" },
 };
 
 const TIER_COLORS = {
   simple: "rgba(74,222,128,0.15)",
   classical: "rgba(212,168,85,0.18)",
   instant: "rgba(139,92,246,0.18)",
+  advanced: "rgba(99,179,237,0.18)",
 };
 
 const TIER_TEXT_COLORS = {
   simple: "#86efac",
   classical: "#fde68a",
   instant: "#c4b5fd",
+  advanced: "#93c5fd",
 };
 
 export default function MethodsView() {
@@ -321,6 +350,8 @@ export default function MethodsView() {
             >
               {pickBody(m)}
             </p>
+            {/* m.detailHref → 詳細介紹頁連結 — 由 Phase 3 接上,
+                此處先不 render 避免 404。 */}
           </article>
         ))}
       </div>

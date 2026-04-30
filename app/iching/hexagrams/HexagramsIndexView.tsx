@@ -119,30 +119,60 @@ export default function HexagramsIndexView({ images }: Props) {
         </div>
       </section>
 
-      {/* 八卦對照 */}
+      {/* 八卦對照 — 含後天八卦方位、人事、事理、占斷提示 */}
       <section style={{ marginBottom: 36 }}>
         <h2
           style={{
             fontFamily: "'Noto Serif TC', serif",
             fontSize: 20,
             color: "#d4a855",
-            marginBottom: 12,
+            marginBottom: 6,
             borderLeft: "3px solid #d4a855",
             paddingLeft: 12,
           }}
         >
           {t("八卦速覽", "The Eight Trigrams", "八卦速見表", "팔괘 속람")}
         </h2>
+        <p
+          style={{
+            color: "rgba(192,192,208,0.65)",
+            fontSize: 12,
+            marginLeft: 14,
+            marginBottom: 18,
+            lineHeight: 1.7,
+          }}
+        >
+          {t(
+            "後天八卦(文王八卦)方位 — 占卜時用以定「事之所在」,合參卦象見事情如何演變。",
+            "Later-Heaven (King Wen) directions — locate the matter in space, then read the hexagram for how it unfolds.",
+            "後天八卦(文王八卦)の方位 — 占卜では「事の在処」を定め、卦象と合わせて変化を読みます。",
+            "후천팔괘(문왕팔괘) 방위 — 점복 시 '일이 있는 곳'을 정하고 괘상과 합쳐 흐름을 읽습니다."
+          )}
+        </p>
         <div
           style={{
             display: "grid",
-            // 跟 64 卦同 grid 設定:auto-fill 140px、間距 16
-            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-            gap: 16,
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gap: 14,
           }}
         >
           {Object.entries(trigramNames).map(([code, tg]) => {
             const imgUrl = images[trigramImageKey(code)];
+            const tgName = t(tg.zh, tg.en, tg.ja, tg.ko);
+            const direction = t(
+              tg.directionZh,
+              tg.directionEn,
+              tg.directionJa,
+              tg.directionKo
+            );
+            const people = t(tg.peopleZh, tg.peopleEn, tg.peopleJa, tg.peopleKo);
+            const matters = t(
+              tg.mattersZh,
+              tg.mattersEn,
+              tg.mattersJa,
+              tg.mattersKo
+            );
+            const advice = t(tg.adviceZh, tg.adviceEn, tg.adviceJa, tg.adviceKo);
             return (
               <div
                 key={code}
@@ -150,29 +180,31 @@ export default function HexagramsIndexView({ images }: Props) {
                   background: "rgba(13,13,43,0.5)",
                   border: "1px solid rgba(212,168,85,0.15)",
                   borderRadius: 10,
-                  padding: 8,
+                  padding: 12,
+                  display: "grid",
+                  gridTemplateColumns: "76px 1fr",
+                  gap: 12,
+                  alignItems: "start",
                 }}
               >
-                {/* 圖片框 — 仿 64 卦 9:14 直幅。
-                    未上傳圖時刻意留白(不放 Unicode 卦象字),
-                    避免日後上傳真圖時的視覺跳動。 */}
+                {/* 圖片框 — 仿 64 卦 9:14 直幅 */}
                 <div
                   style={{
-                    width: "100%",
+                    width: 76,
                     aspectRatio: "9 / 14",
                     borderRadius: 6,
                     overflow: "hidden",
-                    marginBottom: 6,
                     border: "1px solid rgba(212,168,85,0.2)",
                     background:
                       "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
+                    flexShrink: 0,
                   }}
                 >
                   {imgUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={imgUrl}
-                      alt={tg.zh}
+                      alt={tgName}
                       style={{
                         width: "100%",
                         height: "100%",
@@ -182,17 +214,94 @@ export default function HexagramsIndexView({ images }: Props) {
                     />
                   )}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#e8e8f0",
-                    lineHeight: 1.4,
-                    textAlign: "center",
-                    fontWeight: 600,
-                    fontFamily: "'Noto Serif TC', serif",
-                  }}
-                >
-                  {t(tg.zh, tg.en, tg.ja, tg.ko)}
+
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 8,
+                      marginBottom: 4,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ fontSize: 18, color: "#d4a855", lineHeight: 1 }}>
+                      {tg.symbol}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontWeight: 700,
+                        fontSize: 15,
+                        color: "#fde68a",
+                      }}
+                    >
+                      {tgName}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(212,168,85,0.85)",
+                        background: "rgba(212,168,85,0.12)",
+                        padding: "1px 8px",
+                        borderRadius: 100,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {direction}
+                    </span>
+                  </div>
+
+                  <dl
+                    style={{
+                      margin: 0,
+                      fontSize: 12,
+                      color: "#c0c0d0",
+                      lineHeight: 1.6,
+                      display: "grid",
+                      rowGap: 4,
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <dt
+                        style={{
+                          color: "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          flexShrink: 0,
+                          minWidth: 36,
+                        }}
+                      >
+                        {t("人事", "People", "人事", "인사")}
+                      </dt>
+                      <dd style={{ margin: 0 }}>{people}</dd>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <dt
+                        style={{
+                          color: "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          flexShrink: 0,
+                          minWidth: 36,
+                        }}
+                      >
+                        {t("事理", "Matters", "事理", "사리")}
+                      </dt>
+                      <dd style={{ margin: 0 }}>{matters}</dd>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <dt
+                        style={{
+                          color: "rgba(212,168,85,0.7)",
+                          fontSize: 11,
+                          flexShrink: 0,
+                          minWidth: 36,
+                        }}
+                      >
+                        {t("提示", "Advice", "助言", "조언")}
+                      </dt>
+                      <dd style={{ margin: 0, color: "#e8e8f0" }}>{advice}</dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
             );
