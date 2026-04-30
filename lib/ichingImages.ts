@@ -48,6 +48,13 @@ export function hexagramImageKey(num: number): string {
 }
 
 /**
+ * 易經抽卦的「背牌」圖 — 跟塔羅 CARD_BACK_IMAGE 同樣是 public 靜態資源,不走 storage。
+ * 凡是易經需要翻卡動畫(/iching/daily 的 card flip 等)都統一引用這個常數,
+ * 換圖只要替換 public 檔即可,不必改各頁。
+ */
+export const ICHING_BACK_IMAGE = "/iching/8grams/ichingbackcard.jpg";
+
+/**
  * 八卦圖片 key 形式:`trigram:<3-bit code>`(例 `trigram:111` = 乾)。
  * 跟 64 卦共用同一個 app_content row,prefix 避開 1..64 數字 key 的 namespace,
  * 不需要新增資料表 / migration。
