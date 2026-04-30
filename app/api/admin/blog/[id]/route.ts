@@ -83,6 +83,10 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
   const { user: actor } = auth.ctx;
   const { id } = await ctx.params;
 
+  // ?force=true → 不管中文是否有變動,都重新呼叫 DeepSeek 翻譯三語覆蓋。
+  // 由「重新翻譯成多國語言」按鈕觸發 — 用於既有翻譯品質不佳要重來的情境。
+  const forceTranslate = new URL(req.url).searchParams.get("force") === "true";
+
   let body: UpdateBody;
   try {
     body = (await req.json()) as UpdateBody;
@@ -122,11 +126,12 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
   };
 
   const zhUnchanged =
+    !forceTranslate &&
     existing.title_zh === body.titleZh &&
     existing.excerpt_zh === body.excerptZh &&
     arrayEq(existing.body_zh as string[] | null, body.bodyZh!);
 
-  // 中文沒變 → 翻譯欄位都不動;有變 → 重新呼叫 deepseek 三語平行翻
+  // 中文沒變 → 翻譯欄位都不動;有變(或 force=true)→ 重新呼叫 deepseek 三語平行翻
   const translations = zhUnchanged
     ? null
     : await translatePostToAllLangs({
@@ -187,6 +192,7 @@ export async function PUT(req: NextRequest, ctx: RouteParams) {
       slug: data.slug,
       published: data.published,
       translationSkipped: zhUnchanged,
+      forceTranslate: forceTranslate || undefined,
       translationErrors:
         translations && translations.errors.length > 0 ? translations.errors : undefined,
     },

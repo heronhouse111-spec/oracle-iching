@@ -78,6 +78,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<BlogPostFormValue>(initial);
   const [saving, setSaving] = useState(false);
+  const [retranslating, setRetranslating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [translationWarning, setTranslationWarning] = useState<string | null>(null);
@@ -187,6 +188,69 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * 重新翻譯 — 強制把目前表單裡的中文重翻成 en/ja/ko 並覆蓋 DB。
+   * 跟「儲存變更」差別:
+   *   - 一定觸發翻譯,不管中文是否跟 DB 相同(force=true)
+   *   - 翻完留在原頁,不跳走列表 — admin 可以馬上再點一次或改完再翻
+   * 只在 edit 模式提供;new 模式儲存時自然就會翻譯。
+   */
+  const handleRetranslate = async () => {
+    if (mode !== "edit" || !postId) return;
+    setRetranslating(true);
+    setError(null);
+    setTranslationWarning(null);
+    try {
+      const splitParagraphs = (text: string) =>
+        text
+          .split(/\n\s*\n/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0);
+
+      const payload = {
+        slug: form.slug.trim(),
+        category: form.category,
+        publishedAt: form.publishedAt,
+        published: form.published,
+        heroImageUrl: form.heroImageUrl,
+        titleZh: form.titleZh.trim(),
+        excerptZh: form.excerptZh.trim(),
+        bodyZh: splitParagraphs(form.bodyZhText),
+      };
+
+      const res = await fetch(`/api/admin/blog/${postId}?force=true`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+        if (j.error === "duplicate_slug") {
+          throw new Error(`Slug「${payload.slug}」已被其他文章使用,請換一個。`);
+        }
+        throw new Error(j.detail ?? j.error ?? `HTTP ${res.status}`);
+      }
+
+      const data = (await res.json().catch(() => ({}))) as {
+        translationWarnings?: { lang: string; message: string }[];
+      };
+      if (data.translationWarnings && data.translationWarnings.length > 0) {
+        const langs = data.translationWarnings.map((w) => w.lang.toUpperCase()).join(", ");
+        setTranslationWarning(
+          `重新翻譯完成,但部分語系失敗(${langs})— 該語系仍為上次成功的版本。可以再點一次重試。`
+        );
+      } else {
+        setTranslationWarning(
+          "✓ 重新翻譯完成 — English / 日本語 / 한국어 三種語系都已覆蓋,前台會在 60 秒內更新。"
+        );
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRetranslating(false);
     }
   };
 
@@ -450,7 +514,7 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
           alignItems: "center",
         }}
       >
-        {saving && (
+        {(saving || retranslating) && (
           <span style={{ color: "rgba(212,168,85,0.85)", fontSize: 12, marginRight: 4 }}>
             ✦ AI 翻譯中,大約 10 秒…
           </span>
@@ -468,17 +532,38 @@ export default function BlogPostEditor({ mode, postId, initial }: Props) {
         >
           取消
         </Link>
+        {mode === "edit" && (
+          <button
+            type="button"
+            onClick={handleRetranslate}
+            disabled={saving || retranslating}
+            style={{
+              padding: "10px 18px",
+              fontSize: 13,
+              border: "1px solid rgba(212,168,85,0.45)",
+              borderRadius: 8,
+              color: "#fde68a",
+              background: "rgba(212,168,85,0.08)",
+              cursor: saving || retranslating ? "wait" : "pointer",
+              opacity: saving || retranslating ? 0.5 : 1,
+              fontFamily: "inherit",
+            }}
+            title="強制呼叫 DeepSeek 重新翻譯整篇,覆蓋 English / 日本語 / 한국어 既有翻譯"
+          >
+            {retranslating ? "翻譯中…" : "✦ 重新翻譯成多國語言"}
+          </button>
+        )}
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || retranslating}
           className="btn-gold"
           style={{
             padding: "10px 24px",
             fontSize: 13,
             border: "none",
-            cursor: saving ? "wait" : "pointer",
-            opacity: saving ? 0.5 : 1,
+            cursor: saving || retranslating ? "wait" : "pointer",
+            opacity: saving || retranslating ? 0.5 : 1,
             fontFamily: "inherit",
           }}
         >
