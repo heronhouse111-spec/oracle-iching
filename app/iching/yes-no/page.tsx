@@ -5,21 +5,24 @@
  *
  * 流程跟 /yes-no(塔羅版)完全一致:
  *   ask  → 輸入問題
- *   drawing → 立刻抽一卦,六爻自下而上揭示(取代翻牌動畫)
+ *   drawing → 立刻抽一卦,翻牌動畫(背 → 正)
  *   result → 顯示卦象 + verdict (yes/no/depends) + AI 一段解釋
  *
- * 差別:不擲銅錢、不算變爻 — 直接從 64 卦中抽一個。整個過程約 900ms 動畫
- * 對齊塔羅版的節奏。
+ * 差別:不擲銅錢、不算變爻 — 直接從 64 卦中抽一個。
+ * 動畫:跟 /iching/daily 同樣的 0.7s rotateY 翻牌,背面用 ICHING_BACK_IMAGE,
+ *      跟塔羅版的 CardBacks.jpg 對等。
  */
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import { hexagrams, getHexagramByNumber, trigramNames } from "@/data/hexagrams";
+import { ICHING_BACK_IMAGE } from "@/lib/ichingImages";
 import {
   notifyCreditsChanged,
   parseInsufficientCredits,
@@ -33,7 +36,6 @@ export default function IChingYesNoPage() {
   const [step, setStep] = useState<Step>("ask");
   const [question, setQuestion] = useState("");
   const [hexNumber, setHexNumber] = useState<number | null>(null);
-  const [revealedLines, setRevealedLines] = useState(0);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [aiText, setAiText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,16 +55,9 @@ export default function IChingYesNoPage() {
     // 立刻抽一卦(no 擲銅錢過程)
     const drawnNum = Math.floor(Math.random() * hexagrams.length) + 1;
     setHexNumber(drawnNum);
-    setRevealedLines(0);
 
-    // 六爻自下而上揭示,每爻間隔 110ms,六爻 ~660ms
-    for (let i = 1; i <= 6; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((r) => setTimeout(r, 110));
-      setRevealedLines(i);
-    }
-    // 全部揭示完再停 200ms 讓使用者看一眼,進 result step 開始 fetch
-    await new Promise((r) => setTimeout(r, 200));
+    // 翻牌動畫 — 背 → 正,跟 /iching/daily / /daily 同樣 700ms
+    await new Promise((r) => setTimeout(r, 700));
 
     setStep("result");
     setIsLoading(true);
@@ -137,7 +132,6 @@ export default function IChingYesNoPage() {
     setStep("ask");
     setQuestion("");
     setHexNumber(null);
-    setRevealedLines(0);
     setVerdict(null);
     setAiText("");
   };
@@ -256,57 +250,93 @@ export default function IChingYesNoPage() {
               transition={{ duration: 0.3 }}
               style={{ textAlign: "center" }}
             >
-              {/* 卦象顯示:六爻自下而上揭示 + 卦象大字 */}
+              {/* 翻牌動畫 — 背 → 正,200×320,跟 /daily / /iching/daily 同尺寸與 timing */}
               <div
                 style={{
                   margin: "20px auto 16px",
+                  perspective: 1200,
                   width: 200,
-                  padding: 24,
-                  borderRadius: 16,
-                  background: "rgba(13,13,43,0.6)",
-                  border: "1px solid rgba(212,168,85,0.4)",
-                  boxShadow: "0 8px 32px rgba(212,168,85,0.18)",
+                  height: 320,
                 }}
               >
-                {/* 六爻 — drawing step 時依 revealedLines 漸進顯示;result step 全部顯示 */}
-                <HexagramLines
-                  lines={hex.lines}
-                  revealedCount={step === "result" ? 6 : revealedLines}
-                />
-
-                {/* 卦名 — 全部揭示後才顯現
-                    (原本上方還有一個 Unicode 卦象字 `{hex.character}`,
-                     因為跟 HexagramLines 的六爻重複了,移除避免大小雙重顯示) */}
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: (step === "result" || revealedLines >= 6) ? 1 : 0,
+                  initial={{ rotateY: 180 }}
+                  animate={{ rotateY: step === "result" ? 0 : 180 }}
+                  transition={{ duration: 0.7, ease: "easeOut" }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    position: "relative",
+                    transformStyle: "preserve-3d",
                   }}
-                  transition={{ duration: 0.4, delay: step === "result" ? 0 : 0.1 }}
-                  style={{ marginTop: 16 }}
                 >
+                  {/* 正面 — 卦象方塊 */}
                   <div
                     style={{
-                      color: "#e8e8f0",
-                      fontSize: 18,
-                      fontWeight: 700,
-                      fontFamily: "'Noto Serif TC', serif",
+                      position: "absolute",
+                      inset: 0,
+                      backfaceVisibility: "hidden",
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid rgba(212,168,85,0.5)",
+                      boxShadow: "0 8px 32px rgba(212,168,85,0.25)",
+                      background: "rgba(13,13,43,0.85)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "20px 16px",
                     }}
                   >
-                    {t(
-                      hex.nameZh,
-                      hex.nameEn.split(" ")[0],
-                      hex.nameJa,
-                      hex.nameKo
-                    )}
+                    <HexagramLines lines={hex.lines} revealedCount={6} />
+                    <div style={{ marginTop: 16 }}>
+                      <div
+                        style={{
+                          color: "#fde68a",
+                          fontSize: 22,
+                          fontWeight: 700,
+                          fontFamily: "'Noto Serif TC', serif",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {t(
+                          hex.nameZh,
+                          hex.nameEn.split(" ")[0],
+                          hex.nameJa,
+                          hex.nameKo
+                        )}
+                      </div>
+                      <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 4 }}>
+                        {t(
+                          `第 ${hex.number} 卦`,
+                          `Hexagram ${hex.number}`,
+                          `第 ${hex.number} 卦`,
+                          `제 ${hex.number} 괘`
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginTop: 2 }}>
-                    {t(
-                      `第 ${hex.number} 卦`,
-                      `Hexagram ${hex.number}`,
-                      `第 ${hex.number} 卦`,
-                      `제 ${hex.number} 괘`
-                    )}
+                  {/* 背面 — 易經背牌圖 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)",
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid rgba(212,168,85,0.5)",
+                      boxShadow: "0 8px 32px rgba(212,168,85,0.25)",
+                    }}
+                  >
+                    <Image
+                      src={ICHING_BACK_IMAGE}
+                      alt="hexagram card back"
+                      width={400}
+                      height={640}
+                      priority
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
                   </div>
                 </motion.div>
               </div>
