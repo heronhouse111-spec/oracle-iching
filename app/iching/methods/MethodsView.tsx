@@ -61,53 +61,9 @@ const METHODS: Method[] = [
       "동일한 동전 세 개를 준비합니다. 앞면이 양(3점), 뒷면이 음(2점). 여섯 번 던져 아래에서 위로 여섯 효를 만듭니다. 세 동전의 합이 6/7/8/9 중 하나가 되며, 6은 노음(변), 7은 소양, 8은 소음, 9는 노양(변)입니다. 노음과 노양은 '변효'가 되어 본괘에서 지괘를 만들고 변화의 방향을 보여줍니다. 의식성과 정밀성의 균형이 좋아, 본 앱의 메인 플로우가 기본으로 사용하는 방법입니다.",
   },
   {
-    id: "yarrow",
+    id: "plum-blossom",
     numberZh: "2",
     numberEn: "2",
-    nameZh: "蓍草法",
-    nameEn: "Yarrow Stalk Method",
-    nameJa: "筮竹法",
-    nameKo: "시초법",
-    tier: "classical",
-    taglineZh: "周易最古老的卜卦法,儀式繁複但精準",
-    taglineEn: "The oldest classical method — elaborate but precise",
-    taglineJa: "周易で最も古い方法 — 手順は複雑だが精密",
-    taglineKo: "주역에서 가장 오래된 방법 — 절차는 복잡하지만 정밀합니다",
-    bodyZh:
-      "用 50 根蓍草(或竹籤、籌策),取出 1 根置於旁(代表「太極」),其餘 49 根分為兩堆,經過「分二、掛一、揲四、歸奇」四個步驟,得到一爻。整個過程要做十八變才能成一卦(每爻三變)。儀式感最重、精準度最高,但耗時 30 分鐘以上。古代占卜師專用,現代研究易經者偶爾使用。對於人生重大抉擇,值得把心定下來認真做一次。",
-    bodyEn:
-      "Use 50 yarrow stalks (or bamboo sticks). Set 1 aside (the Taiji), then divide the remaining 49 into two piles. Through four steps — 'divide in two, hang one, count by fours, take the remainder' — you derive one line. The full process requires eighteen iterations (three per line) to form a hexagram. The most ritualistic and precise method, taking 30+ minutes. Used by classical diviners; modern I Ching scholars employ it occasionally. Worth the focused stillness for major life decisions.",
-    bodyJa:
-      "筮竹50本(または竹串)を使用。1本を脇に置き(太極を表す)、残り49本を二つの山に分け、「分二・掛一・揲四・帰奇」の4手順で一爻を得ます。全体で18変を経て卦を作ります(各爻3変)。儀式性が最も高く精密ですが、30分以上かかります。古代の占者専用で、現代の易経研究者が時折使用。人生の重大な選択には心を落ち着けて一度真剣に試す価値があります。",
-    bodyKo:
-      "시초 50개(또는 대나무 막대)를 사용합니다. 1개를 옆에 두고(태극 상징), 나머지 49개를 두 더미로 나누어 '분이·괘일·설사·귀기' 네 단계를 거쳐 한 효를 얻습니다. 전체 과정은 18변을 거쳐 괘를 만듭니다(각 효에 3변). 의식성과 정밀도가 가장 높지만 30분 이상 걸립니다. 고대 점술가가 사용했고, 현대의 주역 연구자들이 가끔 사용합니다. 인생의 중대한 선택에는 마음을 가다듬고 한 번 진지하게 해 볼 가치가 있습니다.",
-  },
-  {
-    id: "single-coin",
-    numberZh: "3",
-    numberEn: "3",
-    nameZh: "單錢卜法",
-    nameEn: "Single-Coin Method",
-    nameJa: "単銭法",
-    nameKo: "단전법",
-    tier: "simple",
-    taglineZh: "極簡版:一枚硬幣擲六次,正陽反陰",
-    taglineEn: "Minimal: toss one coin six times — heads yang, tails yin",
-    taglineJa: "シンプル版:硬貨1枚を6回投げる",
-    taglineKo: "최소판: 동전 하나를 여섯 번 던집니다",
-    bodyZh:
-      "只用一枚硬幣,擲六次,自下而上記錄陰陽:正面為陽(——)、反面為陰(— —)。簡化版,沒有變爻。適合手邊只有一枚錢、想快速求個方向的場合。缺點是失去「之卦」這層動態資訊,只能看到當下的「本卦」。本 app 的「Yes / No 一卦速答」邏輯與此類似:不擲變爻,直接抽一卦看方向。",
-    bodyEn:
-      "Use just one coin. Toss six times, recording yin/yang from bottom to top: heads = yang (—), tails = yin (— —). Simplified — no changing lines. Good when you only have one coin and want quick direction. Loses the dynamic information of the relating hexagram. Our app's 'Yes/No One-Hexagram Quick Answer' uses similar logic: no changing lines, just draw one hexagram for direction.",
-    bodyJa:
-      "硬貨1枚のみ使用。6回投げ、下から順に陰陽を記録:表が陽(——)、裏が陰(— —)。簡略版で変爻はありません。手元に1枚しかなくサッと方向性が欲しい時に向いています。短所は之卦という動的情報が得られず、本卦のみであること。本アプリの「Yes/No 一卦速答」も同様の発想です。",
-    bodyKo:
-      "동전 하나만 사용합니다. 여섯 번 던져 아래에서 위로 음양을 기록: 앞면 양(——), 뒷면 음(— —). 단순화한 방법으로 변효는 없습니다. 동전이 하나뿐이거나 빠르게 방향을 보고 싶을 때 적합합니다. 지괘의 동적 정보를 잃는 단점이 있습니다. 본 앱의 'Yes/No 한 괘 속답'도 비슷한 논리입니다.",
-  },
-  {
-    id: "plum-blossom",
-    numberZh: "4",
-    numberEn: "4",
     nameZh: "梅花易數",
     nameEn: "Plum Blossom Numerology",
     nameJa: "梅花易数",
@@ -128,8 +84,8 @@ const METHODS: Method[] = [
   },
   {
     id: "instant-draw",
-    numberZh: "5",
-    numberEn: "5",
+    numberZh: "3",
+    numberEn: "3",
     nameZh: "抽卦速答法",
     nameEn: "Instant Draw",
     nameJa: "即引き法",
@@ -150,8 +106,8 @@ const METHODS: Method[] = [
   },
   {
     id: "direction-hexagram",
-    numberZh: "6",
-    numberEn: "6",
+    numberZh: "4",
+    numberEn: "4",
     nameZh: "方位卦象合參",
     nameEn: "Direction × Hexagram Combined",
     nameJa: "方位×卦象 合参",
@@ -240,10 +196,10 @@ export default function MethodsView() {
         </h1>
         <p style={{ color: "#c0c0d0", fontSize: 14, marginTop: 8 }}>
           {t(
-            "從古法蓍草到現代抽卦,五種主流方法整理",
-            "From classical yarrow stalks to modern instant draw — five mainstream methods",
-            "古典の筮竹から現代の即引きまで、5つの主要な方法",
-            "고전 시초법부터 현대 즉석 뽑기까지, 다섯 가지 주류 방법"
+            "從三錢全卦到方位卦象合參,四種主流方法整理",
+            "From three-coin full hexagram to direction × hexagram combined — four mainstream methods",
+            "三銭全卦から方位×卦象合参まで、4つの主要な方法",
+            "삼전 전괘부터 방위·괘상 합참까지, 네 가지 주류 방법"
           )}
         </p>
         <p
@@ -257,10 +213,10 @@ export default function MethodsView() {
           }}
         >
           {t(
-            "易經卜卦的核心是「讓隨機事件對映出當下心境」 — 不論用銅錢、蓍草、時間、還是直接抽卦,目的都是讓你停下來、把問題想清楚。下面五種方法各有適合的情境,選一個你願意實踐的就好。",
-            "The core of I Ching divination is letting a random event mirror your current state of mind. Whether you use coins, yarrow stalks, time, or direct draw — the goal is to slow down and articulate the question. Each method below fits a different situation; pick one you'll actually use.",
-            "易経の核心は「ランダムな事象を今の心境に映す」こと。銅銭・筮竹・時間・即引きのいずれを使っても、目的は立ち止まって問いを明確にすること。それぞれの方法に合った場面があります。実践したくなる一つを選んでください。",
-            "주역 점의 핵심은 '무작위 사건을 지금의 심경에 비추는 것'입니다. 동전·시초·시간·즉석 뽑기 어느 것을 사용하든, 목적은 멈춰서 질문을 명확히 하는 것입니다. 아래 다섯 가지 방법은 각기 다른 상황에 맞습니다. 실천할 만한 하나를 고르세요."
+            "易經卜卦的核心是「讓隨機事件對映出當下心境」 — 不論用銅錢、時間、直接抽卦,還是合參方位,目的都是讓你停下來、把問題想清楚。下面四種方法各有適合的情境,選一個你願意實踐的就好。",
+            "The core of I Ching divination is letting a random event mirror your current state of mind. Whether you use coins, time, direct draw, or combine direction with hexagram — the goal is to slow down and articulate the question. Each method below fits a different situation; pick one you'll actually use.",
+            "易経の核心は「ランダムな事象を今の心境に映す」こと。銅銭・時間・即引き・方位合参のいずれを使っても、目的は立ち止まって問いを明確にすること。それぞれの方法に合った場面があります。実践したくなる一つを選んでください。",
+            "주역 점의 핵심은 '무작위 사건을 지금의 심경에 비추는 것'입니다. 동전·시간·즉석 뽑기·방위 합참 어느 것을 사용하든, 목적은 멈춰서 질문을 명확히 하는 것입니다. 아래 네 가지 방법은 각기 다른 상황에 맞습니다. 실천할 만한 하나를 고르세요."
           )}
         </p>
       </header>
