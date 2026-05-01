@@ -10,6 +10,7 @@ import {
   SUIT_NAMES_EN,
 } from "@/data/tarot";
 import { getSpread, DEFAULT_SPREAD_ID } from "@/data/spreads";
+import { getPersona, personaName } from "@/lib/personas";
 
 /**
  * 公開分享頁 /r/[id]
@@ -50,6 +51,8 @@ interface PublicDivination {
   locale: string;
   created_at: string;
   is_public: boolean;
+  /** phase18 加;舊紀錄為 NULL,渲染端 fallback 為「老師」 */
+  persona_id: string | null;
 }
 
 async function loadPublic(id: string): Promise<PublicDivination | null> {
@@ -59,7 +62,7 @@ async function loadPublic(id: string): Promise<PublicDivination | null> {
   const { data, error } = await supabase
     .from("divinations")
     .select(
-      "id,question,category,hexagram_number,primary_lines,changing_lines,relating_hexagram_number,tarot_cards,tarot_spread_id,divine_type,ai_reading,locale,created_at,is_public"
+      "id,question,category,hexagram_number,primary_lines,changing_lines,relating_hexagram_number,tarot_cards,tarot_spread_id,divine_type,ai_reading,locale,created_at,is_public,persona_id"
     )
     .eq("id", id)
     .eq("is_public", true)
@@ -210,6 +213,17 @@ export default async function PublicDivinationPage({
 
   const isTarot = d.divine_type === "tarot";
   const brandIcon = isTarot ? "🎴" : "☯";
+
+  // 占卜師標題 — 舊紀錄 persona_id 為 NULL,fallback 到「老師」
+  const personaLabel = d.persona_id
+    ? personaName(getPersona(d.persona_id), dLocale)
+    : t("老師", "Master", "占い師", "선생님");
+  const readingTitle = t(
+    `${personaLabel}解盤`,
+    `${personaLabel}'s Reading`,
+    `${personaLabel}の解読`,
+    `${personaLabel}의 해석`,
+  );
 
   // ── 易經:本卦/之卦/卦辭/象辭 ──
   const hex =
@@ -651,7 +665,7 @@ export default async function PublicDivinationPage({
               marginBottom: 10,
             }}
           >
-            ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
+            ✦ {readingTitle}
           </h3>
           <div
             style={{

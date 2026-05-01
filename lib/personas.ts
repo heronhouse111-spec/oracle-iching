@@ -257,6 +257,17 @@ export function getPersona(id: string | null | undefined): Persona {
   return PERSONAS.find((p) => p.id === id) ?? PERSONAS[0];
 }
 
+/** 依 locale 取占卜師顯示名;ja/ko 缺值時 fallback 到 en */
+export function personaName(
+  p: Persona,
+  locale: "zh" | "en" | "ja" | "ko"
+): string {
+  if (locale === "en") return p.nameEn;
+  if (locale === "ja") return p.nameJa ?? p.nameEn;
+  if (locale === "ko") return p.nameKo ?? p.nameEn;
+  return p.nameZh;
+}
+
 /**
  * 訂閱判定 — 給 API route 用
  *   isActive 訂閱戶解鎖 premium tier;否則只能用 free。

@@ -43,6 +43,8 @@ export interface PendingDivinationSnapshot {
   tarot: PendingTarotSlot[] | null;
   /** tarot 牌陣 id — 舊 snapshot 沒這欄,讀取端要 default 到 'three-card'。 */
   tarotSpreadId?: string;
+  /** 占卜時選的 AI 占卜師 id(lib/personas.ts)。phase18 加,舊 snapshot 沒這欄。 */
+  personaId?: string;
   // 訪客在結果頁跟老師的對話(可選 — 舊 snapshot 無此欄位也不會炸)。
   // 登入後一併帶回來,讓使用者看到的畫面跟按下登入前一致。
   chatMessages?: PendingChatMessage[];

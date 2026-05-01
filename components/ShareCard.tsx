@@ -43,6 +43,9 @@ type CommonProps = {
   aiReading: string;
   locale: "zh" | "en";
   showWatermark: boolean; // true = 免費用戶 (加對角浮水印),false = 付費
+  /** 占卜師名字(zh/en) — 給「{占卜師}解盤」標題用。沒給就 fallback 到「老師 / Master」(舊紀錄)。 */
+  personaNameZh?: string;
+  personaNameEn?: string;
 };
 
 type Props = CommonProps & (IchingProps | TarotProps);
@@ -136,8 +139,12 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
     aiReading,
     locale,
     showWatermark,
+    personaNameZh,
+    personaNameEn,
   } = props;
   const t = (zh: string, en: string) => (locale === "zh" ? zh : en);
+  const personaLabel = t(personaNameZh ?? "老師", personaNameEn ?? "Master");
+  const readingTitle = t(`${personaLabel}解盤`, `${personaLabel}'s Reading`);
   const isTarot = props.divineType === "tarot";
 
   // 摘要長度視佈局調整 — 塔羅版卡片區較大,摘要稍短
@@ -530,7 +537,7 @@ const ShareCard = forwardRef<HTMLDivElement, Props>(function ShareCard(
               letterSpacing: 1,
             }}
           >
-            ✦ {t("老師解盤", "Master's Reading")}
+            ✦ {readingTitle}
           </div>
           <div
             style={{

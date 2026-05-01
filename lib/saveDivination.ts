@@ -24,6 +24,8 @@ export interface SaveIchingDivinationParams {
   method?: "main" | "plum-blossom" | "direction-hexagram";
   /** 方位卦象合參才有值;3-bit binary trigram code(後天八卦其一)。其他占法為 null。 */
   directionTrigram?: string | null;
+  /** 占卜時選的 AI 占卜師 id(lib/personas.ts)。phase18 加的欄位,讓分享頁/分享圖顯示正確的占卜師名字。 */
+  personaId?: string | null;
 }
 
 export interface SavedTarotCard {
@@ -42,6 +44,8 @@ export interface SaveTarotDivinationParams {
   tarotCards: SavedTarotCard[];
   aiReading: string;
   locale: string;
+  /** 占卜時選的 AI 占卜師 id(lib/personas.ts)。phase18 加的欄位。 */
+  personaId?: string | null;
 }
 
 export type SaveDivinationParams =
@@ -61,6 +65,7 @@ export async function saveDivination(params: SaveDivinationParams) {
     ai_reading: params.aiReading,
     locale: params.locale,
     divine_type: params.divineType,
+    persona_id: params.personaId ?? null,
     created_at: new Date().toISOString(),
   };
 
