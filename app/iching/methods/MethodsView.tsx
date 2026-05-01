@@ -366,8 +366,10 @@ export default function MethodsView() {
           )}
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          {/* 開始易經占卜 → /categories?type=iching 走統一前置流程
+              (categories → 問題 → /iching → 三選一)。 */}
           <Link
-            href="/"
+            href="/categories?type=iching"
             style={{
               padding: "10px 24px",
               background: "linear-gradient(135deg, #d4a855, #f0d78c)",
