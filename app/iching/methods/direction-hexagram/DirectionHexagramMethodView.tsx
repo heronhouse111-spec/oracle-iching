@@ -763,8 +763,10 @@ export default function DirectionHexagramMethodView() {
             "준비 됐나요? 방위·괘상 합참을 시작합니다"
           )}
         </h3>
+        {/* 直連 /iching/direction-hexagram 已不能用 — 那頁要前置 sessionStorage 的 q+cat
+            才會 render。改成從統一入口 /categories?type=iching 走完整流程進來。 */}
         <Link
-          href="/iching/direction-hexagram"
+          href="/categories?type=iching"
           style={{
             display: "inline-block",
             padding: "10px 24px",
@@ -776,7 +778,7 @@ export default function DirectionHexagramMethodView() {
             fontSize: 14,
           }}
         >
-          ✦ {t("開始合參占卜", "Start the Reading", "合参占卜を始める", "합참 점법 시작")}
+          ✦ {t("開始占卜", "Start a Reading", "占いを始める", "점 시작")}
         </Link>
       </section>
     </div>
