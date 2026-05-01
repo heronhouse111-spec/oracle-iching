@@ -52,6 +52,8 @@ import {
   DEFAULT_PERSONA_ID,
   getPersonasForSystem,
   getDefaultPersonaIdForSystem,
+  getPersona,
+  personaName,
 } from "@/lib/personas";
 
 // Line 目前尚未在 Supabase 後台啟用(需 Pro plan + Custom OIDC),用 env 開關
@@ -261,6 +263,21 @@ export default function Home() {
   // 訂閱戶才能用 premium persona / deep,API route 會再驗一次,前端 picker 也會擋。
   const [personaId, setPersonaId] = useState<string>(DEFAULT_PERSONA_ID);
   const [readingDepth, setReadingDepth] = useState<ReadingDepth>("quick");
+
+  // 結果頁標題用當下選的占卜師名字(例:周文王解盤 / 繼續請教周文王)
+  const personaDisplayName = personaName(getPersona(personaId), locale);
+  const personaReadingTitle = t(
+    `${personaDisplayName}解盤`,
+    `${personaDisplayName}'s Reading`,
+    `${personaDisplayName}の解読`,
+    `${personaDisplayName}의 해석`,
+  );
+  const askPersonaTitle = t(
+    `繼續請教${personaDisplayName}`,
+    `Ask ${personaDisplayName}`,
+    `${personaDisplayName}に質問する`,
+    `${personaDisplayName}께 물어보기`,
+  );
 
   // 塔羅 state:已選的牌陣 + 抽到的牌組 + 已翻開幾張
   // 預設沒選 — 進塔羅 step 才挑;`?spread=<id>` 也會在 mount effect 寫進來
@@ -772,6 +789,7 @@ export default function Home() {
           isReversed: d.isReversed,
         })),
         tarotSpreadId: spread.id,
+        personaId,
         chatMessages: chatForSnap,
       });
     } else if (divineType === "iching") {
@@ -792,6 +810,7 @@ export default function Home() {
           relatingHexagramNumber: relatingHexagram?.number ?? null,
         },
         tarot: null,
+        personaId,
         chatMessages: chatForSnap,
       });
     }
@@ -811,6 +830,7 @@ export default function Home() {
     locale,
     isSignedIn,
     chatMessages,
+    personaId,
   ]);
 
   // mount 時:若有暫存占卜就復原;若現在已登入,順便補存 Supabase 拿 id
@@ -895,6 +915,7 @@ export default function Home() {
                 })),
                 aiReading: snap.aiReading,
                 locale: snap.locale,
+                personaId: snap.personaId ?? null,
               })
             : snap.divineType === "iching" && snap.iching
             ? await saveDivination({
@@ -907,6 +928,7 @@ export default function Home() {
                 relatingHexagramNumber: snap.iching.relatingHexagramNumber,
                 aiReading: snap.aiReading,
                 locale: snap.locale,
+                personaId: snap.personaId ?? null,
               })
             : null;
         if (saved?.id) setDivinationId(saved.id);
@@ -1699,6 +1721,7 @@ export default function Home() {
             method: divineMethod,
             directionTrigram:
               divineMethod === "direction-hexagram" ? directionTrigram : null,
+            personaId,
           });
           if (saved?.id) setDivinationId(saved.id);
         }
@@ -1844,6 +1867,7 @@ export default function Home() {
             })),
             aiReading: fullText,
             locale,
+            personaId,
           });
           if (saved?.id) setDivinationId(saved.id);
         }
@@ -2222,10 +2246,10 @@ export default function Home() {
               }}>
                 <div style={{ color: "#d4a855", fontSize: 11, marginBottom: 4 }}>
                   {t(
-                    "老師延伸解說",
-                    "Master's continuation",
-                    "占い師の続き解説",
-                    "선생님의 후속 해설"
+                    `${personaDisplayName}延伸解說`,
+                    `${personaDisplayName}'s continuation`,
+                    `${personaDisplayName}の続き解説`,
+                    `${personaDisplayName}의 후속 해설`
                   )}
                 </div>
                 {f.aiReading}
@@ -2368,8 +2392,10 @@ export default function Home() {
           </div>
           <p style={{ marginTop: 8, color: "rgba(192,192,208,0.5)", fontSize: 11, lineHeight: 1.5, margin: "8px 0 0" }}>
             {t(
-              "老師會記得剛剛的占卜與我們的對話,用這次新抽到的卦/牌給你約 300 字的延伸解說。",
-              "The master will remember this reading and our chat, then give ~150 words of continuation based on your new draw."
+              `${personaDisplayName}會記得剛剛的占卜與我們的對話,用這次新抽到的卦/牌給你約 300 字的延伸解說。`,
+              `${personaDisplayName} will remember this reading and our chat, then give ~150 words of continuation based on your new draw.`,
+              `${personaDisplayName}は今の占いと会話を覚えており、新しい卦/牌で約300字の続き解説をします。`,
+              `${personaDisplayName}님은 방금의 점과 우리의 대화를 기억하시고, 새로 뽑은 괘/카드로 약 300자의 후속 해설을 드립니다.`
             )}
           </p>
         </div>
@@ -3604,10 +3630,10 @@ export default function Home() {
                         `${revealedCount} / ${spread.cardCount}장 펼쳤습니다`
                       )
                     : t(
-                        `${spread.cardCount} 張牌已揭示,老師正在為你解讀...`,
-                        `All ${spread.cardCount} cards revealed. Reading now...`,
-                        `${spread.cardCount}枚すべて揭示されました。解読中...`,
-                        `${spread.cardCount}장 모두 펼쳤습니다. 해석 중...`
+                        `${spread.cardCount} 張牌已揭示,${personaDisplayName}正在為你解讀...`,
+                        `All ${spread.cardCount} cards revealed. ${personaDisplayName} is reading now...`,
+                        `${spread.cardCount}枚すべて揭示されました。${personaDisplayName}が解読中...`,
+                        `${spread.cardCount}장 모두 펼쳤습니다. ${personaDisplayName}님이 해석 중...`
                       )}
                 </p>
               </div>
@@ -4128,7 +4154,7 @@ export default function Home() {
               {/* AI Analysis - clearly marked */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
+                  ✦ {personaReadingTitle}
                 </h3>
 
                 {isLoadingAI && !aiReading ? (
@@ -4383,7 +4409,7 @@ export default function Home() {
                 style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
               >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
-                  {t("繼續請教老師", "Ask the Master", "占い師に質問する", "선생님께 물어보기")}
+                  {askPersonaTitle}
                 </h3>
 
                 {/* Chat messages */}
@@ -4406,7 +4432,7 @@ export default function Home() {
                         }}>
                           {msg.role === "assistant" && (
                             <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
-                              {t("老師", "Master", "占い師", "선생님")}
+                              {personaDisplayName}
                             </span>
                           )}
                           {msg.content}
@@ -4453,10 +4479,10 @@ export default function Home() {
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
                     placeholder={t(
-                      "想問老師什麼呢...",
-                      "Ask the master...",
-                      "占い師に聞きたいこと…",
-                      "선생님께 물어볼 것…"
+                      `想問${personaDisplayName}什麼呢...`,
+                      `Ask ${personaDisplayName}...`,
+                      `${personaDisplayName}に聞きたいこと…`,
+                      `${personaDisplayName}님께 물어볼 것…`
                     )}
                     disabled={isChatLoading || isLoadingAI}
                     style={{
@@ -4642,7 +4668,7 @@ export default function Home() {
               {/* AI 解讀 */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  ✦ {t("老師解盤", "Master's Reading", "占い師の解読", "선생님의 해석")}
+                  ✦ {personaReadingTitle}
                 </h3>
 
                 {isLoadingAI && !aiReading ? (
@@ -4897,7 +4923,7 @@ export default function Home() {
                 style={{ padding: 16, marginTop: 16, overflow: "hidden", scrollMarginTop: 80 }}
               >
                 <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12, paddingLeft: 4 }}>
-                  {t("繼續請教老師", "Ask the Master", "占い師に質問する", "선생님께 물어보기")}
+                  {askPersonaTitle}
                 </h3>
 
                 {chatMessages.length > 0 && (
@@ -4919,7 +4945,7 @@ export default function Home() {
                         }}>
                           {msg.role === "assistant" && (
                             <span style={{ color: "#d4a855", fontSize: 12, display: "block", marginBottom: 2 }}>
-                              {t("老師", "Master", "占い師", "선생님")}
+                              {personaDisplayName}
                             </span>
                           )}
                           {msg.content}
@@ -4965,10 +4991,10 @@ export default function Home() {
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
                     placeholder={t(
-                      "想問老師什麼呢...",
-                      "Ask the master...",
-                      "占い師に聞きたいこと…",
-                      "선생님께 물어볼 것…"
+                      `想問${personaDisplayName}什麼呢...`,
+                      `Ask ${personaDisplayName}...`,
+                      `${personaDisplayName}に聞きたいこと…`,
+                      `${personaDisplayName}님께 물어볼 것…`
                     )}
                     disabled={isChatLoading || isLoadingAI}
                     style={{
@@ -5043,6 +5069,8 @@ export default function Home() {
                 aiReading={aiReading}
                 locale={locale === "zh" ? "zh" : "en"}
                 showWatermark={!isActive}
+                personaNameZh={getPersona(personaId).nameZh}
+                personaNameEn={getPersona(personaId).nameEn}
               />
             </div>
           );
@@ -5079,6 +5107,8 @@ export default function Home() {
                 aiReading={aiReading}
                 locale={locale === "zh" ? "zh" : "en"}
                 showWatermark={!isActive}
+                personaNameZh={getPersona(personaId).nameZh}
+                personaNameEn={getPersona(personaId).nameEn}
               />
             </div>
           );
