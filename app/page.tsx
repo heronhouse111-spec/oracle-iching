@@ -3956,28 +3956,133 @@ export default function Home() {
                   )}
                 </h2>
 
-                <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 24 }}>
-                  <div>
-                    <HexagramDisplay lines={divinationResult?.primaryLines || []} changingLines={divinationResult?.changingLines} size="md" />
-                    <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>{t("本卦", "Primary", "本卦", "본괘")}</p>
-                  </div>
-                  {relatingHexagram && divinationResult?.relatingLines && (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center", color: "rgba(212,168,85,0.4)", fontSize: 24 }}>→</div>
-                      <div>
-                        <HexagramDisplay lines={divinationResult.relatingLines} size="md" />
-                        <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginTop: 12 }}>
-                          {t(
-                            `之卦 ${relatingHexagram.nameZh}`,
-                            `Relating: ${relatingHexagram.nameEn}`,
-                            `之卦 ${relatingHexagram.nameJa ?? relatingHexagram.nameZh}`,
-                            `지괘 ${relatingHexagram.nameKo ?? relatingHexagram.nameEn.split(" ")[0]}`
+                {/* 本卦 / 之卦 圖鑑區 — 9:14 直幅卦圖(來自 admin 上傳的 iching_images),
+                    沒上傳時 fallback 為空框,跟 /iching/hexagrams 詳細頁一致;
+                    下方再渲染 HexagramDisplay 線條,讓使用者一眼看到是哪幾爻變動。 */}
+                {(() => {
+                  const primaryImg = ichingImages[hexagramImageKey(hexagram.number)];
+                  const relatingImg = relatingHexagram
+                    ? ichingImages[hexagramImageKey(relatingHexagram.number)]
+                    : undefined;
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "flex-start",
+                        gap: 24,
+                        marginTop: 24,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div style={{ textAlign: "center" }}>
+                        <div
+                          style={{
+                            width: 130,
+                            aspectRatio: "9 / 14",
+                            borderRadius: 10,
+                            overflow: "hidden",
+                            border: "1px solid rgba(212,168,85,0.4)",
+                            background:
+                              "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+                            boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
+                            margin: "0 auto 12px",
+                          }}
+                        >
+                          {primaryImg && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={primaryImg}
+                              alt={hexagram.nameZh}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                                display: "block",
+                              }}
+                            />
                           )}
+                        </div>
+                        <HexagramDisplay
+                          lines={divinationResult?.primaryLines || []}
+                          changingLines={divinationResult?.changingLines}
+                          size="md"
+                        />
+                        <p
+                          style={{
+                            color: "rgba(192,192,208,0.6)",
+                            fontSize: 12,
+                            marginTop: 12,
+                          }}
+                        >
+                          {t("本卦", "Primary", "本卦", "본괘")}
                         </p>
                       </div>
-                    </>
-                  )}
-                </div>
+                      {relatingHexagram && divinationResult?.relatingLines && (
+                        <>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              color: "rgba(212,168,85,0.4)",
+                              fontSize: 24,
+                              alignSelf: "center",
+                            }}
+                          >
+                            →
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div
+                              style={{
+                                width: 130,
+                                aspectRatio: "9 / 14",
+                                borderRadius: 10,
+                                overflow: "hidden",
+                                border: "1px solid rgba(212,168,85,0.4)",
+                                background:
+                                  "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+                                boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
+                                margin: "0 auto 12px",
+                              }}
+                            >
+                              {relatingImg && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={relatingImg}
+                                  alt={relatingHexagram.nameZh}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "contain",
+                                    display: "block",
+                                  }}
+                                />
+                              )}
+                            </div>
+                            <HexagramDisplay
+                              lines={divinationResult.relatingLines}
+                              size="md"
+                            />
+                            <p
+                              style={{
+                                color: "rgba(192,192,208,0.6)",
+                                fontSize: 12,
+                                marginTop: 12,
+                              }}
+                            >
+                              {t(
+                                `之卦 ${relatingHexagram.nameZh}`,
+                                `Relating: ${relatingHexagram.nameEn}`,
+                                `之卦 ${relatingHexagram.nameJa ?? relatingHexagram.nameZh}`,
+                                `지괘 ${relatingHexagram.nameKo ?? relatingHexagram.nameEn.split(" ")[0]}`
+                              )}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
 
