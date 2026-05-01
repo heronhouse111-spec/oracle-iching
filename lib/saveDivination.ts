@@ -20,6 +20,10 @@ export interface SaveIchingDivinationParams {
   relatingHexagramNumber: number | null;
   aiReading: string;
   locale: string;
+  /** 易經占法分流 — 預設 'main'(三錢全卦)。phase16 加的欄位。 */
+  method?: "main" | "plum-blossom" | "direction-hexagram";
+  /** 方位卦象合參才有值;3-bit binary trigram code(後天八卦其一)。其他占法為 null。 */
+  directionTrigram?: string | null;
 }
 
 export interface SavedTarotCard {
@@ -79,6 +83,9 @@ export async function saveDivination(params: SaveDivinationParams) {
           relating_hexagram_number: params.relatingHexagramNumber,
           tarot_cards: null,
           tarot_spread_id: null,
+          // phase16/17 加入的占法分流欄位 — 預設 'main',plum-blossom / direction-hexagram 才覆寫
+          method: params.method ?? "main",
+          direction_trigram: params.directionTrigram ?? null,
         };
 
   if (isSupabaseConfigured) {

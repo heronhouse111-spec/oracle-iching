@@ -55,7 +55,9 @@ const METHODS: MethodEntry[] = [
   },
   {
     id: "plum-blossom",
-    href: "/iching/plum-blossom",
+    // resumeFlow=cast → 進入 plum-blossom 卜卦頁,該頁只跑「起卦中」動畫,
+    // 完成後再回首頁 result step 顯示。直接打 /iching/plum-blossom 沒帶 param 進來會被 redirect 到 /iching。
+    href: "/iching/plum-blossom?resumeFlow=cast",
     badgeZh: "梅",
     badgeEn: "Plum",
     nameZh: "梅花易數 · 時間起卦",
@@ -71,7 +73,9 @@ const METHODS: MethodEntry[] = [
   },
   {
     id: "direction-hexagram",
-    href: "/iching/direction-hexagram",
+    // resumeFlow=compass → 進入 direction-hexagram 卜卦頁,只跑羅盤 + 銅錢動畫,
+    // 完成後再回首頁 result step 顯示。直接打 URL 沒帶 param 進來會被 redirect 到 /iching。
+    href: "/iching/direction-hexagram?resumeFlow=compass",
     badgeZh: "進",
     badgeEn: "Adv",
     nameZh: "方位卦象合參",

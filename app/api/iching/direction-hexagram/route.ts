@@ -30,7 +30,6 @@ import {
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import {
   spendCredits,
   refundCredits,
@@ -531,27 +530,8 @@ Follow the system instructions: combine direction and hexagram into a concrete r
         } finally {
           controller.close();
 
-          // 寫入 DB(只在登入時)— 失敗不影響使用者體驗,只 log
-          if (user && collectedReading.trim().length > 0) {
-            try {
-              const admin = createAdminClient();
-              await admin.from("divinations").insert({
-                user_id: user.id,
-                question: question.trim(),
-                category,
-                hexagram_number: hex.number,
-                primary_lines: primaryLines,
-                changing_lines: changingLines,
-                relating_hexagram_number: relatingHex?.number ?? null,
-                ai_reading: collectedReading,
-                locale: safeLocale,
-                method: "direction-hexagram",
-                direction_trigram: directionTrigram,
-              });
-            } catch (e) {
-              console.error("[iching/direction-hex] DB insert failed:", e);
-            }
-          }
+          // DB insert 由前端 saveDivination 處理(method='direction-hexagram')— 這裡不再寫,
+          // 避免跟 home page result step 的 saveDivination 雙寫造成 duplicate row。
         }
       },
     });

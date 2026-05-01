@@ -24,7 +24,6 @@ import { trigramNames, hexagramAuspice } from "@/data/hexagrams";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import {
   spendCredits,
   refundCredits,
@@ -388,26 +387,8 @@ Per the system instructions, give a combined reading: primary mood → changing-
           console.error("IChing plum-blossom stream error:", e);
         } finally {
           controller.close();
-
-          if (user && collectedReading.trim().length > 0) {
-            try {
-              const admin = createAdminClient();
-              await admin.from("divinations").insert({
-                user_id: user.id,
-                question: question.trim(),
-                category,
-                hexagram_number: primaryHex.number,
-                primary_lines: primaryLines,
-                changing_lines: changingLines,
-                relating_hexagram_number: relatingHex.number,
-                ai_reading: collectedReading,
-                locale: safeLocale,
-                method: "plum-blossom",
-              });
-            } catch (e) {
-              console.error("[iching/plum-blossom] DB insert failed:", e);
-            }
-          }
+          // DB insert 由前端 saveDivination 處理(method='plum-blossom')— 這裡不再寫,
+          // 避免跟 home page result step 的 saveDivination 雙寫造成 duplicate row。
         }
       },
     });

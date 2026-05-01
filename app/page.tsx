@@ -11,7 +11,8 @@ import HexagramDisplay from "@/components/HexagramDisplay";
 import CoinAnimation from "@/components/CoinAnimation";
 import ShareCard from "@/components/ShareCard";
 import { performDivination, questionCategories, type DivinationResult, type CoinThrow } from "@/lib/divination";
-import { findHexagram, getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
+import { findHexagram, getHexagramByNumber, trigramNames, type Hexagram } from "@/data/hexagrams";
+import { trigramImageKey, hexagramImageKey } from "@/lib/ichingImages";
 import { saveDivination, appendFollowUp } from "@/lib/saveDivination";
 import {
   drawThreeCards,
@@ -174,6 +175,39 @@ export default function Home() {
   const [aiReading, setAiReading] = useState("");
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // 梅花易數從 plum-blossom 工具頁帶過來的「起卦時刻」epoch ms。
+  // /api/iching/plum-blossom 用這個重算同一張卦,讓 prompt 裡的「起卦時刻」跟使用者實際按下時刻一致。
+  // 不放 state 是因為 result step 的 fetchAIReading effect 不需要 re-render 它。
+  const lastCastEpochMsRef = useRef<number | null>(null);
+
+  // 易經卦象 / 八卦 admin 上傳的圖 — 客端 lazy fetch(只在 result step 需要才載)。
+  // 沒上傳的 slot value 會是 undefined,UI 會 fallback 到空框 / Unicode 卦符。
+  const [ichingImages, setIchingImages] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("app_content")
+          .select("value")
+          .eq("key", "iching_images")
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.value && typeof data.value === "object") {
+          setIchingImages(data.value as Record<string, string>);
+        }
+      } catch {
+        /* 不影響流程,fallback 是空框 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 點數不足 modal(402 時觸發)
   const [creditsModal, setCreditsModal] = useState<{ open: boolean; required: number }>({
@@ -211,6 +245,16 @@ export default function Home() {
 
   // 占卜類型(易經 / 塔羅)
   const [divineType, setDivineType] = useState<DivineType | null>(null);
+
+  // 易經占法分流 — 'main' = 三錢全卦法(預設,擲銅錢動畫);
+  //              'plum-blossom' = 梅花易數(時間起卦,工具頁完成後 redirect 帶結果);
+  //              'direction-hexagram' = 方位卦象合參(羅盤+擲爻 + 帶 directionTrigram)。
+  // 影響:result step 派 AI 給哪一支 API、要不要顯示方位卡、DB 寫入時 method 欄填什麼。
+  const [divineMethod, setDivineMethod] = useState<
+    "main" | "plum-blossom" | "direction-hexagram"
+  >("main");
+  // 方位卦象合參才有值,其他兩種 null。寫進 sessionStorage 帶過來的 trigram code(3-bit)
+  const [directionTrigram, setDirectionTrigram] = useState<string | null>(null);
 
   // ── 占卜師人格 + 解讀深度 ────────────────────────────
   // localStorage 記住上次選擇 — 預設 lunar-sister + quick(免費版)。
@@ -417,9 +461,113 @@ export default function Home() {
     setSelectedCategory(resumeState.category);
     setUserQuestion(resumeState.question);
     setDivineType("iching");
+    setDivineMethod("main");
+    setDirectionTrigram(null);
     setDrawnCards([]);
     setStep("mode-select");
   }, []);
+
+  // ── /?resumeFlow=method-result deep-link ───────────────
+  // 梅花易數 / 方位卦象合參的工具頁完成卜卦後會帶這個 param 回來,
+  // sessionStorage("iching_method_result_state") 攜帶完整的卦資料(method/q/cat/hex/lines/方位)。
+  // 我們直接落到 step="result" 並由 result step 派 AI 給對應 API 串流出文字。
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("resumeFlow") !== "method-result") return;
+
+    let payload:
+      | {
+          method?: "plum-blossom" | "direction-hexagram";
+          question?: string;
+          category?: string;
+          directionTrigram?: string | null;
+          hexagramNumber?: number;
+          primaryLines?: number[];
+          changingLines?: number[];
+          relatingNumber?: number | null;
+          relatingLines?: number[] | null;
+          castEpochMs?: number;
+        }
+      | null = null;
+    try {
+      const raw = sessionStorage.getItem("iching_method_result_state");
+      if (raw) payload = JSON.parse(raw);
+      sessionStorage.removeItem("iching_method_result_state");
+    } catch {
+      /* ignore */
+    }
+
+    // 先清 URL param 不論成不成功,避免使用者按上一頁觸發第二次
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("resumeFlow");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
+    } catch {
+      /* ignore */
+    }
+
+    if (
+      !payload?.question ||
+      !payload?.category ||
+      !payload?.method ||
+      typeof payload.hexagramNumber !== "number" ||
+      !Array.isArray(payload.primaryLines)
+    ) {
+      // sessionStorage 缺資料就不嘗試還原,讓使用者從首頁重新開始
+      return;
+    }
+
+    const hex = getHexagramByNumber(payload.hexagramNumber) ?? null;
+    if (!hex) return;
+    const relHex =
+      typeof payload.relatingNumber === "number"
+        ? getHexagramByNumber(payload.relatingNumber) ?? null
+        : null;
+
+    setSelectedCategory(payload.category);
+    setUserQuestion(payload.question);
+    setDivineType("iching");
+    setDivineMethod(payload.method);
+    setDirectionTrigram(payload.directionTrigram ?? null);
+    if (typeof payload.castEpochMs === "number") {
+      lastCastEpochMsRef.current = payload.castEpochMs;
+    }
+    setHexagram(hex);
+    setRelatingHexagram(relHex);
+    setDivinationResult({
+      throws: [],
+      primaryLines: payload.primaryLines,
+      changingLines: payload.changingLines ?? [],
+      relatingLines: payload.relatingLines ?? null,
+    });
+    setDrawnCards([]);
+    setAiReading("");
+    setStep("result");
+    // 真正觸發 AI 串流的工作交給下面那個 effect — 它監聽
+    // (step === "result" && divineMethod !== 'main' && aiReading 還空 && hexagram 已備好),
+    // 用 guard ref 確保只跑一次。
+  }, []);
+
+  // ── 方法轉跳結果頁時自動 fetch AI 解卦 ────────────
+  // 普通三錢法不走這個 effect — 它是 handleThrowCoins 完成第 6 爻時直接 call fetchAIReading。
+  // 這個 effect 只服務「梅花易數 / 方位卦象合參」從工具頁帶結果回來的情境:
+  //   step=result + divineMethod 非 main + aiReading 空 + 卦資料齊全 → 開始 AI 串流
+  // 用 ref 鎖死「同一張卦只 fetch 一次」,避免 React 重 render 又跑一遍。
+  const methodResultFetchRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (step !== "result") return;
+    if (divineMethod === "main") return;
+    if (aiReading) return;
+    if (!hexagram || !divinationResult) return;
+    // 用「method + hexagramNumber + question」當 key 確認是同一筆才略過
+    const fingerprint = `${divineMethod}:${hexagram.number}:${userQuestion}`;
+    if (methodResultFetchRef.current === fingerprint) return;
+    methodResultFetchRef.current = fingerprint;
+    void fetchAIReading(divinationResult, hexagram);
+    // fetchAIReading 是 component scope 內的 closure;不放進 deps 因為它不穩定且本 effect 已 fingerprint 防重入
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, divineMethod, aiReading, hexagram, divinationResult, userQuestion]);
 
   // 切換占卜系統(易經 / 塔羅)時,若目前 persona 不在新系統的清單裡,自動切到該系統預設
   // 解決「先選塔羅人格、再切去易經,picker 找不到 active card」的情況
@@ -1400,24 +1548,67 @@ export default function Home() {
       const category = questionCategories.find((c) => c.id === selectedCategory);
       const relHex = result.relatingLines ? findHexagram(result.relatingLines) : null;
 
-      const response = await fetch("/api/divine", {
+      // ── API 路由分流 ──
+      // 三錢法(main)+ 任何 follow-up:走 /api/divine,維持衍伸鏈與 deep depth 等既有功能。
+      // 梅花易數 / 方位卦象合參(只在「初次讀」、不是 follow-up):走自家專用 API,
+      //   prompt 是該占法量身寫的(梅花強調動爻時機、方位強調合參)。
+      // 之所以 follow-up 一律走 /api/divine:那兩支專用 API 不認識 chatHistory/previousContext,
+      //   而衍伸對話的目的是把先前對話接起來,放回主 API 才能銜接連貫。
+      const useMethodApi =
+        !isFollowUpMode &&
+        (divineMethod === "plum-blossom" || divineMethod === "direction-hexagram");
+
+      const apiUrl = useMethodApi
+        ? divineMethod === "plum-blossom"
+          ? "/api/iching/plum-blossom"
+          : "/api/iching/direction-hexagram"
+        : "/api/divine";
+
+      const apiBody: Record<string, unknown> = useMethodApi
+        ? divineMethod === "plum-blossom"
+          ? {
+              question: userQuestion,
+              category: selectedCategory,
+              // server 會用這個 epoch 重算同一張卦(deterministic),確保 prompt 裡
+              // 「起卦時刻」跟使用者實際按下起卦的瞬間一致。
+              castEpochMs: lastCastEpochMsRef.current ?? Date.now(),
+              locale,
+              personaId,
+            }
+          : {
+              question: userQuestion,
+              category: selectedCategory,
+              directionTrigram,
+              primaryLines: result.primaryLines,
+              changingLines: result.changingLines,
+              locale,
+              personaId,
+            }
+        : {
+            hexagramNumber: hex.number,
+            hexagramName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
+            changingLines: result.changingLines,
+            relatingHexagramNumber: relHex?.number,
+            question: userQuestion,
+            category: category
+              ? t(
+                  category.promptHintZh,
+                  category.promptHintEn,
+                  category.promptHintJa,
+                  category.promptHintKo
+                )
+              : "",
+            locale,
+            previousContext: followUpCtx,
+            chatHistory: followUpChat,
+            personaId,
+            depth: readingDepth,
+          };
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          hexagramNumber: hex.number,
-          hexagramName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
-          changingLines: result.changingLines,
-          relatingHexagramNumber: relHex?.number,
-          question: userQuestion,
-          category: category
-            ? t(category.promptHintZh, category.promptHintEn, category.promptHintJa, category.promptHintKo)
-            : "",
-          locale,
-          previousContext: followUpCtx,
-          chatHistory: followUpChat,
-          personaId,
-          depth: readingDepth,
-        }),
+        body: JSON.stringify(apiBody),
         signal: controller.signal,
       });
 
@@ -1505,6 +1696,9 @@ export default function Home() {
             relatingHexagramNumber: relHex?.number ?? null,
             aiReading: fullText,
             locale,
+            method: divineMethod,
+            directionTrigram:
+              divineMethod === "direction-hexagram" ? directionTrigram : null,
           });
           if (saved?.id) setDivinationId(saved.id);
         }
@@ -1876,6 +2070,19 @@ export default function Home() {
     setIsFollowUpMode(false);
     setShowFollowUpForm(false);
     setFollowUpQuestion("");
+    // 易經占法分流回到預設(三錢全卦)
+    setDivineMethod("main");
+    setDirectionTrigram(null);
+    lastCastEpochMsRef.current = null;
+    methodResultFetchRef.current = null;
+  };
+
+  // 「易經再來一次」— 直接回到 /categories?type=iching 重走完整流程
+  // (categories → question → /iching → 三錢/梅花/方位 → result)。
+  // 比 handleReset 重新走 home page 內 step machine 還統一,因為三種占法用同一個入口。
+  const handleResetIching = () => {
+    handleReset();
+    router.push("/categories?type=iching");
   };
 
   // ── 衍伸占卜鏈渲染 ─────────────────────────────────────
@@ -3581,6 +3788,163 @@ export default function Home() {
           {/* ===== STEP 4a: Result (易經) ===== */}
           {step === "result" && divineType !== "tarot" && hexagram && (
             <motion.div key="res" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              {/* 方位資訊卡 — 只有方位卦象合參才顯示,排在卦象上方,合參順序:方位 → 卦象 → AI 解讀 */}
+              {divineMethod === "direction-hexagram" && directionTrigram && trigramNames[directionTrigram] && (() => {
+                const dirTg = trigramNames[directionTrigram];
+                const imgUrl = ichingImages[trigramImageKey(directionTrigram)];
+                return (
+                  <div
+                    className="mystic-card"
+                    style={{ padding: 18, marginTop: 16 }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: 2,
+                        color: "rgba(212,168,85,0.7)",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {t(
+                        "第一段 · 方位",
+                        "STAGE 1 · DIRECTION",
+                        "第一段 · 方位",
+                        "1단 · 방위"
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        flexWrap: "wrap",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 64,
+                          aspectRatio: "9 / 14",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          border: "1px solid rgba(212,168,85,0.3)",
+                          background:
+                            "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {imgUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imgUrl}
+                            alt={t(dirTg.zh, dirTg.en, dirTg.ja, dirTg.ko)}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "contain",
+                              display: "block",
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 30, color: "#d4a855", lineHeight: 1 }}>
+                            {dirTg.symbol}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div
+                          style={{
+                            fontFamily: "'Noto Serif TC', serif",
+                            fontSize: 20,
+                            fontWeight: 700,
+                            color: "#fde68a",
+                          }}
+                        >
+                          {t(dirTg.zh, dirTg.en, dirTg.ja, dirTg.ko)}
+                        </div>
+                        <div style={{ fontSize: 13, color: "rgba(212,168,85,0.85)" }}>
+                          {t(
+                            dirTg.directionZh,
+                            dirTg.directionEn,
+                            dirTg.directionJa,
+                            dirTg.directionKo
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <p
+                      style={{
+                        color: "#c0c0d0",
+                        fontSize: 13,
+                        lineHeight: 1.7,
+                        margin: 0,
+                      }}
+                    >
+                      <strong style={{ color: "rgba(212,168,85,0.9)" }}>
+                        {t("人事", "People", "人事", "인사")}
+                      </strong>
+                      ：
+                      {t(
+                        dirTg.peopleZh,
+                        dirTg.peopleEn,
+                        dirTg.peopleJa,
+                        dirTg.peopleKo
+                      )}
+                      <br />
+                      <strong style={{ color: "rgba(212,168,85,0.9)" }}>
+                        {t("事理", "Matters", "事理", "사리")}
+                      </strong>
+                      ：
+                      {t(
+                        dirTg.mattersZh,
+                        dirTg.mattersEn,
+                        dirTg.mattersJa,
+                        dirTg.mattersKo
+                      )}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* method badge — 標示這是哪一種占法 */}
+              {divineMethod !== "main" && (
+                <div style={{ textAlign: "center", marginTop: 16 }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      background:
+                        divineMethod === "direction-hexagram"
+                          ? "rgba(99,179,237,0.18)"
+                          : "rgba(139,92,246,0.18)",
+                      color:
+                        divineMethod === "direction-hexagram" ? "#93c5fd" : "#c4b5fd",
+                      fontSize: 11,
+                      padding: "3px 12px",
+                      borderRadius: 100,
+                      fontWeight: 600,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    {divineMethod === "direction-hexagram"
+                      ? t(
+                          "方位 × 卦象 合參",
+                          "Direction × Hexagram",
+                          "方位 × 卦象 合参",
+                          "방위 × 괘상 합참"
+                        )
+                      : t(
+                          "梅花易數 · 時間起卦",
+                          "Plum Blossom · Time Casting",
+                          "梅花易数 · 時間起卦",
+                          "매화역수 · 시간 기괘"
+                        )}
+                  </span>
+                </div>
+              )}
+
               {/* Hexagram card */}
               <div className="mystic-card" style={{ padding: 32, textAlign: "center", marginTop: 16 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif" }}>
@@ -4016,7 +4380,11 @@ export default function Home() {
 
               {/* Actions */}
               <div style={{ marginTop: 16 }}>
-                <button onClick={handleReset} className="btn-gold" style={{ width: "100%", fontSize: 16 }}>
+                <button
+                  onClick={handleResetIching}
+                  className="btn-gold"
+                  style={{ width: "100%", fontSize: 16 }}
+                >
                   {t("重新占卜", "New Divination", "新しい占い", "새로운 점")}
                 </button>
               </div>
