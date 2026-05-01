@@ -3958,37 +3958,51 @@ export default function Home() {
 
                 {/* 本卦 / 之卦 圖鑑區 — 9:14 直幅卦圖(來自 admin 上傳的 iching_images),
                     沒上傳時 fallback 為空框,跟 /iching/hexagrams 詳細頁一致。
-                    依使用者要求,不在這裡再渲染陰陽爻線(HexagramDisplay) — 只用圖。 */}
+                    依使用者要求,不在這裡再渲染陰陽爻線(HexagramDisplay) — 只用圖。
+                    nowrap + 各 frame flex:1 1 0 maxWidth:130 → 桌機保持 130px,
+                    窄螢幕(手機)會等比例縮小,本卦/之卦永遠並排不換行。 */}
                 {(() => {
                   const primaryImg = ichingImages[hexagramImageKey(hexagram.number)];
                   const relatingImg = relatingHexagram
                     ? ichingImages[hexagramImageKey(relatingHexagram.number)]
                     : undefined;
+                  const hasRelating = !!(
+                    relatingHexagram && divinationResult?.relatingLines
+                  );
+                  const frameStyle = {
+                    width: "100%",
+                    aspectRatio: "9 / 14",
+                    borderRadius: 10,
+                    overflow: "hidden" as const,
+                    border: "1px solid rgba(212,168,85,0.4)",
+                    background:
+                      "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+                    boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
+                    marginBottom: 12,
+                  };
                   return (
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "center",
                         alignItems: "flex-start",
-                        gap: 24,
+                        gap: 12,
                         marginTop: 24,
-                        flexWrap: "wrap",
+                        flexWrap: "nowrap",
+                        maxWidth: hasRelating ? 360 : 180,
+                        marginLeft: "auto",
+                        marginRight: "auto",
                       }}
                     >
-                      <div style={{ textAlign: "center" }}>
-                        <div
-                          style={{
-                            width: 130,
-                            aspectRatio: "9 / 14",
-                            borderRadius: 10,
-                            overflow: "hidden",
-                            border: "1px solid rgba(212,168,85,0.4)",
-                            background:
-                              "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
-                            boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
-                            margin: "0 auto 12px",
-                          }}
-                        >
+                      <div
+                        style={{
+                          textAlign: "center",
+                          flex: "1 1 0",
+                          minWidth: 0,
+                          maxWidth: 130,
+                        }}
+                      >
+                        <div style={frameStyle}>
                           {primaryImg && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -4007,39 +4021,37 @@ export default function Home() {
                           style={{
                             color: "rgba(192,192,208,0.6)",
                             fontSize: 12,
-                            marginTop: 4,
+                            margin: 0,
                           }}
                         >
                           {t("本卦", "Primary", "本卦", "본괘")}
                         </p>
                       </div>
-                      {relatingHexagram && divinationResult?.relatingLines && (
+                      {hasRelating && relatingHexagram && (
                         <>
                           <div
                             style={{
                               display: "flex",
                               alignItems: "center",
                               color: "rgba(212,168,85,0.4)",
-                              fontSize: 24,
+                              fontSize: 22,
                               alignSelf: "center",
+                              flex: "0 0 auto",
+                              paddingTop: "min(28%, 60px)", // 視覺上對齊圖片中段
+                              transform: "translateY(-12px)",
                             }}
                           >
                             →
                           </div>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                width: 130,
-                                aspectRatio: "9 / 14",
-                                borderRadius: 10,
-                                overflow: "hidden",
-                                border: "1px solid rgba(212,168,85,0.4)",
-                                background:
-                                  "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
-                                boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
-                                margin: "0 auto 12px",
-                              }}
-                            >
+                          <div
+                            style={{
+                              textAlign: "center",
+                              flex: "1 1 0",
+                              minWidth: 0,
+                              maxWidth: 130,
+                            }}
+                          >
+                            <div style={frameStyle}>
                               {relatingImg && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -4058,7 +4070,7 @@ export default function Home() {
                               style={{
                                 color: "rgba(192,192,208,0.6)",
                                 fontSize: 12,
-                                marginTop: 4,
+                                margin: 0,
                               }}
                             >
                               {t(
