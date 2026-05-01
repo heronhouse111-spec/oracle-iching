@@ -3957,8 +3957,8 @@ export default function Home() {
                 </h2>
 
                 {/* 本卦 / 之卦 圖鑑區 — 9:14 直幅卦圖(來自 admin 上傳的 iching_images),
-                    沒上傳時 fallback 為空框,跟 /iching/hexagrams 詳細頁一致;
-                    下方再渲染 HexagramDisplay 線條,讓使用者一眼看到是哪幾爻變動。 */}
+                    沒上傳時 fallback 為空框,跟 /iching/hexagrams 詳細頁一致。
+                    依使用者要求,不在這裡再渲染陰陽爻線(HexagramDisplay) — 只用圖。 */}
                 {(() => {
                   const primaryImg = ichingImages[hexagramImageKey(hexagram.number)];
                   const relatingImg = relatingHexagram
@@ -4003,16 +4003,11 @@ export default function Home() {
                             />
                           )}
                         </div>
-                        <HexagramDisplay
-                          lines={divinationResult?.primaryLines || []}
-                          changingLines={divinationResult?.changingLines}
-                          size="md"
-                        />
                         <p
                           style={{
                             color: "rgba(192,192,208,0.6)",
                             fontSize: 12,
-                            marginTop: 12,
+                            marginTop: 4,
                           }}
                         >
                           {t("本卦", "Primary", "本卦", "본괘")}
@@ -4059,15 +4054,11 @@ export default function Home() {
                                 />
                               )}
                             </div>
-                            <HexagramDisplay
-                              lines={divinationResult.relatingLines}
-                              size="md"
-                            />
                             <p
                               style={{
                                 color: "rgba(192,192,208,0.6)",
                                 fontSize: 12,
-                                marginTop: 12,
+                                marginTop: 4,
                               }}
                             >
                               {t(
