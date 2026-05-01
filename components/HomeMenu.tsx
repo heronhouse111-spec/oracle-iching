@@ -106,26 +106,8 @@ const GROUPS: NavGroup[] = [
   {
     heading: { tw: "易經", en: "I-Ching", ja: "易経", ko: "역경" },
     items: [
-      {
-        key: "iching-select",
-        href: "/iching",
-        label: {
-          tw: "占卜方法選擇",
-          en: "Choose Method",
-          ja: "占卜の方法選択",
-          ko: "점법 선택",
-        },
-      },
-      {
-        key: "iching-direction-hex",
-        href: "/iching/direction-hexagram",
-        label: {
-          tw: "方位卦象合參",
-          en: "Direction × Hexagram",
-          ja: "方位×卦象 合参",
-          ko: "방위·괘상 합참",
-        },
-      },
+      // 「占卜方法選擇」(/iching) 跟「方位卦象合參」入口移除 —
+      // 都是統一流程的中間頁,使用者該走「開始占卜 → 易經占卜」進來,不該從這裡跳。
       {
         key: "iching-64",
         href: "/iching/hexagrams",
