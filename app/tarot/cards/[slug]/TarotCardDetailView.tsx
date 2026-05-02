@@ -325,6 +325,11 @@ export default function TarotCardDetailView({ card }: Props) {
           >
             {sameSuit.map((c) => {
               const cName = t(c.nameZh, c.nameEn, c.nameJa, c.nameKo);
+              // 跟主圖同邏輯:已登入但沒抽到 → 灰階。訪客 / loading 維持彩色。
+              const siblingOwned = collection.ownedIds.has(c.id);
+              const siblingGray =
+                (collection.status === "not-owned" || collection.status === "owned") &&
+                !siblingOwned;
               return (
                 <Link
                   key={c.id}
@@ -337,11 +342,16 @@ export default function TarotCardDetailView({ card }: Props) {
                 >
                   <div
                     style={{
+                      position: "relative",
                       borderRadius: 6,
                       overflow: "hidden",
                       aspectRatio: "9 / 14",
                       marginBottom: 4,
-                      border: "1px solid rgba(212,168,85,0.15)",
+                      border: siblingGray
+                        ? "1px solid rgba(212,168,85,0.08)"
+                        : "1px solid rgba(212,168,85,0.15)",
+                      filter: siblingGray ? "grayscale(1) brightness(0.55)" : "none",
+                      transition: "filter 0.3s, border-color 0.3s",
                     }}
                   >
                     <Image
@@ -351,8 +361,37 @@ export default function TarotCardDetailView({ card }: Props) {
                       height={310}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
+                    {siblingOwned && (
+                      <span
+                        title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+                        style={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          width: 16,
+                          height: 16,
+                          borderRadius: "50%",
+                          background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                          color: "#0a0a1a",
+                          fontSize: 9,
+                          fontWeight: 700,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 2px 5px rgba(212,168,85,0.45)",
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
                   </div>
-                  <div style={{ fontSize: 11, color: "#c0c0d0", textAlign: "center" }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: siblingGray ? "rgba(192,192,208,0.45)" : "#c0c0d0",
+                      textAlign: "center",
+                    }}
+                  >
                     {cName}
                   </div>
                 </Link>

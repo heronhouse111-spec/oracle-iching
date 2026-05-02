@@ -21,6 +21,9 @@ export interface UseCollectionOwnedResult {
   ownedCount: number;
   /** 若已登入,該 type 卡牌總數(易經 64 / 塔羅 78);用來顯示「23/64」 */
   total: number;
+  /** 完整 owned 卡片 id 集合 — 給「同花色 / 相關卦」grid 判斷單卡灰階用。
+   *  loading / unauth 為空 Set。 */
+  ownedIds: Set<string>;
 }
 
 interface CollectionResponse {
@@ -36,6 +39,7 @@ export function useCollectionOwned(
 ): UseCollectionOwnedResult {
   const [status, setStatus] = useState<OwnedStatus>("loading");
   const [ownedCount, setOwnedCount] = useState(0);
+  const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -54,10 +58,12 @@ export function useCollectionOwned(
         if (!json.authenticated) {
           setStatus("unauth");
           setOwnedCount(0);
+          setOwnedIds(new Set());
           return;
         }
         const ownedSet = new Set(json.owned.map((o) => o.cardId));
         setOwnedCount(json.ownedCount);
+        setOwnedIds(ownedSet);
         setStatus(ownedSet.has(cardId) ? "owned" : "not-owned");
       } catch {
         if (!cancelled) setStatus("loading");
@@ -72,5 +78,6 @@ export function useCollectionOwned(
     status,
     ownedCount,
     total: type === "iching" ? 64 : 78,
+    ownedIds,
   };
 }
