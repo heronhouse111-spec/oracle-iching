@@ -21,6 +21,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import NewCardToast from "@/components/NewCardToast";
 import { tarotDeck, CARD_BACK_IMAGE } from "@/data/tarot";
 import {
   notifyCreditsChanged,
@@ -48,6 +49,12 @@ export default function DailyPage() {
     open: false,
     required: 0,
   });
+  const [collectionToast, setCollectionToast] = useState<{
+    show: boolean;
+    cardName: string;
+    count: number;
+    rewards: number;
+  }>({ show: false, cardName: "", count: 0, rewards: 0 });
   const ranRef = useRef(false);
 
   const card = cardId ? tarotDeck.find((c) => c.id === cardId) : null;
@@ -125,6 +132,18 @@ export default function DailyPage() {
       setIsReversed(rev);
       setDateKey(date);
       setReread(isReread);
+
+      // 收藏 toast — 真正第一次抽到這張卡才跳出
+      const isNewCard = res.headers.get("X-Collection-IsNew") === "1";
+      const collectionCount = parseInt(res.headers.get("X-Collection-Count") ?? "0", 10);
+      const rewards = parseInt(res.headers.get("X-Collection-Rewards") ?? "0", 10);
+      if (isNewCard && cId) {
+        const drawnCard = tarotDeck.find((c) => c.id === cId);
+        const cardName = drawnCard
+          ? t(drawnCard.nameZh, drawnCard.nameEn, drawnCard.nameJa, drawnCard.nameKo)
+          : cId;
+        setCollectionToast({ show: true, cardName, count: collectionCount, rewards });
+      }
 
       // 翻牌動畫,給 0.7s 讓 user 看到 reveal
       setPhase("revealing");
@@ -394,6 +413,15 @@ export default function DailyPage() {
         open={creditsModal.open}
         required={creditsModal.required}
         onClose={() => setCreditsModal({ open: false, required: 0 })}
+      />
+      <NewCardToast
+        show={collectionToast.show}
+        type="tarot"
+        cardName={collectionToast.cardName}
+        collectionCount={collectionToast.count}
+        total={78}
+        rewardCredits={collectionToast.rewards}
+        onDismiss={() => setCollectionToast((s) => ({ ...s, show: false }))}
       />
     </main>
   );

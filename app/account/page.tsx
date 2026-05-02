@@ -592,6 +592,40 @@ export default function AccountPage() {
             {t("→ 占卜紀錄", "→ Divination History", "→ 占い履歴", "→ 점 기록")}
           </Link>
           <Link
+            href="/iching/hexagrams"
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              color: "rgba(192,192,208,0.9)",
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            {t(
+              "→ 我的易經卦象收藏",
+              "→ My I Ching Collection",
+              "→ 私の易経収集",
+              "→ 나의 주역 수집",
+            )}
+          </Link>
+          <Link
+            href="/tarot/cards"
+            style={{
+              display: "block",
+              padding: "10px 12px",
+              color: "rgba(192,192,208,0.9)",
+              fontSize: 13,
+              textDecoration: "none",
+            }}
+          >
+            {t(
+              "→ 我的塔羅牌收藏",
+              "→ My Tarot Collection",
+              "→ 私のタロット収集",
+              "→ 나의 타로 수집",
+            )}
+          </Link>
+          <Link
             href="/account/linked"
             style={{
               display: "block",

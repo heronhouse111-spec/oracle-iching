@@ -10,6 +10,7 @@ import {
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
+import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 
 export async function POST(request: NextRequest) {
   try {
@@ -118,6 +119,32 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in to continue" }),
         { status: 401, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // 卡牌收藏 — 易經主流程同時收「本卦 + 之卦」(若有變爻)。訪客不收藏。
+    let collectionNewCount = 0;
+    let collectionFinalCount = 0;
+    let collectionRewards = 0;
+    if (user) {
+      const inputs = [String(hexagramNumber)];
+      if (relatingHexagramNumber && relatingHexagramNumber !== hexagramNumber) {
+        inputs.push(String(relatingHexagramNumber));
+      }
+      const results = [];
+      for (const cid of inputs) {
+        results.push(
+          await recordCardObtained({
+            userId: user.id,
+            collectionType: "iching",
+            cardId: cid,
+            source: "main",
+          }),
+        );
+      }
+      const agg = aggregateResults(results);
+      collectionNewCount = agg.newCardCount;
+      collectionFinalCount = agg.finalDistinctCount;
+      collectionRewards = agg.totalRewardCredits;
     }
 
     const wordTargetZh = effectiveDepth === "deep" ? "約 500 字" : "約 300 字";
@@ -237,7 +264,13 @@ export async function POST(request: NextRequest) {
     });
 
     return new Response(readable, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Transfer-Encoding": "chunked" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-Count": String(collectionFinalCount),
+        "X-Collection-Rewards": String(collectionRewards),
+      },
     });
   } catch (error) {
     console.error("Divine API error:", error);

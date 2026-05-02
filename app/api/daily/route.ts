@@ -20,6 +20,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { recordCardObtained } from "@/lib/cardCollection";
 
 type Locale = "zh" | "en" | "ja" | "ko";
 function pickStr(
@@ -146,6 +147,24 @@ export async function POST(request: NextRequest) {
     const card = drawn.card;
     const isReversed = drawn.isReversed;
 
+    // 卡牌收藏 — 只在「真正首次扣點」當下記錄,同日重抽不重複寫入
+    // (失敗不影響 daily 主流程,helper 內部已 try-catch)
+    let collectionIsNew = false;
+    let collectionCount = 0;
+    let collectionRewards = 0;
+    if (!alreadyChargedToday) {
+      const r = await recordCardObtained({
+        userId: user.id,
+        collectionType: "tarot",
+        cardId: card.id,
+        cardSubkind: card.suit,
+        source: "daily",
+      });
+      collectionIsNew = r.isNew;
+      collectionCount = r.distinctCount;
+      collectionRewards = r.rewardCredits;
+    }
+
     const meaning = isReversed
       ? pickStr(
           safeLocale,
@@ -259,6 +278,9 @@ export async function POST(request: NextRequest) {
         "X-Daily-Reversed": isReversed ? "1" : "0",
         "X-Daily-Date": dateKey,
         "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
+        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
+        "X-Collection-Count": String(collectionCount),
+        "X-Collection-Rewards": String(collectionRewards),
       },
     });
   } catch (error) {

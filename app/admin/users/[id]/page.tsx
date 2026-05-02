@@ -8,6 +8,8 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Header from "@/components/Header";
+import { hexagrams } from "@/data/hexagrams";
+import { tarotDeck } from "@/data/tarot";
 
 interface UserDetail {
   profile: {
@@ -50,6 +52,20 @@ interface UserDetail {
     granted_by_email: string;
     related_order_mtn: string | null;
     created_at: string;
+  }>;
+}
+
+interface CollectionData {
+  iching: { ownedIds: string[]; count: number; total: number };
+  tarot: { ownedIds: string[]; count: number; total: number };
+  milestones: Array<{ milestone_id: string; reward_credits: number; granted_at: string }>;
+  milestoneConfigs: Array<{
+    id: string;
+    collection_type: "iching" | "tarot";
+    label_zh: string;
+    reward_credits: number;
+    threshold: number;
+    kind: string;
   }>;
 }
 
@@ -99,6 +115,16 @@ export default function AdminUserDetailPage() {
   const [banReason, setBanReason] = useState("");
   const [banBusy, setBanBusy] = useState(false);
 
+  // 卡牌收藏 + 贈卡 modal state
+  const [collection, setCollection] = useState<CollectionData | null>(null);
+  const [grantCardOpen, setGrantCardOpen] = useState(false);
+  const [grantCardType, setGrantCardType] = useState<"iching" | "tarot">("iching");
+  const [grantCardId, setGrantCardId] = useState("1");
+  const [grantCardReason, setGrantCardReason] = useState("");
+  const [grantCardBusy, setGrantCardBusy] = useState(false);
+  const [grantCardError, setGrantCardError] = useState<string | null>(null);
+  const [grantCardSuccess, setGrantCardSuccess] = useState<string | null>(null);
+
   // subscription modal state
   const [subOpen, setSubOpen] = useState(false);
   const [subAction, setSubAction] = useState<
@@ -117,17 +143,23 @@ export default function AdminUserDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${id}`, { cache: "no-store" });
-      if (res.status === 401) {
+      const [detailRes, collRes] = await Promise.all([
+        fetch(`/api/admin/users/${id}`, { cache: "no-store" }),
+        fetch(`/api/admin/users/${id}/collection`, { cache: "no-store" }),
+      ]);
+      if (detailRes.status === 401) {
         window.location.href = `/?redirect=/admin/users/${id}`;
         return;
       }
-      if (!res.ok) {
-        setError(`載入失敗:HTTP ${res.status}`);
+      if (!detailRes.ok) {
+        setError(`載入失敗:HTTP ${detailRes.status}`);
         return;
       }
-      const json = (await res.json()) as UserDetail;
+      const json = (await detailRes.json()) as UserDetail;
       setData(json);
+      if (collRes.ok) {
+        setCollection((await collRes.json()) as CollectionData);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -138,6 +170,47 @@ export default function AdminUserDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleGrantCard = async () => {
+    setGrantCardError(null);
+    setGrantCardSuccess(null);
+    if (grantCardReason.trim().length < 4) {
+      setGrantCardError("原因至少 4 個字");
+      return;
+    }
+    if (!grantCardId.trim()) {
+      setGrantCardError("請選擇卡牌");
+      return;
+    }
+    setGrantCardBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/grant-card`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collectionType: grantCardType,
+          cardId: grantCardId.trim(),
+          reason: grantCardReason.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setGrantCardError(json.detail?.join?.(", ") ?? json.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setGrantCardSuccess(
+        json.isNew
+          ? `已新贈卡。該 user ${grantCardType} 已收 ${json.distinctCount} 張。`
+          : `卡片已存在(累計次數 +1)。該 user ${grantCardType} 共 ${json.distinctCount} 張。`,
+      );
+      setGrantCardReason("");
+      await load();
+    } catch (e) {
+      setGrantCardError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGrantCardBusy(false);
+    }
+  };
 
   const handleBan = async () => {
     if (banReason.trim().length < 4) {
@@ -544,6 +617,116 @@ export default function AdminUserDetailPage() {
                     ))}
                   </tbody>
                 </table>
+              )}
+            </div>
+
+            {/* ─── 卡牌收藏 ─── */}
+            <div
+              className="mystic-card"
+              style={{ padding: 0, marginBottom: 16, overflow: "hidden" }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderBottom: "1px solid rgba(192,192,208,0.08)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <h2 style={{ fontSize: 14, color: "#d4a855" }}>卡牌收藏</h2>
+                <button
+                  onClick={() => setGrantCardOpen(true)}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: 12,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(212,168,85,0.5)",
+                    background: "rgba(212,168,85,0.1)",
+                    color: "#d4a855",
+                    cursor: "pointer",
+                  }}
+                >
+                  🎁 手動贈卡
+                </button>
+              </div>
+              {!collection ? (
+                <div style={{ padding: 24, textAlign: "center", color: "rgba(192,192,208,0.4)", fontSize: 13 }}>
+                  載入中…
+                </div>
+              ) : (
+                <div style={{ padding: 16 }}>
+                  {(["iching", "tarot"] as const).map((kind) => {
+                    const c = collection[kind];
+                    const pct = c.total > 0 ? Math.round((c.count / c.total) * 100) : 0;
+                    const earnedIds = new Set(collection.milestones.map((m) => m.milestone_id));
+                    const kindMilestones = collection.milestoneConfigs.filter(
+                      (m) => m.collection_type === kind,
+                    );
+                    return (
+                      <div key={kind} style={{ marginBottom: 16 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            marginBottom: 4,
+                          }}
+                        >
+                          <span style={{ fontSize: 13, color: "#e8e8f0" }}>
+                            {kind === "iching" ? "易經 64 卦" : "塔羅 78 張"}
+                          </span>
+                          <span style={{ fontSize: 12, color: "#fde68a" }}>
+                            {c.count} / {c.total} ({pct}%)
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            height: 6,
+                            borderRadius: 9999,
+                            background: "rgba(255,255,255,0.06)",
+                            overflow: "hidden",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${pct}%`,
+                              height: "100%",
+                              background: "linear-gradient(90deg, #d4a855, #fde68a)",
+                            }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {kindMilestones.map((m) => {
+                            const earned = earnedIds.has(m.id);
+                            return (
+                              <span
+                                key={m.id}
+                                style={{
+                                  fontSize: 10,
+                                  padding: "2px 8px",
+                                  borderRadius: 9999,
+                                  background: earned
+                                    ? "rgba(110,231,183,0.12)"
+                                    : "rgba(255,255,255,0.04)",
+                                  border: `1px solid ${earned ? "rgba(110,231,183,0.4)" : "rgba(212,168,85,0.2)"}`,
+                                  color: earned ? "#6ee7b7" : "rgba(192,192,208,0.6)",
+                                }}
+                                title={`+${m.reward_credits} ✦`}
+                              >
+                                {earned ? "✓ " : ""}
+                                {m.label_zh}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -1049,6 +1232,205 @@ export default function AdminUserDetailPage() {
                   }}
                 >
                   {banBusy ? "處理中…" : "確認封鎖"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Grant Card modal ─── */}
+        {grantCardOpen && (
+          <div
+            onClick={() => setGrantCardOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.7)",
+              backdropFilter: "blur(4px)",
+              zIndex: 1000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mystic-card"
+              style={{ padding: 24, maxWidth: 460, width: "100%" }}
+            >
+              <h3
+                className="text-gold-gradient"
+                style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 18, marginBottom: 12 }}
+              >
+                🎁 手動贈卡(客服救人專用)
+              </h3>
+              <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginBottom: 16 }}>
+                只記入收藏,**不觸發里程碑獎勵**(防止刷獎)。所有操作會留 audit log。
+              </p>
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                類型
+              </label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                {(["iching", "tarot"] as const).map((tt) => (
+                  <button
+                    key={tt}
+                    onClick={() => {
+                      setGrantCardType(tt);
+                      setGrantCardId(tt === "iching" ? "1" : tarotDeck[0].id);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      borderRadius: 8,
+                      border:
+                        grantCardType === tt
+                          ? "1px solid #d4a855"
+                          : "1px solid rgba(212,168,85,0.2)",
+                      background:
+                        grantCardType === tt ? "rgba(212,168,85,0.15)" : "transparent",
+                      color: grantCardType === tt ? "#fde68a" : "rgba(192,192,208,0.7)",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: grantCardType === tt ? 600 : 400,
+                    }}
+                  >
+                    {tt === "iching" ? "易經卦象" : "塔羅牌"}
+                  </button>
+                ))}
+              </div>
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                {grantCardType === "iching" ? "卦號(1-64)" : "塔羅牌"}
+              </label>
+              {grantCardType === "iching" ? (
+                <select
+                  value={grantCardId}
+                  onChange={(e) => setGrantCardId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    background: "rgba(13,13,43,0.5)",
+                    color: "#e8e8f0",
+                    fontSize: 14,
+                    marginBottom: 12,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {hexagrams.map((h) => (
+                    <option key={h.number} value={String(h.number)}>
+                      第 {h.number} 卦 — {h.nameZh} ({h.nameEn.split(" ")[0]})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={grantCardId}
+                  onChange={(e) => setGrantCardId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    background: "rgba(13,13,43,0.5)",
+                    color: "#e8e8f0",
+                    fontSize: 14,
+                    marginBottom: 12,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {tarotDeck.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      [{c.suit}] {c.nameZh} — {c.nameEn}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                原因(必填,≥4 字)
+              </label>
+              <textarea
+                value={grantCardReason}
+                onChange={(e) => setGrantCardReason(e.target.value)}
+                rows={3}
+                placeholder="例如:用戶反映抽到此卦但收藏沒記到 → 補入"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(212,168,85,0.3)",
+                  background: "rgba(13,13,43,0.5)",
+                  color: "#e8e8f0",
+                  fontSize: 13,
+                  resize: "none",
+                  marginBottom: 12,
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                }}
+              />
+
+              {grantCardError && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 6,
+                    background: "rgba(248,113,113,0.08)",
+                    border: "1px solid rgba(248,113,113,0.4)",
+                    color: "#fca5a5",
+                    fontSize: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  {grantCardError}
+                </div>
+              )}
+              {grantCardSuccess && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 6,
+                    background: "rgba(110,231,183,0.08)",
+                    border: "1px solid rgba(110,231,183,0.4)",
+                    color: "#6ee7b7",
+                    fontSize: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  {grantCardSuccess}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setGrantCardOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  關閉
+                </button>
+                <button
+                  onClick={handleGrantCard}
+                  disabled={grantCardBusy}
+                  className="btn-gold"
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    opacity: grantCardBusy ? 0.6 : 1,
+                    cursor: grantCardBusy ? "wait" : "pointer",
+                  }}
+                >
+                  {grantCardBusy ? "處理中…" : "確認贈卡"}
                 </button>
               </div>
             </div>

@@ -30,6 +30,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
 type Locale = "zh" | "en" | "ja" | "ko";
@@ -154,6 +155,30 @@ export async function POST(request: NextRequest) {
           headers: { "Content-Type": "application/json" },
         });
       }
+    }
+
+    // 卡牌收藏 — 本卦 + 之卦(梅花易數一定有變爻,所以一定有之卦)
+    let collectionNewCount = 0;
+    let collectionFinalCount = 0;
+    let collectionRewards = 0;
+    if (user) {
+      const ids = [String(primaryHex.number)];
+      if (relatingHex.number !== primaryHex.number) ids.push(String(relatingHex.number));
+      const results = [];
+      for (const cid of ids) {
+        results.push(
+          await recordCardObtained({
+            userId: user.id,
+            collectionType: "iching",
+            cardId: cid,
+            source: "plum_blossom",
+          }),
+        );
+      }
+      const agg = aggregateResults(results);
+      collectionNewCount = agg.newCardCount;
+      collectionFinalCount = agg.finalDistinctCount;
+      collectionRewards = agg.totalRewardCredits;
     }
 
     // ──────────────────────────────────────────
@@ -400,6 +425,9 @@ Per the system instructions, give a combined reading: primary mood → changing-
         "X-PB-HexagramNumber": String(primaryHex.number),
         "X-PB-RelatingNumber": String(relatingHex.number),
         "X-PB-ChangingLine": String(changingLines[0]),
+        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-Count": String(collectionFinalCount),
+        "X-Collection-Rewards": String(collectionRewards),
       },
     });
   } catch (error) {

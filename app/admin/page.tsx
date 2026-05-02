@@ -8,7 +8,7 @@ import TopHexagrams from "@/components/admin/TopHexagrams";
 import LocaleSplit from "@/components/admin/LocaleSplit";
 import RecentDivinations from "@/components/admin/RecentDivinations";
 import RecentUsers from "@/components/admin/RecentUsers";
-import { getAdminUser, loadAdminStats } from "@/lib/admin/stats";
+import { getAdminUser, loadAdminStats, loadCollectionStats } from "@/lib/admin/stats";
 import { loadRevenueStats } from "@/lib/admin/revenue";
 
 // 後台資料一律即時取得,避免快取過舊
@@ -19,6 +19,22 @@ export const revalidate = 0;
 const LOCALE: "zh" | "en" = "zh";
 
 // ──────── 後台導覽連結卡片 ────────
+function Tile({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 10,
+        border: "1px solid #dbe3ee",
+        background: "#fafcfe",
+      }}
+    >
+      <div style={{ fontSize: 11, color: "#5a6a82", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "#1e4272" }}>{value}</div>
+    </div>
+  );
+}
+
 function AdminLinkCard({
   href,
   icon,
@@ -157,9 +173,10 @@ export default async function AdminDashboardPage() {
     );
   }
 
-  const [stats, revenue] = await Promise.all([
+  const [stats, revenue, collectionStats] = await Promise.all([
     loadAdminStats(),
     loadRevenueStats(),
+    loadCollectionStats(),
   ]);
 
   const fmtTwd = (n: number) =>
@@ -419,6 +436,65 @@ export default async function AdminDashboardPage() {
               <AdminLinkCard href="/admin/flags" icon="🚦" title="功能開關" desc="Feature flags" />
               <AdminLinkCard href="/admin/admins" icon="🔑" title="管理員" desc="後台帳號權限(super admin only)" />
               <AdminLinkCard href="/admin/audit-log" icon="📜" title="稽核紀錄" desc="所有後台操作的歷史" />
+              <AdminLinkCard href="/admin/collection-milestones" icon="🎯" title="收集里程碑" desc="調整卡牌收集獎勵閾值與點數" />
+            </div>
+          </section>
+
+          {/* ── 卡牌收集系統(phase 20)── */}
+          <section className="mystic-card" style={{ padding: 20 }}>
+            <h2 style={{ fontSize: 16, color: "#1e4272", margin: 0, marginBottom: 14, fontWeight: 600 }}>
+              🎯 卡牌收集系統
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              <Tile label="易經抽卡總次數" value={collectionStats.totalRowsIching.toLocaleString()} />
+              <Tile label="塔羅抽卡總次數" value={collectionStats.totalRowsTarot.toLocaleString()} />
+              <Tile label="收藏中的玩家(易經)" value={collectionStats.uniqueOwnersIching.toLocaleString()} />
+              <Tile label="收藏中的玩家(塔羅)" value={collectionStats.uniqueOwnersTarot.toLocaleString()} />
+              <Tile label="已發里程碑次數" value={collectionStats.milestonesGranted.toLocaleString()} />
+              <Tile
+                label="獎勵發出 credits"
+                value={`✦ ${collectionStats.totalRewardCreditsGranted.toLocaleString()}`}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 13, color: "#5a6a82", marginBottom: 8 }}>易經 Top 5</h3>
+                {collectionStats.topIching.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "#9aa5b8" }}>—</p>
+                ) : (
+                  <ol style={{ paddingLeft: 18, margin: 0, fontSize: 12, color: "#3a4554", lineHeight: 1.8 }}>
+                    {collectionStats.topIching.map((h) => (
+                      <li key={h.hexagram_number}>
+                        第 {h.hexagram_number} 卦{" "}
+                        <span style={{ color: "#9aa5b8" }}>({h.count} 人收到)</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+              <div>
+                <h3 style={{ fontSize: 13, color: "#5a6a82", marginBottom: 8 }}>塔羅 Top 5</h3>
+                {collectionStats.topTarot.length === 0 ? (
+                  <p style={{ fontSize: 12, color: "#9aa5b8" }}>—</p>
+                ) : (
+                  <ol style={{ paddingLeft: 18, margin: 0, fontSize: 12, color: "#3a4554", lineHeight: 1.8 }}>
+                    {collectionStats.topTarot.map((c) => (
+                      <li key={c.card_id}>
+                        {c.card_id}{" "}
+                        <span style={{ color: "#9aa5b8" }}>({c.count} 人收到)</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
             </div>
           </section>
 

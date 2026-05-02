@@ -22,6 +22,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
+import NewCardToast from "@/components/NewCardToast";
 import { getHexagramByNumber, trigramNames } from "@/data/hexagrams";
 import { ICHING_BACK_IMAGE } from "@/lib/ichingImages";
 import {
@@ -49,6 +50,13 @@ export default function IChingDailyPage() {
     open: false,
     required: 0,
   });
+  // Card collection toast state(server header X-Collection-IsNew=1 觸發)
+  const [collectionToast, setCollectionToast] = useState<{
+    show: boolean;
+    cardName: string;
+    count: number;
+    rewards: number;
+  }>({ show: false, cardName: "", count: 0, rewards: 0 });
   const ranRef = useRef(false);
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
@@ -128,6 +136,18 @@ export default function IChingDailyPage() {
       if (num) setHexNumber(num);
       setDateKey(date);
       setReread(isReread);
+
+      // 收藏 toast — 只在「不是 reread」+「真的新卡」時跳出
+      const isNewCard = res.headers.get("X-Collection-IsNew") === "1";
+      const collectionCount = parseInt(res.headers.get("X-Collection-Count") ?? "0", 10);
+      const rewards = parseInt(res.headers.get("X-Collection-Rewards") ?? "0", 10);
+      if (isNewCard && num) {
+        const drawnHex = getHexagramByNumber(num);
+        const cardName = drawnHex
+          ? t(drawnHex.nameZh, drawnHex.nameEn, drawnHex.nameJa, drawnHex.nameKo)
+          : `第 ${num} 卦`;
+        setCollectionToast({ show: true, cardName, count: collectionCount, rewards });
+      }
 
       // 翻牌動畫:背 → 正,跟 /daily 一致 0.7s
       setPhase("revealing");
@@ -504,6 +524,15 @@ export default function IChingDailyPage() {
         open={creditsModal.open}
         required={creditsModal.required}
         onClose={() => setCreditsModal({ open: false, required: 0 })}
+      />
+      <NewCardToast
+        show={collectionToast.show}
+        type="iching"
+        cardName={collectionToast.cardName}
+        collectionCount={collectionToast.count}
+        total={64}
+        rewardCredits={collectionToast.rewards}
+        onDismiss={() => setCollectionToast((s) => ({ ...s, show: false }))}
       />
     </main>
   );
