@@ -69,6 +69,32 @@ interface CollectionData {
   }>;
 }
 
+function addDays(d: Date, days: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + days);
+  return out;
+}
+
+/** 把 ISO 字串轉成 <input type="datetime-local"> 接受的本地時間值(yyyy-MM-ddTHH:mm) */
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const SUB_PLAN_LABEL: Record<string, string> = {
+  monthly: "月訂閱",
+  yearly: "年訂閱",
+  lifetime: "終身",
+};
+
+const SUB_STATUS_LABEL: Record<string, string> = {
+  free: "免費",
+  active: "訂閱中",
+  canceled: "已取消(未到期)",
+  expired: "已過期",
+};
+
 export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
@@ -98,6 +124,19 @@ export default function AdminUserDetailPage() {
   const [grantCardBusy, setGrantCardBusy] = useState(false);
   const [grantCardError, setGrantCardError] = useState<string | null>(null);
   const [grantCardSuccess, setGrantCardSuccess] = useState<string | null>(null);
+
+  // subscription modal state
+  const [subOpen, setSubOpen] = useState(false);
+  const [subAction, setSubAction] = useState<
+    "activate" | "cancel" | "expire" | "clear"
+  >("activate");
+  const [subPlan, setSubPlan] = useState<"monthly" | "yearly" | "lifetime">(
+    "monthly",
+  );
+  const [subExpiresAt, setSubExpiresAt] = useState("");
+  const [subReason, setSubReason] = useState("");
+  const [subBusy, setSubBusy] = useState(false);
+  const [subError, setSubError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -207,6 +246,74 @@ export default function AdminUserDetailPage() {
       return;
     }
     await load();
+  };
+
+  const openSubModal = () => {
+    // 預設動作:目前仍在有效期 → cancel,否則 → activate
+    const current = data?.subscription;
+    const stillValid =
+      !!current &&
+      (current.status === "active" || current.status === "canceled") &&
+      (!current.expires_at || new Date(current.expires_at).getTime() > Date.now());
+    if (stillValid && current?.expires_at) {
+      setSubAction("cancel");
+      setSubExpiresAt(toLocalInputValue(current.expires_at));
+    } else {
+      setSubAction("activate");
+      setSubExpiresAt(toLocalInputValue(addDays(new Date(), 30).toISOString()));
+    }
+    setSubPlan(
+      (current?.plan as "monthly" | "yearly" | "lifetime") ?? "monthly",
+    );
+    setSubReason("");
+    setSubError(null);
+    setSubOpen(true);
+  };
+
+  const handleSubmitSub = async () => {
+    setSubError(null);
+    if (subReason.trim().length < 4) {
+      setSubError("原因至少 4 字");
+      return;
+    }
+    const payload: Record<string, unknown> = {
+      action: subAction,
+      reason: subReason.trim(),
+    };
+    if (subAction === "activate") {
+      if (!subExpiresAt) {
+        setSubError("請指定到期日");
+        return;
+      }
+      const expIso = new Date(subExpiresAt).toISOString();
+      if (new Date(expIso).getTime() <= Date.now()) {
+        setSubError("到期日必須是未來時間");
+        return;
+      }
+      payload.plan = subPlan;
+      payload.expiresAt = expIso;
+    } else if (subAction === "cancel" && subExpiresAt) {
+      payload.expiresAt = new Date(subExpiresAt).toISOString();
+    }
+    setSubBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/subscription`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        setSubError(j.detail ?? j.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setSubOpen(false);
+      await load();
+    } catch (e) {
+      setSubError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubBusy(false);
+    }
   };
 
   const handleGrant = async () => {
@@ -363,10 +470,48 @@ export default function AdminUserDetailPage() {
                           color: "#6ee7b7",
                         }}
                       >
-                        {data.subscription.plan === "monthly" ? "月訂閱" : data.subscription.plan === "yearly" ? "年訂閱" : data.subscription.plan}
+                        {SUB_PLAN_LABEL[data.subscription.plan] ?? data.subscription.plan}
                         ({data.subscription.provider})
                       </span>
                     )}
+                  </div>
+                  {/* 訂閱詳情 + 編輯按鈕 */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginTop: 12,
+                      fontSize: 12,
+                      color: "rgba(192,192,208,0.7)",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span style={{ color: "rgba(192,192,208,0.5)" }}>訂閱:</span>
+                    <span>
+                      {data.subscription
+                        ? `${SUB_STATUS_LABEL[data.subscription.status] ?? data.subscription.status} · ${SUB_PLAN_LABEL[data.subscription.plan] ?? data.subscription.plan}`
+                        : "—"}
+                    </span>
+                    {data.subscription?.expires_at && (
+                      <span style={{ color: "rgba(192,192,208,0.5)" }}>
+                        到期 {new Date(data.subscription.expires_at).toLocaleString("zh-TW", { dateStyle: "short", timeStyle: "short" })}
+                      </span>
+                    )}
+                    <button
+                      onClick={openSubModal}
+                      style={{
+                        padding: "3px 10px",
+                        fontSize: 11,
+                        borderRadius: 9999,
+                        border: "1px solid rgba(212,168,85,0.4)",
+                        background: "rgba(212,168,85,0.08)",
+                        color: "#d4a855",
+                        cursor: "pointer",
+                      }}
+                    >
+                      變更訂閱
+                    </button>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -772,6 +917,231 @@ export default function AdminUserDetailPage() {
                   }}
                 >
                   {grantBusy ? "處理中…" : "確認執行"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Subscription modal ─── */}
+        {subOpen && (
+          <div
+            onClick={() => setSubOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.7)",
+              backdropFilter: "blur(4px)",
+              zIndex: 1000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="mystic-card"
+              style={{ padding: 24, maxWidth: 460, width: "100%" }}
+            >
+              <h3
+                className="text-gold-gradient"
+                style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 18, marginBottom: 8 }}
+              >
+                變更訂閱狀態
+              </h3>
+              <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, marginBottom: 16 }}>
+                目前:
+                {data?.subscription
+                  ? `${SUB_STATUS_LABEL[data.subscription.status] ?? data.subscription.status} · ${SUB_PLAN_LABEL[data.subscription.plan] ?? data.subscription.plan}${data.subscription.expires_at ? ` · 到期 ${new Date(data.subscription.expires_at).toLocaleString("zh-TW", { dateStyle: "short", timeStyle: "short" })}` : ""}`
+                  : "免費"}
+              </p>
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 6 }}>
+                操作
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                {(
+                  [
+                    { v: "activate", label: "啟用 / 延長", color: "#6ee7b7" },
+                    { v: "cancel", label: "取消(保留至到期)", color: "#fbbf24" },
+                    { v: "expire", label: "立即終止", color: "#fca5a5" },
+                    { v: "clear", label: "清除為免費", color: "rgba(192,192,208,0.8)" },
+                  ] as const
+                ).map((opt) => {
+                  const active = subAction === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      onClick={() => setSubAction(opt.v)}
+                      style={{
+                        padding: "8px 10px",
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: `1px solid ${active ? opt.color : "rgba(192,192,208,0.2)"}`,
+                        background: active ? `${opt.color}1a` : "rgba(13,13,43,0.4)",
+                        color: active ? opt.color : "rgba(192,192,208,0.7)",
+                        cursor: "pointer",
+                        fontWeight: active ? 600 : 400,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {subAction === "activate" && (
+                <>
+                  <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                    方案
+                  </label>
+                  <select
+                    value={subPlan}
+                    onChange={(e) => setSubPlan(e.target.value as "monthly" | "yearly" | "lifetime")}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid rgba(212,168,85,0.3)",
+                      background: "rgba(13,13,43,0.5)",
+                      color: "#e8e8f0",
+                      fontSize: 13,
+                      marginBottom: 12,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <option value="monthly">月訂閱</option>
+                    <option value="yearly">年訂閱</option>
+                    <option value="lifetime">終身</option>
+                  </select>
+                </>
+              )}
+
+              {(subAction === "activate" || subAction === "cancel") && (
+                <>
+                  <label
+                    style={{
+                      display: "block",
+                      color: "rgba(192,192,208,0.7)",
+                      fontSize: 11,
+                      marginBottom: 4,
+                    }}
+                  >
+                    到期日{subAction === "cancel" ? "(可調整,留空保留現值)" : ""}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={subExpiresAt}
+                    onChange={(e) => setSubExpiresAt(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid rgba(212,168,85,0.3)",
+                      background: "rgba(13,13,43,0.5)",
+                      color: "#e8e8f0",
+                      fontSize: 13,
+                      marginBottom: 8,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+                    {[
+                      { label: "+30 天", days: 30 },
+                      { label: "+90 天", days: 90 },
+                      { label: "+1 年", days: 365 },
+                    ].map((q) => (
+                      <button
+                        key={q.label}
+                        onClick={() =>
+                          setSubExpiresAt(
+                            toLocalInputValue(addDays(new Date(), q.days).toISOString()),
+                          )
+                        }
+                        style={{
+                          padding: "4px 10px",
+                          fontSize: 11,
+                          borderRadius: 9999,
+                          border: "1px solid rgba(192,192,208,0.2)",
+                          background: "rgba(13,13,43,0.4)",
+                          color: "rgba(192,192,208,0.7)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <label style={{ display: "block", color: "rgba(192,192,208,0.7)", fontSize: 11, marginBottom: 4 }}>
+                原因(必填,≥4 字)
+              </label>
+              <textarea
+                value={subReason}
+                onChange={(e) => setSubReason(e.target.value)}
+                rows={2}
+                placeholder="例如:客服補償、推廣方案、退款處理"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(212,168,85,0.3)",
+                  background: "rgba(13,13,43,0.5)",
+                  color: "#e8e8f0",
+                  fontSize: 13,
+                  resize: "none",
+                  marginBottom: 12,
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                }}
+              />
+
+              {subError && (
+                <div
+                  style={{
+                    padding: 10,
+                    borderRadius: 6,
+                    background: "rgba(248,113,113,0.08)",
+                    border: "1px solid rgba(248,113,113,0.4)",
+                    color: "#fca5a5",
+                    fontSize: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  {subError}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setSubOpen(false)}
+                  style={{
+                    padding: "8px 16px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmitSub}
+                  disabled={subBusy}
+                  className="btn-gold"
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    opacity: subBusy ? 0.6 : 1,
+                    cursor: subBusy ? "wait" : "pointer",
+                  }}
+                >
+                  {subBusy ? "處理中…" : "確認執行"}
                 </button>
               </div>
             </div>
