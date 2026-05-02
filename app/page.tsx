@@ -2611,10 +2611,10 @@ export default function Home() {
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
                       {t(
-                        "5 種經典牌陣可選",
-                        "5 classic spreads",
-                        "5種類のスプレッド",
-                        "5가지 대표 스프레드"
+                        "4 種經典牌陣可選",
+                        "4 classic spreads",
+                        "4種類のスプレッド",
+                        "4가지 대표 스프레드"
                       )}
                     </div>
                   </div>
@@ -3178,8 +3178,8 @@ export default function Home() {
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
-                          "從 5 種經典牌陣中挑一個,以七十八張塔羅為你解讀",
-                          "Pick one of 5 classic spreads — read with the 78-card tarot deck"
+                          "從 4 種經典牌陣中挑一個,以七十八張塔羅為你解讀",
+                          "Pick one of 4 classic spreads — read with the 78-card tarot deck"
                         )}
                       </div>
                     </div>

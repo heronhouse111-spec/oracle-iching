@@ -48,7 +48,6 @@ const SLOTS: Slot[] = [
   { id: "spread.two-options", group: "塔羅牌陣介紹圖", label: "二選一牌陣", emoji: "⚖" },
   { id: "spread.love-cross", group: "塔羅牌陣介紹圖", label: "愛情十字牌陣", emoji: "💞" },
   { id: "spread.celtic-cross", group: "塔羅牌陣介紹圖", label: "凱爾特十字", emoji: "✦" },
-  { id: "spread.year-twelve", group: "塔羅牌陣介紹圖", label: "年度十二宮", emoji: "🌙" },
 ];
 
 // 把 slots group 起來

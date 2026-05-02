@@ -31,10 +31,10 @@ export default function TarotSpreadIndexView({ uiImages }: Props) {
           }}
         >
           {t(
-            "不同問題適合不同牌陣 — 三牌看脈絡、二選一做決策、愛情十字看關係、凱爾特十字解大命題、年度十二宮看一年。",
-            "Different questions call for different spreads. Three-card for narrative, two-options for decisions, love cross for relationships, Celtic cross for big matters, yearly 12 for the year ahead.",
-            "質問によって適切なスプレッドは異なります。3枚は流れを見るのに、2択は決断、ラブクロスは恋愛、ケルト十字は大きな課題、年間12室は1年を見るのに。",
-            "질문마다 어울리는 스프레드가 다릅니다. 세 장 카드는 흐름, 양자택일은 결정, 러브 크로스는 관계, 켈틱 크로스는 큰 문제, 연간 12궁은 한 해를 보는 데 사용합니다."
+            "不同問題適合不同牌陣 — 三牌看脈絡、二選一做決策、愛情十字看關係、凱爾特十字解大命題。",
+            "Different questions call for different spreads. Three-card for narrative, two-options for decisions, love cross for relationships, Celtic cross for big matters.",
+            "質問によって適切なスプレッドは異なります。3枚は流れを見るのに、2択は決断、ラブクロスは恋愛、ケルト十字は大きな課題。",
+            "질문마다 어울리는 스프레드가 다릅니다. 세 장 카드는 흐름, 양자택일은 결정, 러브 크로스는 관계, 켈틱 크로스는 큰 문제에 사용합니다."
           )}
         </p>
       </header>

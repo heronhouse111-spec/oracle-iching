@@ -279,43 +279,14 @@ const CELTIC_CROSS: Spread = {
   ],
 };
 
-// ──────────────────────────────────────────
-// 5. 年度十二宮:跨度一整年的能量地圖
-// ──────────────────────────────────────────
-const YEAR_TWELVE: Spread = {
-  id: "year-twelve",
-  nameZh: "年度十二宮",
-  nameEn: "Yearly 12-House",
-  taglineZh: "一張十二月份的能量地圖,看清楚整年的節奏",
-  taglineEn: "A 12-month energy map for the year ahead",
-  whenZh:
-    "適合在新的一年、新的生日、人生新階段開始時做。十二張牌對應一月到十二月,可以看出每個月的主題、能量、適合做什麼。建議用 Deep Insight 模式並搭配年度紀錄回頭驗證。",
-  whenEn:
-    "Use at new year, your birthday, or a new life-chapter. Twelve cards map January through December — themes, energies, suggested focus per month. Pair with Deep Insight and revisit your journal at year-end.",
-  category: "year",
-  cardCount: 12,
-  positions: [
-    { key: "month-01", labelZh: "一月", labelEn: "January", descZh: "新年起手,本月的能量與主題", descEn: "Year-start theme & energy" },
-    { key: "month-02", labelZh: "二月", labelEn: "February", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-03", labelZh: "三月", labelEn: "March", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-04", labelZh: "四月", labelEn: "April", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-05", labelZh: "五月", labelEn: "May", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-06", labelZh: "六月", labelEn: "June", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-07", labelZh: "七月", labelEn: "July", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-08", labelZh: "八月", labelEn: "August", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-09", labelZh: "九月", labelEn: "September", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-10", labelZh: "十月", labelEn: "October", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-11", labelZh: "十一月", labelEn: "November", descZh: "本月的能量與主題", descEn: "Theme & energy this month" },
-    { key: "month-12", labelZh: "十二月", labelEn: "December", descZh: "全年總結,延續到新年的能量", descEn: "Year-end summary, energy carrying into next year" },
-  ],
-};
+// 「年度十二宮」(Yearly 12-House) 已下架 — 跨度一整年、AI 生成成本高、使用率低,
+// 2026-05 移除。歷史占卜紀錄仍可正常顯示(getSpread 找不到會 fallback 到 three-card)。
 
 export const SPREADS: Spread[] = [
   THREE_CARD,
   TWO_OPTIONS,
   LOVE_CROSS,
   CELTIC_CROSS,
-  YEAR_TWELVE,
 ];
 
 // ──────────────────────────────────────────
