@@ -3,11 +3,12 @@
 // ============================================
 // 圖檔:由鷺居國際以 Google Gemini AI 繪圖重新繪製,構圖參考源自公共領域之
 //       Rider-Waite-Smith 塔羅 (Pamela Colman Smith, 1909)。
-//       檔案輸出於 public/tarot/*.jpg:
-//   - Major: 00-TheFool.jpg ~ 21-TheWorld.jpg
-//   - Minor: {Suit}{01-14}.jpg, suit ∈ Cups / Pentacles / Swords / Wands
+//       原始 JPG 已於 2026-05 透過 scripts/optimize-public-images.mjs
+//       轉成 WebP(quality 80,省 ~50% 流量),檔案輸出於 public/tarot/*.webp:
+//   - Major: 00-TheFool.webp ~ 21-TheWorld.webp
+//   - Minor: {Suit}{01-14}.webp, suit ∈ Cups / Pentacles / Swords / Wands
 //     01=Ace、02-10=數字、11=Page、12=Knight、13=Queen、14=King
-//   - CardBacks.jpg 為牌背(面朝下時顯示)
+//   - CardBacks.webp 為牌背(面朝下時顯示)
 //
 // 牌義採 Rider-Waite-Smith 傳統詮釋之濃縮版本(公共領域),餵給 AI 解讀用
 // ============================================
@@ -27,7 +28,7 @@ export interface TarotCard {
    *  缺值時 view 端的 t() 會 fallback 到 en。 */
   nameJa?: string;
   nameKo?: string;
-  imagePath: string;      // /tarot/xxx.jpg (public 下的路徑)
+  imagePath: string;      // /tarot/xxx.webp (public 下的路徑)
   uprightMeaningZh: string;
   uprightMeaningEn: string;
   uprightMeaningJa?: string;
@@ -46,7 +47,7 @@ export interface TarotCard {
   keywordsReversedKo?: string[];
 }
 
-export const CARD_BACK_IMAGE = "/tarot/CardBacks.jpg";
+export const CARD_BACK_IMAGE = "/tarot/CardBacks.webp";
 
 // 花色中文對照
 export const SUIT_NAMES_ZH: Record<TarotSuit, string> = {
@@ -95,7 +96,7 @@ const MAJOR: TarotCard[] = [
     number: 0,
     nameZh: "愚人",
     nameEn: "The Fool",
-    imagePath: "/tarot/00-TheFool.jpg",
+    imagePath: "/tarot/00-TheFool.webp",
     uprightMeaningZh: "象徵全新的開始、天真與冒險。懷抱信念踏出第一步,對未知保持開放。",
     uprightMeaningEn: "New beginnings, innocence, and a leap of faith. Step forward with open-hearted optimism.",
     reversedMeaningZh: "衝動、魯莽或不願承擔風險。該重新考慮計畫是否周全。",
@@ -111,7 +112,7 @@ const MAJOR: TarotCard[] = [
     number: 1,
     nameZh: "魔術師",
     nameEn: "The Magician",
-    imagePath: "/tarot/01-TheMagician.jpg",
+    imagePath: "/tarot/01-TheMagician.webp",
     uprightMeaningZh: "顯化力量、意志力與行動力。你擁有實現願望所需的一切工具。",
     uprightMeaningEn: "Manifestation, willpower, and resourcefulness. You have all the tools you need.",
     reversedMeaningZh: "操弄、自欺或才能未發揮。注意動機是否純粹。",
@@ -127,7 +128,7 @@ const MAJOR: TarotCard[] = [
     number: 2,
     nameZh: "女祭司",
     nameEn: "The High Priestess",
-    imagePath: "/tarot/02-TheHighPriestess.jpg",
+    imagePath: "/tarot/02-TheHighPriestess.webp",
     uprightMeaningZh: "直覺、神秘與內在智慧。傾聽潛意識的聲音,答案已在心中。",
     uprightMeaningEn: "Intuition, mystery, and inner wisdom. Listen to your subconscious; the answer is within.",
     reversedMeaningZh: "忽視直覺、祕密浮上檯面或與內在失聯。",
@@ -143,7 +144,7 @@ const MAJOR: TarotCard[] = [
     number: 3,
     nameZh: "女皇",
     nameEn: "The Empress",
-    imagePath: "/tarot/03-TheEmpress.jpg",
+    imagePath: "/tarot/03-TheEmpress.webp",
     uprightMeaningZh: "豐饒、創造力與母性能量。滋養自己與身邊的人,享受感官之美。",
     uprightMeaningEn: "Abundance, creativity, and nurturing energy. Enjoy beauty and care for those around you.",
     reversedMeaningZh: "依賴、停滯或創造力受阻。需要重新連結內在力量。",
@@ -159,7 +160,7 @@ const MAJOR: TarotCard[] = [
     number: 4,
     nameZh: "皇帝",
     nameEn: "The Emperor",
-    imagePath: "/tarot/04-TheEmperor.jpg",
+    imagePath: "/tarot/04-TheEmperor.webp",
     uprightMeaningZh: "權威、穩固結構與領導力。以紀律與責任打造基礎。",
     uprightMeaningEn: "Authority, structure, and leadership. Build foundations with discipline.",
     reversedMeaningZh: "專制、控制欲或僵化。過度堅持掌控反成阻礙。",
@@ -175,7 +176,7 @@ const MAJOR: TarotCard[] = [
     number: 5,
     nameZh: "教皇",
     nameEn: "The Hierophant",
-    imagePath: "/tarot/05-TheHierophant.jpg",
+    imagePath: "/tarot/05-TheHierophant.webp",
     uprightMeaningZh: "傳統、信念與靈性指引。尋求導師或在既有體制中學習。",
     uprightMeaningEn: "Tradition, belief, and spiritual guidance. Seek mentors or learn within established systems.",
     reversedMeaningZh: "反叛傳統、打破規則或需挑戰既定信念。",
@@ -191,7 +192,7 @@ const MAJOR: TarotCard[] = [
     number: 6,
     nameZh: "戀人",
     nameEn: "The Lovers",
-    imagePath: "/tarot/06-TheLovers.jpg",
+    imagePath: "/tarot/06-TheLovers.webp",
     uprightMeaningZh: "愛、和諧與重要的抉擇。依循內心價值做決定。",
     uprightMeaningEn: "Love, harmony, and a meaningful choice. Decide from your core values.",
     reversedMeaningZh: "關係失衡、錯誤選擇或價值觀衝突。",
@@ -207,7 +208,7 @@ const MAJOR: TarotCard[] = [
     number: 7,
     nameZh: "戰車",
     nameEn: "The Chariot",
-    imagePath: "/tarot/07-TheChariot.jpg",
+    imagePath: "/tarot/07-TheChariot.webp",
     uprightMeaningZh: "意志力、決心與勝利。聚焦目標,衝破阻礙。",
     uprightMeaningEn: "Willpower, determination, and victory. Stay focused and push through obstacles.",
     reversedMeaningZh: "失去方向、自我懷疑或侵略性失控。",
@@ -223,7 +224,7 @@ const MAJOR: TarotCard[] = [
     number: 8,
     nameZh: "力量",
     nameEn: "Strength",
-    imagePath: "/tarot/08-Strength.jpg",
+    imagePath: "/tarot/08-Strength.webp",
     uprightMeaningZh: "內在勇氣、耐心與柔性駕馭。以溫柔而非蠻力制伏挑戰。",
     uprightMeaningEn: "Inner courage, patience, and gentle mastery. Overcome challenges with compassion, not force.",
     reversedMeaningZh: "自我懷疑、情緒失控或用暴力解決問題。",
@@ -239,7 +240,7 @@ const MAJOR: TarotCard[] = [
     number: 9,
     nameZh: "隱者",
     nameEn: "The Hermit",
-    imagePath: "/tarot/09-TheHermit.jpg",
+    imagePath: "/tarot/09-TheHermit.webp",
     uprightMeaningZh: "內省、獨處與尋找真理。退一步靜心,答案在內在浮現。",
     uprightMeaningEn: "Introspection, solitude, and seeking truth. Step back and let answers emerge within.",
     reversedMeaningZh: "孤立、逃避或拒絕內在工作。需重新與他人連結。",
@@ -255,7 +256,7 @@ const MAJOR: TarotCard[] = [
     number: 10,
     nameZh: "命運之輪",
     nameEn: "Wheel of Fortune",
-    imagePath: "/tarot/10-WheelOfFortune.jpg",
+    imagePath: "/tarot/10-WheelOfFortune.webp",
     uprightMeaningZh: "命運輪轉、循環與轉機。接受變化,機會正在到來。",
     uprightMeaningEn: "Fate turning, cycles, and a turning point. Embrace change; opportunity is arriving.",
     reversedMeaningZh: "運勢低迷、抗拒變化或陷入不利循環。",
@@ -271,7 +272,7 @@ const MAJOR: TarotCard[] = [
     number: 11,
     nameZh: "正義",
     nameEn: "Justice",
-    imagePath: "/tarot/11-Justice.jpg",
+    imagePath: "/tarot/11-Justice.webp",
     uprightMeaningZh: "公平、真理與因果。誠實面對事實,做出合乎倫理的決定。",
     uprightMeaningEn: "Fairness, truth, and cause-and-effect. Face facts honestly and decide ethically.",
     reversedMeaningZh: "不公、推卸責任或逃避後果。",
@@ -287,7 +288,7 @@ const MAJOR: TarotCard[] = [
     number: 12,
     nameZh: "吊人",
     nameEn: "The Hanged Man",
-    imagePath: "/tarot/12-TheHangedMan.jpg",
+    imagePath: "/tarot/12-TheHangedMan.webp",
     uprightMeaningZh: "暫停、換位思考與犧牲。放下執著才能看見新視角。",
     uprightMeaningEn: "Pause, new perspective, and sacrifice. Let go to see things anew.",
     reversedMeaningZh: "停滯、猶豫不決或無謂的犧牲。",
@@ -303,7 +304,7 @@ const MAJOR: TarotCard[] = [
     number: 13,
     nameZh: "死神",
     nameEn: "Death",
-    imagePath: "/tarot/13-Death.jpg",
+    imagePath: "/tarot/13-Death.webp",
     uprightMeaningZh: "結束、轉化與重生。舊的階段落幕,為新生騰出空間。",
     uprightMeaningEn: "Endings, transformation, and rebirth. Close one chapter to make room for the next.",
     reversedMeaningZh: "抗拒改變、執著過去或轉化受阻。",
@@ -319,7 +320,7 @@ const MAJOR: TarotCard[] = [
     number: 14,
     nameZh: "節制",
     nameEn: "Temperance",
-    imagePath: "/tarot/14-Temperance.jpg",
+    imagePath: "/tarot/14-Temperance.webp",
     uprightMeaningZh: "平衡、調和與耐心。中庸之道,化對立為和諧。",
     uprightMeaningEn: "Balance, moderation, and patience. Blend opposites into harmony.",
     reversedMeaningZh: "失衡、極端或缺乏耐心。",
@@ -335,7 +336,7 @@ const MAJOR: TarotCard[] = [
     number: 15,
     nameZh: "惡魔",
     nameEn: "The Devil",
-    imagePath: "/tarot/15-TheDevil.jpg",
+    imagePath: "/tarot/15-TheDevil.webp",
     uprightMeaningZh: "束縛、慾望與物質執著。意識到是自己把自己綁住。",
     uprightMeaningEn: "Bondage, desire, and attachment. Recognize that the chains are self-imposed.",
     reversedMeaningZh: "掙脫枷鎖、覺醒與釋放。勇敢面對陰影面。",
@@ -351,7 +352,7 @@ const MAJOR: TarotCard[] = [
     number: 16,
     nameZh: "高塔",
     nameEn: "The Tower",
-    imagePath: "/tarot/16-TheTower.jpg",
+    imagePath: "/tarot/16-TheTower.webp",
     uprightMeaningZh: "突發劇變、幻象瓦解與真相顯露。崩解之後才有重建。",
     uprightMeaningEn: "Sudden upheaval, shattered illusions, and revelation. Collapse clears the way for rebuilding.",
     reversedMeaningZh: "避免災難、壓抑恐懼或延遲的變動。",
@@ -367,7 +368,7 @@ const MAJOR: TarotCard[] = [
     number: 17,
     nameZh: "星星",
     nameEn: "The Star",
-    imagePath: "/tarot/17-TheStar.jpg",
+    imagePath: "/tarot/17-TheStar.webp",
     uprightMeaningZh: "希望、療癒與靈感。風雨過後,信念與平靜回歸。",
     uprightMeaningEn: "Hope, healing, and inspiration. After the storm, faith and calm return.",
     reversedMeaningZh: "失去希望、信念動搖或與指引失聯。",
@@ -383,7 +384,7 @@ const MAJOR: TarotCard[] = [
     number: 18,
     nameZh: "月亮",
     nameEn: "The Moon",
-    imagePath: "/tarot/18-TheMoon.jpg",
+    imagePath: "/tarot/18-TheMoon.webp",
     uprightMeaningZh: "幻象、恐懼與潛意識。事情未必如表象,留意直覺。",
     uprightMeaningEn: "Illusion, fear, and subconscious. Things may not be as they seem — trust intuition.",
     reversedMeaningZh: "真相浮現、迷霧散去或釋放恐懼。",
@@ -399,7 +400,7 @@ const MAJOR: TarotCard[] = [
     number: 19,
     nameZh: "太陽",
     nameEn: "The Sun",
-    imagePath: "/tarot/19-TheSun.jpg",
+    imagePath: "/tarot/19-TheSun.webp",
     uprightMeaningZh: "喜悅、成功與活力。光明燦爛的時刻,純粹地享受。",
     uprightMeaningEn: "Joy, success, and vitality. A radiant moment — simply enjoy.",
     reversedMeaningZh: "暫時受挫、喜悅被遮蔽或過度樂觀。",
@@ -415,7 +416,7 @@ const MAJOR: TarotCard[] = [
     number: 20,
     nameZh: "審判",
     nameEn: "Judgement",
-    imagePath: "/tarot/20-Judgement.jpg",
+    imagePath: "/tarot/20-Judgement.webp",
     uprightMeaningZh: "重生、覺醒與召喚。回顧人生、做出決定性的轉變。",
     uprightMeaningEn: "Rebirth, awakening, and a calling. Review your life and make a decisive shift.",
     reversedMeaningZh: "自我批判過度、拒絕反省或錯失轉機。",
@@ -431,7 +432,7 @@ const MAJOR: TarotCard[] = [
     number: 21,
     nameZh: "世界",
     nameEn: "The World",
-    imagePath: "/tarot/21-TheWorld.jpg",
+    imagePath: "/tarot/21-TheWorld.webp",
     uprightMeaningZh: "圓滿、完成與整合。一個重要循環畫下句點,新的旅程即將開始。",
     uprightMeaningEn: "Completion, fulfillment, and integration. A major cycle closes; a new journey awaits.",
     reversedMeaningZh: "未竟之事、缺乏結案或延遲的圓滿。",
@@ -775,7 +776,7 @@ function buildMinor(
       nameEn: names.en,
       nameJa: names.ja,
       nameKo: names.ko,
-      imagePath: `/tarot/${imageSuit}${String(num).padStart(2, "0")}.jpg`,
+      imagePath: `/tarot/${imageSuit}${String(num).padStart(2, "0")}.webp`,
       uprightMeaningZh: d.uprightZh,
       uprightMeaningEn: d.uprightEn,
       reversedMeaningZh: d.reversedZh,

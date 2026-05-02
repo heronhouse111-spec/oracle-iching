@@ -52,7 +52,7 @@ export function hexagramImageKey(num: number): string {
  * 凡是易經需要翻卡動畫(/iching/daily 的 card flip 等)都統一引用這個常數,
  * 換圖只要替換 public 檔即可,不必改各頁。
  */
-export const ICHING_BACK_IMAGE = "/iching/8grams/ichingbackcard.jpg";
+export const ICHING_BACK_IMAGE = "/iching/8grams/ichingbackcard.webp";
 
 /**
  * 八卦圖片 key 形式:`trigram:<3-bit code>`(例 `trigram:111` = 乾)。
