@@ -42,7 +42,9 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         .maybeSingle(),
       supabase
         .from("profiles")
-        .select("credits_balance, credits_refills_at")
+        .select(
+          "credits_balance, credits_refills_at, subscription_status, subscription_plan, subscription_started_at, subscription_expires_at",
+        )
         .eq("id", id)
         .maybeSingle(),
       supabase
@@ -67,14 +69,33 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "user_not_found" }, { status: 404 });
   }
 
-  // 訂閱單獨拉(可能沒有訂閱)
-  const { data: subscription } = await supabase
+  // 訂閱以 profiles 為準(寫入時 admin/billing API 都更新這裡)。
+  // subscriptions 表是歷程,只用來找最近一筆的 provider。
+  const { data: latestSub } = await supabase
     .from("subscriptions")
-    .select("plan, status, started_at, expires_at, provider, is_active")
+    .select("provider")
     .eq("user_id", id)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const profileSub = userResult.data;
+  const status = profileSub?.subscription_status ?? "free";
+  const plan = profileSub?.subscription_plan ?? null;
+  const expiresAt = profileSub?.subscription_expires_at ?? null;
+  const subscription =
+    status === "free"
+      ? null
+      : {
+          plan,
+          status,
+          started_at: profileSub?.subscription_started_at ?? null,
+          expires_at: expiresAt,
+          provider: latestSub?.provider ?? "manual",
+          is_active:
+            (status === "active" || status === "canceled") &&
+            (!expiresAt || new Date(expiresAt).getTime() > Date.now()),
+        };
 
   return NextResponse.json({
     profile: {
@@ -82,7 +103,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       credits_balance: userResult.data?.credits_balance ?? 0,
       credits_refills_at: userResult.data?.credits_refills_at ?? null,
     },
-    subscription: subscription ?? null,
+    subscription,
     divinations: divinationsResult.data ?? [],
     grants: grantsResult.data ?? [],
   });
