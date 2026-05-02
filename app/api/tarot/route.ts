@@ -11,6 +11,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 
 // 客戶端送來的「抽牌結果」— position 改為任意 string,給多牌陣用
 interface DrawnCardRequest {
@@ -179,6 +180,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 卡牌收藏 — 塔羅主流程把每張抽到的牌都收進去(去重 dedupe by cardId)
+    let collectionNewCount = 0;
+    let collectionFinalCount = 0;
+    let collectionRewards = 0;
+    if (user) {
+      const seen = new Set<string>();
+      const toRecord: Array<{ cardId: string; subkind: string }> = [];
+      for (const c of cards) {
+        if (seen.has(c.cardId)) continue;
+        seen.add(c.cardId);
+        const meta = getCardById(c.cardId);
+        if (!meta) continue;  // 不認得的 cardId 跳過(client 亂送的 id)
+        toRecord.push({ cardId: c.cardId, subkind: meta.suit });
+      }
+      const results = [];
+      for (const item of toRecord) {
+        results.push(
+          await recordCardObtained({
+            userId: user.id,
+            collectionType: "tarot",
+            cardId: item.cardId,
+            cardSubkind: item.subkind as "major" | "wands" | "cups" | "swords" | "pentacles",
+            source: "main",
+          }),
+        );
+      }
+      const agg = aggregateResults(results);
+      collectionNewCount = agg.newCardCount;
+      collectionFinalCount = agg.finalDistinctCount;
+      collectionRewards = agg.totalRewardCredits;
+    }
+
     // 字數規格:Quick 約 200 字 / Deep 約 500 字
     const wordTargetZh = effectiveDepth === "deep" ? "約 500 字" : "約 200 字";
     const wordTargetEn = effectiveDepth === "deep" ? "around 350 words" : "around 150 words";
@@ -321,7 +354,13 @@ export async function POST(request: NextRequest) {
     });
 
     return new Response(readable, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Transfer-Encoding": "chunked" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-Count": String(collectionFinalCount),
+        "X-Collection-Rewards": String(collectionRewards),
+      },
     });
   } catch (error) {
     console.error("Tarot API error:", error);

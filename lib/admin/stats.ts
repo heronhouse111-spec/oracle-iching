@@ -270,3 +270,89 @@ export async function loadAdminStats(): Promise<AdminStats> {
     recentUsers: (recentUsersRes.data ?? []) as AdminUserRow[],
   };
 }
+
+// ─────────────────────────────────────────────
+// Collection stats — 卡牌收集系統指標(phase 20)
+// ─────────────────────────────────────────────
+
+export interface CollectionStats {
+  totalRowsIching: number;          // user_collections 易經 row 總數(含重複次數)
+  totalRowsTarot: number;
+  uniqueOwnersIching: number;       // 至少抽過一張的 user 數(易經)
+  uniqueOwnersTarot: number;
+  milestonesGranted: number;         // 已發出里程碑次數
+  totalRewardCreditsGranted: number; // 透過 collection_milestone 發出的 credits
+  topIching: HexagramCount[];        // 最熱門 5 卦(distinct user 數量)
+  topTarot: Array<{ card_id: string; count: number }>;
+}
+
+export async function loadCollectionStats(): Promise<CollectionStats> {
+  const supabase = await createClient();
+
+  // 收藏筆數(分 type)
+  const [ichingCntRes, tarotCntRes] = await Promise.all([
+    supabase
+      .from("user_collections")
+      .select("user_id, card_id", { count: "exact" })
+      .eq("collection_type", "iching"),
+    supabase
+      .from("user_collections")
+      .select("user_id, card_id", { count: "exact" })
+      .eq("collection_type", "tarot"),
+  ]);
+
+  const ichingRows = ichingCntRes.data ?? [];
+  const tarotRows = tarotCntRes.data ?? [];
+
+  const totalRowsIching = ichingCntRes.count ?? ichingRows.length;
+  const totalRowsTarot = tarotCntRes.count ?? tarotRows.length;
+  const uniqueOwnersIching = new Set(ichingRows.map((r) => r.user_id)).size;
+  const uniqueOwnersTarot = new Set(tarotRows.map((r) => r.user_id)).size;
+
+  // 最熱門卡(被多少 distinct user 收到)
+  const ichingMap = new Map<string, Set<string>>();
+  for (const r of ichingRows) {
+    if (!ichingMap.has(r.card_id)) ichingMap.set(r.card_id, new Set());
+    ichingMap.get(r.card_id)!.add(r.user_id);
+  }
+  const topIching: HexagramCount[] = Array.from(ichingMap.entries())
+    .map(([card_id, users]) => ({
+      hexagram_number: parseInt(card_id, 10),
+      count: users.size,
+    }))
+    .filter((x) => Number.isFinite(x.hexagram_number))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const tarotMap = new Map<string, Set<string>>();
+  for (const r of tarotRows) {
+    if (!tarotMap.has(r.card_id)) tarotMap.set(r.card_id, new Set());
+    tarotMap.get(r.card_id)!.add(r.user_id);
+  }
+  const topTarot = Array.from(tarotMap.entries())
+    .map(([card_id, users]) => ({ card_id, count: users.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // 里程碑發出統計
+  const { count: milestonesCount } = await supabase
+    .from("collection_milestones")
+    .select("milestone_id", { count: "exact", head: true });
+
+  const { data: rewardRows } = await supabase
+    .from("collection_milestones")
+    .select("reward_credits");
+  const totalRewardCreditsGranted =
+    (rewardRows ?? []).reduce((sum, r) => sum + (r.reward_credits ?? 0), 0);
+
+  return {
+    totalRowsIching,
+    totalRowsTarot,
+    uniqueOwnersIching,
+    uniqueOwnersTarot,
+    milestonesGranted: milestonesCount ?? 0,
+    totalRewardCreditsGranted,
+    topIching,
+    topTarot,
+  };
+}

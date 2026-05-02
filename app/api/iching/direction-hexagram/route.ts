@@ -30,6 +30,7 @@ import {
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
+import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 import {
   spendCredits,
   refundCredits,
@@ -231,6 +232,32 @@ export async function POST(request: NextRequest) {
           headers: { "Content-Type": "application/json" },
         });
       }
+    }
+
+    // 卡牌收藏 — 本卦 + 之卦(若有變爻)
+    let collectionNewCount = 0;
+    let collectionFinalCount = 0;
+    let collectionRewards = 0;
+    if (user) {
+      const ids = [String(hex.number)];
+      if (relatingHex && relatingHex.number !== hex.number) {
+        ids.push(String(relatingHex.number));
+      }
+      const results = [];
+      for (const cid of ids) {
+        results.push(
+          await recordCardObtained({
+            userId: user.id,
+            collectionType: "iching",
+            cardId: cid,
+            source: "direction",
+          }),
+        );
+      }
+      const agg = aggregateResults(results);
+      collectionNewCount = agg.newCardCount;
+      collectionFinalCount = agg.finalDistinctCount;
+      collectionRewards = agg.totalRewardCredits;
     }
 
     // ──────────────────────────────────────────
@@ -543,6 +570,9 @@ Follow the system instructions: combine direction and hexagram into a concrete r
         "X-DH-HexagramNumber": String(hex.number),
         "X-DH-RelatingNumber": relatingHex ? String(relatingHex.number) : "",
         "X-DH-DirectionTrigram": directionTrigram,
+        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-Count": String(collectionFinalCount),
+        "X-Collection-Rewards": String(collectionRewards),
       },
     });
   } catch (error) {

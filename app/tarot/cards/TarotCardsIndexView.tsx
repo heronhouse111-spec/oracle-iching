@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   tarotDeck,
@@ -10,6 +11,7 @@ import {
   SUIT_NAMES_JA,
   SUIT_NAMES_KO,
 } from "@/data/tarot";
+import CollectionProgress from "@/components/CollectionProgress";
 
 const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
   "major", "wands", "cups", "swords", "pentacles",
@@ -17,6 +19,7 @@ const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
 
 export default function TarotCardsIndexView() {
   const { t } = useLanguage();
+  const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const suitName = (s: typeof SUIT_ORDER[number]) =>
     t(SUIT_NAMES_ZH[s], SUIT_NAMES_EN[s], SUIT_NAMES_JA[s], SUIT_NAMES_KO[s]);
 
@@ -67,6 +70,12 @@ export default function TarotCardsIndexView() {
         </p>
       </header>
 
+      <CollectionProgress
+        type="tarot"
+        total={78}
+        onLoaded={(d) => setOwnedIds(d.ownedIds)}
+      />
+
       {grouped.map(({ suit, name, cards }) => (
         <section key={suit} style={{ marginBottom: 48 }}>
           <h2
@@ -92,52 +101,86 @@ export default function TarotCardsIndexView() {
               gap: 16,
             }}
           >
-            {cards.map((card) => (
-              <Link
-                key={card.id}
-                href={`/tarot/cards/${card.id}`}
-                style={{
-                  display: "block",
-                  textDecoration: "none",
-                  color: "inherit",
-                  background: "rgba(13,13,43,0.5)",
-                  border: "1px solid rgba(212,168,85,0.15)",
-                  borderRadius: 10,
-                  padding: 8,
-                  transition: "transform 0.2s, border-color 0.2s",
-                }}
-              >
-                <div
+            {cards.map((card) => {
+              const owned = ownedIds.has(card.id);
+              return (
+                <Link
+                  key={card.id}
+                  href={`/tarot/cards/${card.id}`}
                   style={{
-                    borderRadius: 6,
-                    overflow: "hidden",
-                    aspectRatio: "9 / 14",
-                    marginBottom: 6,
-                    border: "1px solid rgba(212,168,85,0.2)",
+                    display: "block",
+                    textDecoration: "none",
+                    color: "inherit",
+                    background: owned
+                      ? "rgba(13,13,43,0.5)"
+                      : "rgba(13,13,43,0.35)",
+                    border: owned
+                      ? "1px solid rgba(212,168,85,0.4)"
+                      : "1px solid rgba(212,168,85,0.1)",
+                    borderRadius: 10,
+                    padding: 8,
+                    position: "relative",
+                    transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
                   }}
                 >
-                  <Image
-                    src={card.imagePath}
-                    alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
-                    width={300}
-                    height={467}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#e8e8f0",
-                    lineHeight: 1.4,
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}>
-                    {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                  {owned && (
+                    <span
+                      title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                        color: "#0a0a1a",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                        boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
+                      }}
+                    >
+                      ✓
+                    </span>
+                  )}
+                  <div
+                    style={{
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      aspectRatio: "9 / 14",
+                      marginBottom: 6,
+                      border: "1px solid rgba(212,168,85,0.2)",
+                      filter: owned ? "none" : "grayscale(1) brightness(0.55)",
+                      transition: "filter 0.3s",
+                    }}
+                  >
+                    <Image
+                      src={card.imagePath}
+                      alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                      width={300}
+                      height={467}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
                   </div>
-                </div>
-              </Link>
-            ))}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: owned ? "#e8e8f0" : "rgba(192,192,208,0.45)",
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>
+                      {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       ))}

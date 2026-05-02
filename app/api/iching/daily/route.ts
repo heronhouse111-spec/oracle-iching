@@ -20,6 +20,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { recordCardObtained } from "@/lib/cardCollection";
 
 /** 取台北今天日期字串 (YYYY-MM-DD, UTC+8) */
 function taipeiTodayKey(): string {
@@ -138,6 +139,22 @@ export async function POST(request: NextRequest) {
 
     const hex = drawHexagramForUser(user.id, dateKey);
     const hexName = pickStr(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
+
+    // 卡牌收藏 — 同 daily 塔羅,只在首次扣點當下記錄
+    let collectionIsNew = false;
+    let collectionCount = 0;
+    let collectionRewards = 0;
+    if (!alreadyChargedToday) {
+      const r = await recordCardObtained({
+        userId: user.id,
+        collectionType: "iching",
+        cardId: String(hex.number),
+        source: "daily",
+      });
+      collectionIsNew = r.isNew;
+      collectionCount = r.distinctCount;
+      collectionRewards = r.rewardCredits;
+    }
     const judgmentClassical = hex.judgmentZh;
     const judgmentModern = pickStr(
       hex.judgmentVernacularZh,
@@ -240,6 +257,9 @@ export async function POST(request: NextRequest) {
         "X-Daily-HexagramNumber": String(hex.number),
         "X-Daily-Date": dateKey,
         "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
+        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
+        "X-Collection-Count": String(collectionCount),
+        "X-Collection-Rewards": String(collectionRewards),
       },
     });
   } catch (error) {

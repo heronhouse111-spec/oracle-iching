@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { hexagrams, trigramNames } from "@/data/hexagrams";
 import { trigramImageKey } from "@/lib/ichingImages";
+import CollectionProgress from "@/components/CollectionProgress";
 
 interface Props {
   /** key 是 hexagram.number 字串 ("1" .. "64"),value 是 storage 上的圖 url */
@@ -17,6 +19,7 @@ const SECTIONS = [
 
 export default function HexagramsIndexView({ images }: Props) {
   const { t } = useLanguage();
+  const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
@@ -58,6 +61,13 @@ export default function HexagramsIndexView({ images }: Props) {
           )}
         </p>
       </header>
+
+      {/* 收藏進度 — Pokémon 圖鑑式 */}
+      <CollectionProgress
+        type="iching"
+        total={64}
+        onLoaded={(d) => setOwnedIds(d.ownedIds)}
+      />
 
       {/* 卜卦規則 */}
       <section
@@ -370,7 +380,6 @@ export default function HexagramsIndexView({ images }: Props) {
             >
               {items.map((h) => {
                 const url = images[String(h.number)];
-                // EN 名為 "Qian (The Creative)" 形式,index card 上空間有限只取首字
                 const hName = t(
                   h.nameZh,
                   h.nameEn.split(" ")[0],
@@ -383,6 +392,7 @@ export default function HexagramsIndexView({ images }: Props) {
                   `第${h.number}卦`,
                   `제 ${h.number}괘`
                 );
+                const owned = ownedIds.has(String(h.number));
                 return (
                   <Link
                     key={h.number}
@@ -391,16 +401,43 @@ export default function HexagramsIndexView({ images }: Props) {
                       display: "block",
                       textDecoration: "none",
                       color: "inherit",
-                      background: "rgba(13,13,43,0.5)",
-                      border: "1px solid rgba(212,168,85,0.15)",
+                      background: owned
+                        ? "rgba(13,13,43,0.5)"
+                        : "rgba(13,13,43,0.35)",
+                      border: owned
+                        ? "1px solid rgba(212,168,85,0.4)"
+                        : "1px solid rgba(212,168,85,0.1)",
                       borderRadius: 10,
                       padding: 8,
-                      transition: "transform 0.2s, border-color 0.2s",
+                      position: "relative",
+                      transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
                     }}
                   >
-                    {/* 圖片框 — 仿塔羅 9:14 直幅。
-                        未上傳圖時刻意留白(不放 Unicode 卦象字 / 卦線),
-                        避免日後上傳真圖時的視覺跳動。 */}
+                    {/* 已收藏 → 角標 ✓ */}
+                    {owned && (
+                      <span
+                        title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+                        style={{
+                          position: "absolute",
+                          top: 4,
+                          right: 4,
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                          color: "#0a0a1a",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          zIndex: 2,
+                          boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
                     <div
                       style={{
                         width: "100%",
@@ -411,6 +448,8 @@ export default function HexagramsIndexView({ images }: Props) {
                         border: "1px solid rgba(212,168,85,0.2)",
                         background:
                           "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
+                        // 未收藏 → 灰階 + 半透明
+                        filter: owned ? "none" : "grayscale(1) brightness(0.55)",
                       }}
                     >
                       {url && (
@@ -418,7 +457,6 @@ export default function HexagramsIndexView({ images }: Props) {
                         <img
                           src={url}
                           alt={hName}
-                          // contain → 不裁切檔案,9:14 圖滿框、其他比例 letterbox
                           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                         />
                       )}
@@ -426,12 +464,12 @@ export default function HexagramsIndexView({ images }: Props) {
                     <div
                       style={{
                         fontSize: 12,
-                        color: "#e8e8f0",
+                        color: owned ? "#e8e8f0" : "rgba(192,192,208,0.45)",
                         lineHeight: 1.4,
                         textAlign: "center",
                       }}
                     >
-                      <div style={{ fontSize: 10, color: "rgba(212,168,85,0.7)" }}>
+                      <div style={{ fontSize: 10, color: owned ? "rgba(212,168,85,0.7)" : "rgba(192,192,208,0.4)" }}>
                         {numLabel}
                       </div>
                       <div
