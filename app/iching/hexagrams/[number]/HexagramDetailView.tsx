@@ -21,6 +21,7 @@ import {
   type HexagramAuspice,
   type TrigramRelationship,
 } from "@/data/hexagrams";
+import { useCollectionOwned } from "@/lib/hooks/useCollectionOwned";
 
 // 吉凶 badge 設定 — 跟 MethodsView 的 tier badge 同色系
 const AUSPICE_STYLE: Record<HexagramAuspice, { bg: string; text: string }> = {
@@ -164,6 +165,9 @@ function HexagramLines({ lines, size = "md" }: { lines: number[]; size?: "sm" | 
 
 export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next }: Props) {
   const { t } = useLanguage();
+  const collection = useCollectionOwned("iching", String(hex.number));
+  // 只在「明確未抽到」時才灰階(loading / 未登入維持彩色,避免閃爍 + 不擋訪客瀏覽)
+  const isGray = collection.status === "not-owned";
 
   const upper = trigramNames[hex.upperTrigram];
   const lower = trigramNames[hex.lowerTrigram];
@@ -232,13 +236,18 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
             沒上傳真圖時刻意留白,避免日後上傳真圖時的視覺跳動。 */}
         <div
           style={{
+            position: "relative",
             borderRadius: 12,
             overflow: "hidden",
-            border: "1px solid rgba(212,168,85,0.4)",
-            boxShadow: "0 8px 32px rgba(212,168,85,0.18)",
+            border: isGray
+              ? "1px solid rgba(212,168,85,0.15)"
+              : "1px solid rgba(212,168,85,0.4)",
+            boxShadow: isGray ? "none" : "0 8px 32px rgba(212,168,85,0.18)",
             background:
               "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
             aspectRatio: "9 / 14",
+            filter: isGray ? "grayscale(1) brightness(0.55)" : "none",
+            transition: "filter 0.3s, border-color 0.3s, box-shadow 0.3s",
           }}
         >
           {heroUrl && (
@@ -248,6 +257,48 @@ export default function HexagramDetailView({ hexagram: hex, heroUrl, prev, next 
               alt={hName}
               style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
             />
+          )}
+          {/* 收藏狀態標記 — 已收藏 ✓ 角標 / 未抽到「尚未抽到」slate */}
+          {collection.status === "owned" && (
+            <span
+              title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                color: "#0a0a1a",
+                fontSize: 14,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(212,168,85,0.5)",
+              }}
+            >
+              ✓
+            </span>
+          )}
+          {collection.status === "not-owned" && (
+            <span
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                padding: "3px 10px",
+                borderRadius: 9999,
+                background: "rgba(13,13,43,0.85)",
+                border: "1px solid rgba(192,192,208,0.3)",
+                color: "rgba(192,192,208,0.85)",
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            >
+              {t("尚未抽到", "Not yet drawn", "未入手", "아직 미수집")}
+            </span>
           )}
         </div>
 

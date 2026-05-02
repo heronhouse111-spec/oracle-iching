@@ -11,6 +11,7 @@ import {
   SUIT_NAMES_JA,
   SUIT_NAMES_KO,
 } from "@/data/tarot";
+import { useCollectionOwned } from "@/lib/hooks/useCollectionOwned";
 
 interface Props {
   card: TarotCard;
@@ -18,6 +19,8 @@ interface Props {
 
 export default function TarotCardDetailView({ card }: Props) {
   const { t, locale, cn } = useLanguage();
+  const collection = useCollectionOwned("tarot", card.id);
+  const isGray = collection.status === "not-owned";
 
   const suitName = t(
     SUIT_NAMES_ZH[card.suit],
@@ -79,10 +82,15 @@ export default function TarotCardDetailView({ card }: Props) {
       >
         <div
           style={{
+            position: "relative",
             borderRadius: 12,
             overflow: "hidden",
-            border: "1px solid rgba(212,168,85,0.4)",
-            boxShadow: "0 8px 32px rgba(212,168,85,0.2)",
+            border: isGray
+              ? "1px solid rgba(212,168,85,0.15)"
+              : "1px solid rgba(212,168,85,0.4)",
+            boxShadow: isGray ? "none" : "0 8px 32px rgba(212,168,85,0.2)",
+            filter: isGray ? "grayscale(1) brightness(0.55)" : "none",
+            transition: "filter 0.3s, border-color 0.3s, box-shadow 0.3s",
           }}
         >
           <Image
@@ -92,6 +100,47 @@ export default function TarotCardDetailView({ card }: Props) {
             height={620}
             style={{ width: "100%", height: "auto", display: "block" }}
           />
+          {collection.status === "owned" && (
+            <span
+              title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                color: "#0a0a1a",
+                fontSize: 14,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(212,168,85,0.5)",
+              }}
+            >
+              ✓
+            </span>
+          )}
+          {collection.status === "not-owned" && (
+            <span
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                padding: "3px 10px",
+                borderRadius: 9999,
+                background: "rgba(13,13,43,0.85)",
+                border: "1px solid rgba(192,192,208,0.3)",
+                color: "rgba(192,192,208,0.85)",
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            >
+              {t("尚未抽到", "Not yet drawn", "未入手", "아직 미수집")}
+            </span>
+          )}
         </div>
         <div>
           <div style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", marginBottom: 6 }}>
