@@ -181,3 +181,94 @@ export async function translatePostToAllLangs(zh: PostContent): Promise<{
 
   return { ...result, errors };
 }
+
+// ──────────────────────────────────────────
+// 短文(title + body 組合)翻譯 — 給 collection hub content / 任何 「title 一行 + body 一段」
+// 結構的 CMS 用。比 translatePost() 輕量(沒有段落陣列),JSON output {title?, body?}。
+// ──────────────────────────────────────────
+
+export interface ShortContent {
+  title?: string | null;
+  body?: string | null;
+}
+
+/**
+ * 把短文(title + body)翻成單一目標語言。
+ * 任一欄位是 null/empty 就在輸出對應留 null。
+ */
+export async function translateShort(
+  zh: ShortContent,
+  target: TargetLang,
+): Promise<ShortContent> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error("DEEPSEEK_API_KEY not configured");
+
+  const hasTitle = !!(zh.title && zh.title.trim());
+  const hasBody = !!(zh.body && zh.body.trim());
+  if (!hasTitle && !hasBody) return { title: null, body: null };
+
+  const systemPrompt = `You are a professional translator. Translate Traditional Chinese text into ${LANG_NAMES[target]}.
+
+CRITICAL RULES:
+1. Preserve any inline markdown (**bold**, line breaks).
+2. Keep proper nouns: "Tarogram" stays; "易經"→"I Ching"; "塔羅"→"tarot"; hexagram/card names use conventional translations.
+3. Tone: warm, conversational, slightly informal — same voice as the original.
+4. Output STRICT JSON only. No prose, no code fences.
+
+Output schema (omit a field if the corresponding input is empty):
+{
+  "title": "translated title or empty string if no title input",
+  "body":  "translated body or empty string if no body input"
+}`;
+
+  const userMessage = `Translate the following short content.
+
+TITLE: ${hasTitle ? zh.title : "(no title)"}
+
+BODY: ${hasBody ? zh.body : "(no body)"}`;
+
+  const response = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "deepseek-chat",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+      max_tokens: 800,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`DeepSeek translateShort ${target} ${response.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error(`DeepSeek empty content for ${target}`);
+
+  const cleaned = content
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "");
+  let parsed: { title?: unknown; body?: unknown };
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    throw new Error(
+      `DeepSeek invalid JSON for ${target}: ${(e as Error).message} | content[0..200]: ${content.slice(0, 200)}`,
+    );
+  }
+
+  return {
+    title: hasTitle && typeof parsed.title === "string" ? parsed.title.trim() : null,
+    body: hasBody && typeof parsed.body === "string" ? parsed.body.trim() : null,
+  };
+}

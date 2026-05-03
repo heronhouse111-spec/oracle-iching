@@ -121,6 +121,16 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    heading: { tw: "我的收藏", en: "Collection", ja: "コレクション", ko: "수집" },
+    items: [
+      {
+        key: "collection-hub",
+        href: "/collection",
+        label: { tw: "收藏中心", en: "Collection Hub", ja: "コレクションセンター", ko: "수집 센터" },
+      },
+    ],
+  },
+  {
     items: [
       {
         key: "blog",
