@@ -10,7 +10,8 @@ import {
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
-import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
+import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,8 +79,8 @@ export async function POST(request: NextRequest) {
       depth === "deep" && isActiveSubscriber ? "deep" : "quick";
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    let cost = isFollowUp ? CREDIT_COSTS.DIVINE_FOLLOWUP : CREDIT_COSTS.DIVINE;
-    if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;
+    let cost = isFollowUp ? await getCreditCost("DIVINE_FOLLOWUP") : await getCreditCost("DIVINE");
+    if (effectiveDepth === "deep") cost += await getCreditCost("DEEP_INSIGHT_SURCHARGE");
     const reason = isFollowUp ? "spend_divine_followup" : "spend_divine";
 
     if (user) {
@@ -121,30 +122,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 卡牌收藏 — 易經主流程同時收「本卦 + 之卦」(若有變爻)。訪客不收藏。
+    // 卡牌收藏 — 只計入「本卦」,不收之卦。
+    // (之前同時記本+之卦,造成 1 次主流占卜 = 2 張卡入帳,讓 5 點/卦變相成 2.5 點/卦)
+    // 訪客不收藏。
     let collectionNewCount = 0;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
-      const inputs = [String(hexagramNumber)];
-      if (relatingHexagramNumber && relatingHexagramNumber !== hexagramNumber) {
-        inputs.push(String(relatingHexagramNumber));
-      }
-      const results = [];
-      for (const cid of inputs) {
-        results.push(
-          await recordCardObtained({
-            userId: user.id,
-            collectionType: "iching",
-            cardId: cid,
-            source: "main",
-          }),
-        );
-      }
-      const agg = aggregateResults(results);
-      collectionNewCount = agg.newCardCount;
-      collectionFinalCount = agg.finalDistinctCount;
-      collectionRewards = agg.totalRewardCredits;
+      const r = await recordCardObtained({
+        userId: user.id,
+        collectionType: "iching",
+        cardId: String(hexagramNumber),
+        source: "main",
+      });
+      collectionNewCount = r.isNew ? 1 : 0;
+      collectionFinalCount = r.distinctCount;
+      collectionRewards = r.rewardCredits;
     }
 
     const wordTargetZh = effectiveDepth === "deep" ? "約 500 字" : "約 300 字";

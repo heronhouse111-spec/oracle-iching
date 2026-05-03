@@ -12,6 +12,7 @@ import {
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 
 // 客戶端送來的「抽牌結果」— position 改為任意 string,給多牌陣用
 interface DrawnCardRequest {
@@ -24,14 +25,14 @@ interface DrawnCardRequest {
  * 多牌陣加價表 — cardCount → cost
  * 3 卡走原本 TAROT(5),5/10/12 卡各自獨立費率(避免一張卡都加 1 點不夠勸退濫用)
  */
-function tarotCostFor(spread: Spread, isFollowUp: boolean): number {
-  if (isFollowUp) return CREDIT_COSTS.TAROT_FOLLOWUP;
+async function tarotCostFor(spread: Spread, isFollowUp: boolean): Promise<number> {
+  if (isFollowUp) return getCreditCost("TAROT_FOLLOWUP");
   switch (spread.cardCount) {
-    case 3: return CREDIT_COSTS.TAROT;
-    case 5: return CREDIT_COSTS.TAROT_5_CARD;
-    case 10: return CREDIT_COSTS.TAROT_10_CARD;
-    case 12: return CREDIT_COSTS.TAROT_12_CARD;
-    default: return CREDIT_COSTS.TAROT;
+    case 3: return getCreditCost("TAROT");
+    case 5: return getCreditCost("TAROT_5_CARD");
+    case 10: return getCreditCost("TAROT_10_CARD");
+    case 12: return getCreditCost("TAROT_12_CARD");
+    default: return getCreditCost("TAROT");
   }
 }
 
@@ -131,8 +132,8 @@ export async function POST(request: NextRequest) {
     // Persona — premium 人格在非訂閱戶會自動退回 default
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    let cost = tarotCostFor(spread, isFollowUp);
-    if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;
+    let cost = await tarotCostFor(spread, isFollowUp);
+    if (effectiveDepth === "deep") cost += await getCreditCost("DEEP_INSIGHT_SURCHARGE");
     const reason = isFollowUp ? "spend_tarot_followup" : "spend_tarot";
 
     if (user) {

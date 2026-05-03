@@ -7,6 +7,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    const cost = CREDIT_COSTS.CHAT;
+    const cost = await getCreditCost("CHAT");
 
     if (user) {
       try {

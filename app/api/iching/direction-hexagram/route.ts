@@ -30,7 +30,8 @@ import {
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
-import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
+import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import {
   spendCredits,
   refundCredits,
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
-    const cost = CREDIT_COSTS.DIRECTION_HEX;
+    const cost = await getCreditCost("DIRECTION_HEX");
 
     if (user) {
       try {
@@ -234,30 +235,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 卡牌收藏 — 本卦 + 之卦(若有變爻)
+    // 卡牌收藏 — 只計入「本卦」,不收之卦(避免 2 卦 / 6 點套利)
     let collectionNewCount = 0;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
-      const ids = [String(hex.number)];
-      if (relatingHex && relatingHex.number !== hex.number) {
-        ids.push(String(relatingHex.number));
-      }
-      const results = [];
-      for (const cid of ids) {
-        results.push(
-          await recordCardObtained({
-            userId: user.id,
-            collectionType: "iching",
-            cardId: cid,
-            source: "direction",
-          }),
-        );
-      }
-      const agg = aggregateResults(results);
-      collectionNewCount = agg.newCardCount;
-      collectionFinalCount = agg.finalDistinctCount;
-      collectionRewards = agg.totalRewardCredits;
+      const r = await recordCardObtained({
+        userId: user.id,
+        collectionType: "iching",
+        cardId: String(hex.number),
+        source: "direction",
+      });
+      collectionNewCount = r.isNew ? 1 : 0;
+      collectionFinalCount = r.distinctCount;
+      collectionRewards = r.rewardCredits;
     }
 
     // ──────────────────────────────────────────

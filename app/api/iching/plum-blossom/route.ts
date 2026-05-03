@@ -30,7 +30,8 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
-import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
+import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
 type Locale = "zh" | "en" | "ja" | "ko";
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
-    const cost = CREDIT_COSTS.PLUM_BLOSSOM;
+    const cost = await getCreditCost("PLUM_BLOSSOM");
 
     if (user) {
       try {
@@ -157,28 +158,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 卡牌收藏 — 本卦 + 之卦(梅花易數一定有變爻,所以一定有之卦)
+    // 卡牌收藏 — 只計入「本卦」(梅花易數一定有變爻,如果連之卦也記就變相 2.5 點/卦套利)
     let collectionNewCount = 0;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
-      const ids = [String(primaryHex.number)];
-      if (relatingHex.number !== primaryHex.number) ids.push(String(relatingHex.number));
-      const results = [];
-      for (const cid of ids) {
-        results.push(
-          await recordCardObtained({
-            userId: user.id,
-            collectionType: "iching",
-            cardId: cid,
-            source: "plum_blossom",
-          }),
-        );
-      }
-      const agg = aggregateResults(results);
-      collectionNewCount = agg.newCardCount;
-      collectionFinalCount = agg.finalDistinctCount;
-      collectionRewards = agg.totalRewardCredits;
+      const r = await recordCardObtained({
+        userId: user.id,
+        collectionType: "iching",
+        cardId: String(primaryHex.number),
+        source: "plum_blossom",
+      });
+      collectionNewCount = r.isNew ? 1 : 0;
+      collectionFinalCount = r.distinctCount;
+      collectionRewards = r.rewardCredits;
     }
 
     // ──────────────────────────────────────────
