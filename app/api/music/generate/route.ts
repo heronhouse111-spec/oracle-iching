@@ -8,6 +8,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { moderateMusicText, moderationMessage } from "@/lib/music/moderation";
 
 // Stable Audio 60 秒生成大約 8–15 秒,再加上傳 Storage,留 60s buffer
 export const maxDuration = 60;
@@ -71,6 +72,17 @@ export async function POST(request: NextRequest) {
   }
   if (!VALID_LOCALES.includes(locale as (typeof VALID_LOCALES)[number])) {
     return jsonError(400, "INVALID_LOCALE", "Invalid locale");
+  }
+
+  // ── 3.5 Moderation — 扣點前先擋,通不過不收錢、不打 AI ──
+  const moderation = await moderateMusicText(prompt, title);
+  if (!moderation.allowed) {
+    return jsonError(
+      422,
+      "MODERATION_BLOCKED",
+      moderationMessage(moderation, locale as "zh" | "en" | "ja" | "ko"),
+      { layer: moderation.layer, detail: moderation.detail },
+    );
   }
 
   // ── 4. 扣點(餘額不足回 402) ─────────────────────

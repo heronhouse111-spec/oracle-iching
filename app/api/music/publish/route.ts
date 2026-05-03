@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { moderateMusicText, moderationMessage } from "@/lib/music/moderation";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,33 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // 縱深防守:public 上架前再過一次 moderation(包含 user 暱稱)
+  // 對應同一首歌:title + prompt 已在 generate 階段擋過,但暱稱可能變動。
+  const { data: trackForCheck } = await admin
+    .from("generated_music")
+    .select("title, prompt, creator_display_name")
+    .eq("id", musicId)
+    .maybeSingle();
+  if (trackForCheck) {
+    const profileName =
+      (
+        await admin
+          .from("profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .maybeSingle()
+      ).data?.display_name ?? null;
+    const moderation = await moderateMusicText(
+      trackForCheck.title,
+      trackForCheck.prompt,
+      profileName,
+    );
+    if (!moderation.allowed) {
+      return jsonError(422, "MODERATION_BLOCKED", moderationMessage(moderation, "zh"));
+    }
+  }
+
   const { error } = await admin.rpc("publish_music", {
     p_user_id: user.id,
     p_music_id: musicId,

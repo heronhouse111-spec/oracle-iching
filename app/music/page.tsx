@@ -409,7 +409,8 @@ function TrackRow(props: {
   locale: "zh" | "en" | "ja" | "ko";
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }) {
-  const { rank, title, categoryId, creatorName, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, t } = props;
+  const { trackId, rank, title, categoryId, creatorName, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, t } = props;
+  const [showReport, setShowReport] = useState(false);
   return (
     <div
       style={{
@@ -498,25 +499,233 @@ function TrackRow(props: {
           FREE
         </span>
       ) : onCollect ? (
-        <button
-          onClick={onCollect}
-          disabled={isCollecting}
-          style={{
-            padding: "6px 10px",
-            background: "rgba(212,168,85,0.12)",
-            border: "1px solid rgba(212,168,85,0.4)",
-            borderRadius: 8,
-            color: "#d4a855",
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: isCollecting ? "wait" : "pointer",
-            fontFamily: "inherit",
-            flexShrink: 0,
-          }}
-        >
-          {isCollecting ? t("…", "…", "…", "…") : t("20pt 收藏", "20pt", "20pt 収集", "20pt 수집")}
-        </button>
+        <>
+          <button
+            onClick={onCollect}
+            disabled={isCollecting}
+            style={{
+              padding: "6px 10px",
+              background: "rgba(212,168,85,0.12)",
+              border: "1px solid rgba(212,168,85,0.4)",
+              borderRadius: 8,
+              color: "#d4a855",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: isCollecting ? "wait" : "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+            }}
+          >
+            {isCollecting ? t("…", "…", "…", "…") : t("20pt 收藏", "20pt", "20pt 収集", "20pt 수집")}
+          </button>
+          <button
+            onClick={() => setShowReport(true)}
+            aria-label={t("檢舉", "Report", "通報", "신고")}
+            title={t("檢舉這首歌", "Report this track", "この曲を通報", "신고")}
+            style={{
+              width: 24,
+              height: 24,
+              flexShrink: 0,
+              borderRadius: 9999,
+              background: "transparent",
+              border: "1px solid rgba(192,192,208,0.2)",
+              color: "rgba(192,192,208,0.5)",
+              fontSize: 14,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            ⋯
+          </button>
+        </>
       ) : null}
+      {showReport && (
+        <ReportModal
+          trackId={trackId}
+          title={title}
+          onClose={() => setShowReport(false)}
+          t={t}
+        />
+      )}
+    </div>
+  );
+}
+
+function ReportModal({
+  trackId,
+  title,
+  onClose,
+  t,
+}: {
+  trackId: string;
+  title: string;
+  onClose: () => void;
+  t: (zh: string, en: string, ja?: string, ko?: string) => string;
+}) {
+  const [reason, setReason] = useState<string>("inappropriate");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const REASONS = [
+    { id: "inappropriate", label: t("內容不雅 / 違規", "Inappropriate", "不適切", "부적절") },
+    { id: "spam", label: t("垃圾 / 灌水", "Spam", "スパム", "스팸") },
+    { id: "copyright", label: t("抄襲 / 著作權", "Copyright", "著作権", "저작권") },
+    { id: "low_quality", label: t("品質太差", "Low quality", "低品質", "낮은 품질") },
+    { id: "other", label: t("其他", "Other", "その他", "기타") },
+  ];
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/music/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ musicId: trackId, reason, notes: notes.trim() || null }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        alert(t("請先登入", "Please sign in", "ログインしてください", "로그인 필요"));
+        return;
+      }
+      if (res.status === 429) {
+        alert(t("你最近 24 小時已檢舉過", "Already reported in last 24h", "24時間以内に通報済", "24시간 이내 신고됨"));
+        return;
+      }
+      if (!res.ok) {
+        alert(data.message || t("檢舉失敗", "Report failed", "通報失敗", "신고 실패"));
+        return;
+      }
+      alert(
+        t(
+          `檢舉已送出${data.autoFlagged ? "(已自動標記等審核)" : ""}`,
+          `Reported${data.autoFlagged ? " (auto-flagged for review)" : ""}`,
+          `通報を送信${data.autoFlagged ? "(自動フラグ)" : ""}`,
+          `신고됨${data.autoFlagged ? "(자동 플래그)" : ""}`,
+        ),
+      );
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "rgba(20,20,40,0.98)",
+          border: "1px solid rgba(212,168,85,0.4)",
+          borderRadius: 14,
+          padding: 20,
+          maxWidth: 400,
+          width: "100%",
+        }}
+      >
+        <h3 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>
+          {t("檢舉這首歌", "Report this track", "この曲を通報", "이 곡 신고")}
+        </h3>
+        <p style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, margin: "0 0 14px" }}>
+          {title}
+        </p>
+        <div style={{ display: "grid", gap: 6, marginBottom: 14 }}>
+          {REASONS.map((r) => (
+            <label
+              key={r.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 10px",
+                background: reason === r.id ? "rgba(212,168,85,0.12)" : "transparent",
+                border: reason === r.id ? "1px solid rgba(212,168,85,0.4)" : "1px solid rgba(192,192,208,0.15)",
+                borderRadius: 8,
+                cursor: "pointer",
+                color: "#fff",
+                fontSize: 13,
+              }}
+            >
+              <input
+                type="radio"
+                name="report-reason"
+                value={r.id}
+                checked={reason === r.id}
+                onChange={(e) => setReason(e.target.value)}
+                style={{ accentColor: "#d4a855" }}
+              />
+              {r.label}
+            </label>
+          ))}
+        </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+          placeholder={t("補充說明(可選)", "Optional notes", "補足(任意)", "추가 설명(선택)")}
+          rows={2}
+          style={{
+            width: "100%",
+            padding: "8px 10px",
+            fontSize: 13,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(212,168,85,0.3)",
+            borderRadius: 8,
+            color: "#fff",
+            outline: "none",
+            fontFamily: "inherit",
+            resize: "vertical",
+            marginBottom: 14,
+          }}
+        />
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: "8px 16px",
+              background: "transparent",
+              border: "1px solid rgba(192,192,208,0.3)",
+              borderRadius: 8,
+              color: "#c0c0d0",
+              fontSize: 13,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {t("取消", "Cancel", "キャンセル", "취소")}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{
+              padding: "8px 16px",
+              background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+              border: "none",
+              borderRadius: 8,
+              color: "#0a0a1a",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: submitting ? "wait" : "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {submitting ? t("送出中…", "Sending…", "送信中…", "전송 중…") : t("送出檢舉", "Submit", "送信", "제출")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
