@@ -6,6 +6,8 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import InstallPrompt from "@/components/InstallPrompt";
 import GoogleOneTap from "@/components/GoogleOneTap";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import { MusicPlayerProvider } from "@/components/MusicPlayerProvider";
+import MusicMiniPlayer from "@/components/MusicMiniPlayer";
 import { UiImagesProvider } from "@/hooks/useUiImages";
 import { getUiImages } from "@/lib/uiImages";
 import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
@@ -106,14 +108,18 @@ export default async function RootLayout({
       <body className="bg-stars" style={{ minHeight: "100vh" }}>
         <LanguageProvider>
           <UiImagesProvider images={uiImages}>
-            <AnnouncementBanner />
-            {children}
-            <Footer />
-            {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
-            <ServiceWorkerRegister />
-            <InstallPrompt />
-            {/* Google One Tap — 未登入時自動跳「以 xxx 身份繼續」,iPhone/iPad 也能秒登 */}
-            <GoogleOneTap />
+            <MusicPlayerProvider>
+              <AnnouncementBanner />
+              {children}
+              <Footer />
+              {/* 全站 BGM 浮動播放器 — currentTrack 為 null 時 render null */}
+              <MusicMiniPlayer />
+              {/* PWA:註冊 SW + 跳「加入主畫面」提示。兩者皆 client-only,SSR 階段返回 null。 */}
+              <ServiceWorkerRegister />
+              <InstallPrompt />
+              {/* Google One Tap — 未登入時自動跳「以 xxx 身份繼續」,iPhone/iPad 也能秒登 */}
+              <GoogleOneTap />
+            </MusicPlayerProvider>
           </UiImagesProvider>
         </LanguageProvider>
       </body>
