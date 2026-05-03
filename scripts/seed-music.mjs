@@ -21,13 +21,24 @@
  *   STABILITY_API_KEY
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { setDefaultResultOrder } from "node:dns";
 import { createClient } from "@supabase/supabase-js";
 
 setDefaultResultOrder("ipv4first");
+
+// 本地音檔快取資料夾 — Stable Audio 回傳的 mp3 先存這裡,
+// 萬一 Supabase 上傳失敗也不用再呼叫 API 重生(API 是會扣錢的)
+const CACHE_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "tmp",
+  "seed-music",
+);
+if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { recursive: true });
 
 // ────────────────────────────────────────────
 // env loading
@@ -43,11 +54,13 @@ function loadEnvLocal() {
     if (eq < 0) continue;
     const key = line.slice(0, eq).trim();
     let val = line.slice(eq + 1).trim();
-    if (
+    // 去掉成對的引號 / 角括號(2026-05-03:user 把 service_role key 包成 <...>)
+    while (
       (val.startsWith('"') && val.endsWith('"')) ||
-      (val.startsWith("'") && val.endsWith("'"))
+      (val.startsWith("'") && val.endsWith("'")) ||
+      (val.startsWith("<") && val.endsWith(">"))
     ) {
-      val = val.slice(1, -1);
+      val = val.slice(1, -1).trim();
     }
     if (!process.env[key]) process.env[key] = val;
   }
@@ -396,6 +409,12 @@ function publicUrl(storagePath) {
 // ────────────────────────────────────────────
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+function cachePathFor(track) {
+  const safeName = track.title.replace(/[^a-zA-Z0-9一-鿿]+/g, "_");
+  const duration = track.duration ?? 60;
+  return resolve(CACHE_DIR, `${track.category}-${safeName}-${duration}s.mp3`);
+}
+
 async function processTrack(track, kind, index, total) {
   const isFree = kind === "free";
   const duration = track.duration ?? 60;
@@ -405,10 +424,11 @@ async function processTrack(track, kind, index, total) {
   );
   console.log(`     prompt: ${track.prompt.slice(0, 90)}${track.prompt.length > 90 ? "…" : ""}`);
 
+  // ── DB 已有就完全跳過(不重生、不重傳) ─────────────────
   if (RESUME) {
     const existing = await alreadyExists(track.title);
     if (existing) {
-      console.log(`     → 已存在,跳過 (id: ${existing.id})`);
+      console.log(`     → DB 已存在,跳過 (id: ${existing.id})`);
       return { skipped: true, ...track };
     }
   }
@@ -418,19 +438,35 @@ async function processTrack(track, kind, index, total) {
     return { dryRun: true, ...track };
   }
 
-  const t0 = Date.now();
-  console.log(`     → 呼叫 Stable Audio (${duration}s)…`);
-  const buffer = await generateAudio({ prompt: track.prompt, duration });
-  console.log(
-    `     → 收到 ${(buffer.length / 1024).toFixed(1)} KB (${Date.now() - t0}ms)`,
-  );
+  // ── 步驟 1:取得音檔(優先讀本地快取,沒才呼叫 API) ──
+  let buffer;
+  const cachePath = cachePathFor(track);
+  if (existsSync(cachePath)) {
+    buffer = readFileSync(cachePath);
+    console.log(
+      `     → 從本地快取讀取 ${(buffer.length / 1024).toFixed(1)} KB(省一次 API 呼叫)`,
+    );
+  } else {
+    const t0 = Date.now();
+    console.log(`     → 呼叫 Stable Audio (${duration}s)…`);
+    buffer = await generateAudio({ prompt: track.prompt, duration });
+    console.log(
+      `     → 收到 ${(buffer.length / 1024).toFixed(1)} KB (${Date.now() - t0}ms)`,
+    );
+    // ✅ 立刻存本地 — 後續上傳 / DB 寫入若失敗,下次 --resume 不用重花錢
+    writeFileSync(cachePath, buffer);
+    console.log(`     → 已快取到 ${cachePath}`);
+  }
 
+  // ── 步驟 2:上傳 Supabase Storage ──────────────────────
+  // Storage 不接受非 ASCII 檔名,用 sha1 短 hash 保留 title 唯一性
   const folder = isFree ? "free" : "seed";
-  const safeName = track.title.replace(/[^a-zA-Z0-9一-鿿]+/g, "_");
-  const storagePath = `${folder}/${Date.now()}-${track.category}-${safeName}.mp3`;
+  const titleHash = createHash("sha1").update(track.title).digest("hex").slice(0, 8);
+  const storagePath = `${folder}/${track.category}-${titleHash}.mp3`;
   await uploadToStorage(storagePath, buffer);
   console.log(`     → 上傳 ${storagePath}`);
 
+  // ── 步驟 3:寫 DB ──────────────────────────────────────
   const musicId = await registerMusic({
     title: track.title,
     prompt: track.prompt,

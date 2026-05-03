@@ -55,3 +55,6 @@ supabase/*管理員*.txt
 
 # brand source assets(8MB+ 原檔,不進 git,改存本機/雲端硬碟)
 logo-source.png
+
+# AI 生成音樂本地快取(scripts/seed-music.mjs 用,失敗重跑可省一次 API 呼叫)
+tmp/
