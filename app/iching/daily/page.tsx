@@ -50,13 +50,14 @@ export default function IChingDailyPage() {
     open: false,
     required: 0,
   });
-  // Card collection toast state(server header X-Collection-IsNew=1 觸發)
+  // Card collection toast state — 新卡彈金色,重複卡也彈橘色「恭喜獲得」
   const [collectionToast, setCollectionToast] = useState<{
     show: boolean;
+    isNew: boolean;
     cardName: string;
     count: number;
     rewards: number;
-  }>({ show: false, cardName: "", count: 0, rewards: 0 });
+  }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
   const ranRef = useRef(false);
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
@@ -137,16 +138,23 @@ export default function IChingDailyPage() {
       setDateKey(date);
       setReread(isReread);
 
-      // 收藏 toast — 只在「不是 reread」+「真的新卡」時跳出
+      // 收藏 toast — 抽到 = 跳(reread 同日重抽不彈)
+      // 新卡彈金色,重複卡彈橘色「恭喜獲得」鼓勵繼續收集
       const isNewCard = res.headers.get("X-Collection-IsNew") === "1";
       const collectionCount = parseInt(res.headers.get("X-Collection-Count") ?? "0", 10);
       const rewards = parseInt(res.headers.get("X-Collection-Rewards") ?? "0", 10);
-      if (isNewCard && num) {
+      if (num && !isReread) {
         const drawnHex = getHexagramByNumber(num);
         const cardName = drawnHex
           ? t(drawnHex.nameZh, drawnHex.nameEn, drawnHex.nameJa, drawnHex.nameKo)
           : `第 ${num} 卦`;
-        setCollectionToast({ show: true, cardName, count: collectionCount, rewards });
+        setCollectionToast({
+          show: true,
+          isNew: isNewCard,
+          cardName,
+          count: collectionCount,
+          rewards,
+        });
       }
 
       // 翻牌動畫:背 → 正,跟 /daily 一致 0.7s
@@ -541,6 +549,7 @@ export default function IChingDailyPage() {
       <NewCardToast
         show={collectionToast.show}
         type="iching"
+        isNew={collectionToast.isNew}
         cardName={collectionToast.cardName}
         collectionCount={collectionToast.count}
         total={64}

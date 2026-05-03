@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 卡牌收藏 — 只計入「本卦」(梅花易數一定有變爻,如果連之卦也記就變相 2.5 點/卦套利)
-    let collectionNewCount = 0;
+    let collectionIsNew = false;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         cardId: String(primaryHex.number),
         source: "plum_blossom",
       });
-      collectionNewCount = r.isNew ? 1 : 0;
+      collectionIsNew = r.isNew;
       collectionFinalCount = r.distinctCount;
       collectionRewards = r.rewardCredits;
     }
@@ -418,7 +418,7 @@ Per the system instructions, give a combined reading: primary mood → changing-
         "X-PB-HexagramNumber": String(primaryHex.number),
         "X-PB-RelatingNumber": String(relatingHex.number),
         "X-PB-ChangingLine": String(changingLines[0]),
-        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
         "X-Collection-Count": String(collectionFinalCount),
         "X-Collection-Rewards": String(collectionRewards),
       },

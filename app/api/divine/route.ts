@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     // 卡牌收藏 — 只計入「本卦」,不收之卦。
     // (之前同時記本+之卦,造成 1 次主流占卜 = 2 張卡入帳,讓 5 點/卦變相成 2.5 點/卦)
     // 訪客不收藏。
-    let collectionNewCount = 0;
+    let collectionIsNew = false;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         cardId: String(hexagramNumber),
         source: "main",
       });
-      collectionNewCount = r.isNew ? 1 : 0;
+      collectionIsNew = r.isNew;
       collectionFinalCount = r.distinctCount;
       collectionRewards = r.rewardCredits;
     }
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
-        "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
         "X-Collection-Count": String(collectionFinalCount),
         "X-Collection-Rewards": String(collectionRewards),
       },

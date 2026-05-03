@@ -239,9 +239,13 @@ export async function POST(request: NextRequest) {
     //   - 本卦(hexagram)→ collection_type 'iching'(只計本卦,之卦不收避免套利)
     //   - 第一段抽到的方位 trigram → collection_type 'iching_trigram'(獨立分類)
     // 兩者各自累進、各自觸發里程碑;cardId 跟 hex.number / trigram code 對齊。
-    let collectionNewCount = 0;
-    let collectionFinalCount = 0;
-    let collectionRewards = 0;
+    // headers 拆成 X-Hex-* / X-Trigram-* 兩組,client 可分別決定彈兩個 toast。
+    let hexIsNew = false;
+    let hexCount = 0;
+    let hexRewards = 0;
+    let trigramIsNew = false;
+    let trigramCount = 0;
+    let trigramRewards = 0;
     if (user) {
       const hexResult = await recordCardObtained({
         userId: user.id,
@@ -255,10 +259,12 @@ export async function POST(request: NextRequest) {
         cardId: directionTrigram,  // 3-bit code: '111' / '000' / ...
         source: "direction",
       });
-      collectionNewCount = (hexResult.isNew ? 1 : 0) + (trigramResult.isNew ? 1 : 0);
-      // distinctCount 用 hex 的(主畫面顯示「23/64」),trigram 圖鑑頁自己再 fetch
-      collectionFinalCount = hexResult.distinctCount;
-      collectionRewards = hexResult.rewardCredits + trigramResult.rewardCredits;
+      hexIsNew = hexResult.isNew;
+      hexCount = hexResult.distinctCount;
+      hexRewards = hexResult.rewardCredits;
+      trigramIsNew = trigramResult.isNew;
+      trigramCount = trigramResult.distinctCount;
+      trigramRewards = trigramResult.rewardCredits;
     }
 
     // ──────────────────────────────────────────
@@ -571,9 +577,13 @@ Follow the system instructions: combine direction and hexagram into a concrete r
         "X-DH-HexagramNumber": String(hex.number),
         "X-DH-RelatingNumber": relatingHex ? String(relatingHex.number) : "",
         "X-DH-DirectionTrigram": directionTrigram,
-        "X-Collection-NewCount": String(collectionNewCount),
-        "X-Collection-Count": String(collectionFinalCount),
-        "X-Collection-Rewards": String(collectionRewards),
+        // 兩段式收藏:本卦進度 (X-Hex-*) 與八卦進度 (X-Trigram-*) 各自 toast
+        "X-Hex-IsNew": hexIsNew ? "1" : "0",
+        "X-Hex-Count": String(hexCount),
+        "X-Hex-Rewards": String(hexRewards),
+        "X-Trigram-IsNew": trigramIsNew ? "1" : "0",
+        "X-Trigram-Count": String(trigramCount),
+        "X-Trigram-Rewards": String(trigramRewards),
       },
     });
   } catch (error) {

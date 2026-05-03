@@ -51,10 +51,11 @@ export default function DailyPage() {
   });
   const [collectionToast, setCollectionToast] = useState<{
     show: boolean;
+    isNew: boolean;
     cardName: string;
     count: number;
     rewards: number;
-  }>({ show: false, cardName: "", count: 0, rewards: 0 });
+  }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
   const ranRef = useRef(false);
 
   const card = cardId ? tarotDeck.find((c) => c.id === cardId) : null;
@@ -133,16 +134,23 @@ export default function DailyPage() {
       setDateKey(date);
       setReread(isReread);
 
-      // 收藏 toast — 真正第一次抽到這張卡才跳出
+      // 收藏 toast — 抽到 = 跳(reread 是同日重抽,不算新抽,不顯示)
+      // 新卡彈金色 toast,重複卡彈橘色「恭喜獲得」鼓勵繼續收集
       const isNewCard = res.headers.get("X-Collection-IsNew") === "1";
       const collectionCount = parseInt(res.headers.get("X-Collection-Count") ?? "0", 10);
       const rewards = parseInt(res.headers.get("X-Collection-Rewards") ?? "0", 10);
-      if (isNewCard && cId) {
+      if (cId && !isReread) {
         const drawnCard = tarotDeck.find((c) => c.id === cId);
         const cardName = drawnCard
           ? t(drawnCard.nameZh, drawnCard.nameEn, drawnCard.nameJa, drawnCard.nameKo)
           : cId;
-        setCollectionToast({ show: true, cardName, count: collectionCount, rewards });
+        setCollectionToast({
+          show: true,
+          isNew: isNewCard,
+          cardName,
+          count: collectionCount,
+          rewards,
+        });
       }
 
       // 翻牌動畫,給 0.7s 讓 user 看到 reveal
@@ -430,6 +438,7 @@ export default function DailyPage() {
       <NewCardToast
         show={collectionToast.show}
         type="tarot"
+        isNew={collectionToast.isNew}
         cardName={collectionToast.cardName}
         collectionCount={collectionToast.count}
         total={78}

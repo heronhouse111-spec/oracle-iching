@@ -1,12 +1,16 @@
 "use client";
 
 /**
- * NewCardToast — 「✨ 新卡牌解鎖!」浮動通知
+ * NewCardToast — 抽到卡牌時的浮動通知
  *
- * 給 daily / 主流占卜結果頁用。當 server response header 帶 X-Collection-IsNew=1
- * 或 X-Collection-NewCount > 0 時,顯示一個 ~5 秒會自動消失的 toast。
+ * 兩種變體(isNew prop 控制):
+ *   isNew=true  → 「✨ 新卡牌解鎖!」(金色強調,鼓勵收集)
+ *   isNew=false → 「🎴 恭喜獲得!」(橘色淡化,重複卡也給回饋,為將來
+ *                                    「重複卡兌換獎勵」鋪路)
  *
- * 也會顯示因里程碑獲得的 credits(若 X-Collection-Rewards > 0)。
+ * 用法:server route 從 X-Collection-IsNew header(0/1)決定 isNew 傳什麼。
+ * 多卡情境(塔羅 5/10 卡牌陣) — parent 自己組 cardName(「高塔、戀人、死神」)
+ * 並把 newCount + dupCount 算好,只彈 1 個 toast 包一輪資訊。
  */
 
 import { useEffect, useState } from "react";
@@ -17,12 +21,17 @@ interface Props {
   /** 是否顯示 toast — controlled by parent */
   show: boolean;
   /** 卡牌類型 — 決定點擊時跳到哪個圖鑑頁 */
-  type: "iching" | "tarot";
-  /** 新卡的中文/英文/日文/韓文顯示名(parent 自己選最合適的字串) */
+  type: "iching" | "iching_trigram" | "tarot";
+  /**
+   * 是否為新卡(否則為重複卡)。預設 true 維持向後相容。
+   * server header X-Collection-IsNew=1 → true、=0 → false。
+   */
+  isNew?: boolean;
+  /** 卡牌名稱(已 i18n)— 多卡可用 「、」 串 */
   cardName: string;
   /** 該 type 目前已收 distinct 數;會顯示 「23/64」 */
   collectionCount: number;
-  /** 同 type 卡牌總數(易經 64 / 塔羅 78) */
+  /** 同 type 卡牌總數(易經 64 / 八卦 8 / 塔羅 78) */
   total: number;
   /** 這次因里程碑得到的 credits 加總(可能 0) */
   rewardCredits: number;
@@ -35,6 +44,7 @@ interface Props {
 export default function NewCardToast({
   show,
   type,
+  isNew = true,
   cardName,
   collectionCount,
   total,
@@ -59,7 +69,18 @@ export default function NewCardToast({
 
   if (!show) return null;
 
-  const indexHref = type === "iching" ? "/iching/hexagrams" : "/tarot/cards";
+  // 點擊跳到對應圖鑑;trigram 跟 hexagram 共用 /iching/hexagrams 頁
+  const indexHref =
+    type === "tarot" ? "/tarot/cards" : "/iching/hexagrams";
+
+  // 變體配色 — 新卡金色強調、重複卡橘色淡化
+  const accent = isNew
+    ? { border: "rgba(212,168,85,0.6)", glow: "rgba(212,168,85,0.25)", title: "#fde68a", emoji: "✨" }
+    : { border: "rgba(251,146,60,0.5)", glow: "rgba(251,146,60,0.18)", title: "#fdba74", emoji: "🎴" };
+
+  const titleText = isNew
+    ? t("新卡牌解鎖!", "New card unlocked!", "新カード解錠!", "새 카드 잠금 해제!")
+    : t("恭喜獲得!", "You drew it again!", "再び引き当てた!", "다시 뽑았어요!");
 
   return (
     <div
@@ -82,26 +103,26 @@ export default function NewCardToast({
           background:
             "linear-gradient(135deg, rgba(13,13,43,0.95), rgba(30,15,60,0.95))",
           backdropFilter: "blur(8px)",
-          border: "1px solid rgba(212,168,85,0.6)",
+          border: `1px solid ${accent.border}`,
           borderRadius: 14,
           padding: "14px 18px",
-          boxShadow: "0 10px 40px rgba(212,168,85,0.25), 0 4px 16px rgba(0,0,0,0.5)",
+          boxShadow: `0 10px 40px ${accent.glow}, 0 4px 16px rgba(0,0,0,0.5)`,
           color: "#e8e8f0",
         }}
       >
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div style={{ fontSize: 28, lineHeight: 1, marginTop: 2 }}>✨</div>
+          <div style={{ fontSize: 28, lineHeight: 1, marginTop: 2 }}>{accent.emoji}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 fontFamily: "'Noto Serif TC', serif",
                 fontSize: 15,
                 fontWeight: 700,
-                color: "#fde68a",
+                color: accent.title,
                 marginBottom: 4,
               }}
             >
-              {t("新卡牌解鎖!", "New card unlocked!", "新カード解錠!", "새 카드 잠금 해제!")}
+              {titleText}
             </div>
             <div style={{ fontSize: 14, marginBottom: 6 }}>{cardName}</div>
             <div
@@ -116,7 +137,7 @@ export default function NewCardToast({
             >
               <span>
                 {t("收藏進度", "Collection", "収集進度", "수집 진행")}{" "}
-                <strong style={{ color: "#fde68a" }}>
+                <strong style={{ color: accent.title }}>
                   {collectionCount}/{total}
                 </strong>
               </span>

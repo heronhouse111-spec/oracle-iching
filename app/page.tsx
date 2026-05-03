@@ -46,6 +46,7 @@ import {
 import { tarotSpreadCostByCardCount, UI_CREDIT_COSTS } from "@/lib/uiCreditCosts";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
+import NewCardToast from "@/components/NewCardToast";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
 import QuestionInspirations from "@/components/QuestionInspirations";
 import { useUiImages } from "@/hooks/useUiImages";
@@ -239,6 +240,34 @@ export default function Home() {
     open: false,
     required: 0,
   });
+
+  // 收藏 toast — 抽到塔羅卡時顯示;multi-card spread 會聚合成一個 toast
+  // (X 張新卡 / Y 張重複)。new + dup 同時出現時優先顯示 new(視覺更搶眼)。
+  const [tarotCollectionToast, setTarotCollectionToast] = useState<{
+    show: boolean;
+    isNew: boolean;
+    cardName: string;
+    count: number;
+    rewards: number;
+  }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
+
+  // 易經本卦 toast(三錢法 / 梅花易數 / 方位卦象合參 共用)
+  const [ichingCollectionToast, setIchingCollectionToast] = useState<{
+    show: boolean;
+    isNew: boolean;
+    cardName: string;
+    count: number;
+    rewards: number;
+  }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
+
+  // 八卦 toast(僅 direction-hexagram 會觸發)
+  const [trigramCollectionToast, setTrigramCollectionToast] = useState<{
+    show: boolean;
+    isNew: boolean;
+    cardName: string;
+    count: number;
+    rewards: number;
+  }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -1714,6 +1743,48 @@ export default function Home() {
       // 扣點已經發生 —— 通知 Badge 更新
       notifyCreditsChanged();
 
+      // ── 易經收藏 toast — divine / plum-blossom / direction-hex 共用 X-Collection-* ──
+      // direction-hex 額外送 X-Hex-* + X-Trigram-* 給八卦圖鑑專屬 toast。
+      const ichIsNew = response.headers.get("X-Collection-IsNew");
+      const ichCount = parseInt(response.headers.get("X-Collection-Count") ?? "0", 10);
+      const ichRewards = parseInt(response.headers.get("X-Collection-Rewards") ?? "0", 10);
+      if (ichIsNew !== null) {
+        setIchingCollectionToast({
+          show: true,
+          isNew: ichIsNew === "1",
+          cardName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
+          count: ichCount,
+          rewards: ichRewards,
+        });
+      } else {
+        // direction-hex 路徑用 X-Hex-* / X-Trigram-* 拆開
+        const hexIsNewHdr = response.headers.get("X-Hex-IsNew");
+        const trigIsNewHdr = response.headers.get("X-Trigram-IsNew");
+        if (hexIsNewHdr !== null) {
+          setIchingCollectionToast({
+            show: true,
+            isNew: hexIsNewHdr === "1",
+            cardName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
+            count: parseInt(response.headers.get("X-Hex-Count") ?? "0", 10),
+            rewards: parseInt(response.headers.get("X-Hex-Rewards") ?? "0", 10),
+          });
+        }
+        if (trigIsNewHdr !== null && directionTrigram) {
+          const tg = trigramNames[directionTrigram];
+          const tgName = tg ? t(tg.zh, tg.en, tg.ja, tg.ko) : directionTrigram;
+          // 八卦 toast 延遲 1.5s 出現,跟本卦 toast 不撞畫面(視覺上像連發)
+          setTimeout(() => {
+            setTrigramCollectionToast({
+              show: true,
+              isNew: trigIsNewHdr === "1",
+              cardName: tgName,
+              count: parseInt(response.headers.get("X-Trigram-Count") ?? "0", 10),
+              rewards: parseInt(response.headers.get("X-Trigram-Rewards") ?? "0", 10),
+            });
+          }, 1500);
+        }
+      }
+
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
@@ -1865,6 +1936,40 @@ export default function Home() {
 
       // 扣點已經發生 —— 通知 Badge 更新
       notifyCreditsChanged();
+
+      // ── 收藏 toast — 多牌情境聚合成單一 toast。
+      // 有新卡優先彈 new(更激勵);沒新但有重複也彈 dup,鼓勵繼續收集。
+      const newCount = parseInt(response.headers.get("X-Collection-NewCount") ?? "0", 10);
+      const dupCount = parseInt(response.headers.get("X-Collection-DupCount") ?? "0", 10);
+      const collCount = parseInt(response.headers.get("X-Collection-Count") ?? "0", 10);
+      const collRewards = parseInt(response.headers.get("X-Collection-Rewards") ?? "0", 10);
+      const cardIdsHeader = response.headers.get("X-Collection-CardIds") ?? "";
+      if ((newCount > 0 || dupCount > 0) && cardIdsHeader) {
+        const ids = cardIdsHeader.split(",").filter(Boolean);
+        const names = ids
+          .map((id) => {
+            const c = getCardById(id);
+            return c ? t(c.nameZh, c.nameEn, c.nameJa, c.nameKo) : id;
+          })
+          .join("、");
+        const isNew = newCount > 0;
+        const summarySuffix =
+          newCount > 0 && dupCount > 0
+            ? t(
+                ` (新 ${newCount} 張 / 重複 ${dupCount} 張)`,
+                ` (${newCount} new / ${dupCount} dup)`,
+                ` (新 ${newCount} 枚 / 重複 ${dupCount} 枚)`,
+                ` (새 ${newCount}장 / 중복 ${dupCount}장)`
+              )
+            : "";
+        setTarotCollectionToast({
+          show: true,
+          isNew,
+          cardName: names + summarySuffix,
+          count: collCount,
+          rewards: collRewards,
+        });
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -2524,6 +2629,48 @@ export default function Home() {
         open={creditsModal.open}
         required={creditsModal.required}
         onClose={() => setCreditsModal({ open: false, required: 0 })}
+      />
+
+      {/* 塔羅主流程抽到卡 → 顯示 toast(新卡 / 重複卡兩種變體) */}
+      <NewCardToast
+        show={tarotCollectionToast.show}
+        type="tarot"
+        isNew={tarotCollectionToast.isNew}
+        cardName={tarotCollectionToast.cardName}
+        collectionCount={tarotCollectionToast.count}
+        total={78}
+        rewardCredits={tarotCollectionToast.rewards}
+        onDismiss={() =>
+          setTarotCollectionToast((prev) => ({ ...prev, show: false }))
+        }
+      />
+
+      {/* 易經本卦 toast(三錢法 / 梅花易數 / 方位卦象合參 共用) */}
+      <NewCardToast
+        show={ichingCollectionToast.show}
+        type="iching"
+        isNew={ichingCollectionToast.isNew}
+        cardName={ichingCollectionToast.cardName}
+        collectionCount={ichingCollectionToast.count}
+        total={64}
+        rewardCredits={ichingCollectionToast.rewards}
+        onDismiss={() =>
+          setIchingCollectionToast((prev) => ({ ...prev, show: false }))
+        }
+      />
+
+      {/* 八卦 toast(僅方位卦象合參會觸發 — 跟本卦 toast 錯開 1.5s 連發) */}
+      <NewCardToast
+        show={trigramCollectionToast.show}
+        type="iching_trigram"
+        isNew={trigramCollectionToast.isNew}
+        cardName={trigramCollectionToast.cardName}
+        collectionCount={trigramCollectionToast.count}
+        total={8}
+        rewardCredits={trigramCollectionToast.rewards}
+        onDismiss={() =>
+          setTrigramCollectionToast((prev) => ({ ...prev, show: false }))
+        }
       />
 
       {/* ---- 訪客 2 次上限 gate:沿用 LoginOptionsModal,加訪客專屬標題與說明 ---- */}

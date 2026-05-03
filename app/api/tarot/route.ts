@@ -216,8 +216,11 @@ export async function POST(request: NextRequest) {
 
     // 卡牌收藏 — 塔羅主流程把每張抽到的牌都收進去(去重 dedupe by cardId)
     let collectionNewCount = 0;
+    let collectionDupCount = 0;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
+    /** 這輪抽到的所有 unique cardId(給 client 顯示 toast 用,順序 = 寫入順序) */
+    const collectionCardIds: string[] = [];
     if (user) {
       const seen = new Set<string>();
       const toRecord: Array<{ cardId: string; subkind: string }> = [];
@@ -227,6 +230,7 @@ export async function POST(request: NextRequest) {
         const meta = getCardById(c.cardId);
         if (!meta) continue;  // 不認得的 cardId 跳過(client 亂送的 id)
         toRecord.push({ cardId: c.cardId, subkind: meta.suit });
+        collectionCardIds.push(c.cardId);
       }
       const results = [];
       for (const item of toRecord) {
@@ -242,6 +246,7 @@ export async function POST(request: NextRequest) {
       }
       const agg = aggregateResults(results);
       collectionNewCount = agg.newCardCount;
+      collectionDupCount = results.length - agg.newCardCount;
       collectionFinalCount = agg.finalDistinctCount;
       collectionRewards = agg.totalRewardCredits;
     }
@@ -407,8 +412,11 @@ export async function POST(request: NextRequest) {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
         "X-Collection-NewCount": String(collectionNewCount),
+        "X-Collection-DupCount": String(collectionDupCount),
         "X-Collection-Count": String(collectionFinalCount),
         "X-Collection-Rewards": String(collectionRewards),
+        // 抽到的 unique cardIds(逗號分隔,給 client toast 顯示卡名)
+        "X-Collection-CardIds": collectionCardIds.join(","),
       },
     });
   } catch (error) {
