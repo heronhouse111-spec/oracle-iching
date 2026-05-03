@@ -194,55 +194,81 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   暗色文字 fallback — 全部一律拉到 primary text,不再分層級
+   暗色文字 fallback — 全部一律拉到 primary text
    ────────────────────────────────────────────────────────────────────
-   admin 後台的核心任務是「快速看清資料」,不是「展示優雅的層級」。
-   過往前台 dark theme 用大量 rgba(192,192,208,*) 當「不同弱化等級」,
-   套到 admin 白底後變得跟背景對比不足。這裡用 partial substring 匹配
-   把所有 opacity 一律打成 primary text,保證任何子頁面都看得清楚 —
-   包含未來新加的頁面。
+   admin 後台的核心任務是「快速看清資料」。過往前台 dark theme 用大量
+   rgba(192,192,208,*) 當層級色,套到 admin 白底後完全看不清。
+   一律打成 primary text,保證任何子頁面都看得清楚。
 
-   trade-off:會吃掉「日期欄位該稍微淡一點」這種設計細節。優先換取「
-   管理員不會看不見字」。 */
-.admin-light [style*="color: rgba(192,192,208"],
-.admin-light [style*="color:rgba(192,192,208"],
-.admin-light [style*="color: rgba(232,232,240"],
-.admin-light [style*="color:rgba(232,232,240"] {
-  color: var(--al-text) !important;
-}
+   ⚠️ 為什麼要 cover 兩種格式:
+   - SSR 第一次吐出來是原始字串(e.g. `color:#e8e8f0`、`color:rgba(192,192,208,0.5)`)
+   - hydration 後 React/瀏覽器把它正規化成 `color: rgb(232, 232, 240)` /
+     `color: rgba(192, 192, 208, 0.5)`(with spaces)
+   substring selector 只能 byte-match,所以兩種寫法都得列。
+   ──────────────────────────────────────────────────────────────────── */
 
-/* 灰階 hex(來自 dark-theme palette,在白底完全不夠對比) */
-.admin-light [style*="color: #e8e8f0"],
+/* 灰白系(來自 mystic-silver palette)→ primary text */
 .admin-light [style*="color:#e8e8f0"],
-.admin-light [style*="color: #9aa5b8"],
-.admin-light [style*="color:#9aa5b8"],
-.admin-light [style*="color: #8a99b0"],
-.admin-light [style*="color:#8a99b0"],
-.admin-light [style*="color: #5a6a82"],
-.admin-light [style*="color:#5a6a82"],
-.admin-light [style*="color: #3a4554"],
-.admin-light [style*="color:#3a4554"],
+.admin-light [style*="color: #e8e8f0"],
+.admin-light [style*="color:rgb(232,232,240)"],
+.admin-light [style*="color: rgb(232, 232, 240)"],
+
+.admin-light [style*="color:#c0c0d0"],
 .admin-light [style*="color: #c0c0d0"],
-.admin-light [style*="color:#c0c0d0"] {
+.admin-light [style*="color:rgb(192,192,208)"],
+.admin-light [style*="color: rgb(192, 192, 208)"],
+
+.admin-light [style*="color:rgba(192,192,208"],
+.admin-light [style*="color: rgba(192,192,208"],
+.admin-light [style*="color: rgba(192, 192, 208"],
+
+.admin-light [style*="color:rgba(232,232,240"],
+.admin-light [style*="color: rgba(232,232,240"],
+.admin-light [style*="color: rgba(232, 232, 240"],
+
+.admin-light [style*="color:#9aa5b8"],
+.admin-light [style*="color: #9aa5b8"],
+.admin-light [style*="color: rgb(154, 165, 184)"],
+
+.admin-light [style*="color:#8a99b0"],
+.admin-light [style*="color: #8a99b0"],
+.admin-light [style*="color: rgb(138, 153, 176)"],
+
+.admin-light [style*="color:#5a6a82"],
+.admin-light [style*="color: #5a6a82"],
+.admin-light [style*="color: rgb(90, 106, 130)"],
+
+.admin-light [style*="color:#3a4554"],
+.admin-light [style*="color: #3a4554"],
+.admin-light [style*="color: rgb(58, 69, 84)"] {
   color: var(--al-text) !important;
 }
 
 /* ─── 金色 inline(d4a855 / 212,168,85)→ 深藍品牌色 ─── */
-.admin-light [style*="color: #d4a855"],
 .admin-light [style*="color:#d4a855"],
+.admin-light [style*="color: #d4a855"],
+.admin-light [style*="color:rgb(212,168,85)"],
+.admin-light [style*="color: rgb(212, 168, 85)"],
+.admin-light [style*="color:rgba(212,168,85"],
 .admin-light [style*="color: rgba(212,168,85"],
-.admin-light [style*="color:rgba(212,168,85"] {
+.admin-light [style*="color: rgba(212, 168, 85"] {
   color: var(--al-brand-700) !important;
   font-weight: 500;
 }
 
-/* ─── 黃色 / 琥珀 inline(語意上是 warn,如「未保存」「待處理」)→ 深 warn 色 ─── */
-.admin-light [style*="color: #fde68a"],
+/* ─── 黃色 / 琥珀 inline(語意 warn)→ 深 warn 色 ─── */
 .admin-light [style*="color:#fde68a"],
-.admin-light [style*="color: #fbbf24"],
+.admin-light [style*="color: #fde68a"],
+.admin-light [style*="color:rgb(253,230,138)"],
+.admin-light [style*="color: rgb(253, 230, 138)"],
+
 .admin-light [style*="color:#fbbf24"],
+.admin-light [style*="color: #fbbf24"],
+.admin-light [style*="color: rgb(251, 191, 36)"],
+
+.admin-light [style*="color:#ffd99a"],
 .admin-light [style*="color: #ffd99a"],
-.admin-light [style*="color:#ffd99a"] {
+.admin-light [style*="color: rgb(255, 217, 154)"] {
   color: var(--al-warn) !important;
   font-weight: 600;
 }
@@ -267,20 +293,25 @@
   background: var(--al-surface) !important;
 }
 
-/* ─── 狀態色語意對齊(success / danger / warn 一律 bold + 深色) ─── */
-.admin-light [style*="color: #6ee7b7"],
+/* ─── 狀態色語意對齊(success / danger 一律 bold + 深色;cover hex / no-space rgba / spaced rgba / normalized rgb) ─── */
 .admin-light [style*="color:#6ee7b7"],
-.admin-light [style*="color: #86efac"],
+.admin-light [style*="color: #6ee7b7"],
+.admin-light [style*="color: rgb(110, 231, 183)"],
 .admin-light [style*="color:#86efac"],
+.admin-light [style*="color: #86efac"],
+.admin-light [style*="color: rgb(134, 239, 172)"],
+.admin-light [style*="color:rgba(110,231,183"],
 .admin-light [style*="color: rgba(110,231,183"],
-.admin-light [style*="color:rgba(110,231,183"] {
+.admin-light [style*="color: rgba(110, 231, 183"] {
   color: var(--al-success) !important;
   font-weight: 600;
 }
-.admin-light [style*="color: #fca5a5"],
 .admin-light [style*="color:#fca5a5"],
+.admin-light [style*="color: #fca5a5"],
+.admin-light [style*="color: rgb(252, 165, 165)"],
+.admin-light [style*="color:rgba(248,113,113"],
 .admin-light [style*="color: rgba(248,113,113"],
-.admin-light [style*="color:rgba(248,113,113"] {
+.admin-light [style*="color: rgba(248, 113, 113"] {
   color: var(--al-danger) !important;
   font-weight: 600;
 }
