@@ -131,6 +131,26 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    heading: { tw: "背景音樂", en: "Music", ja: "BGM", ko: "음악" },
+    items: [
+      {
+        key: "music-leaderboard",
+        href: "/music",
+        label: { tw: "音樂排行榜", en: "Leaderboard", ja: "ランキング", ko: "랭킹" },
+      },
+      {
+        key: "music-create",
+        href: "/music/generate",
+        label: { tw: "創作音樂", en: "Create Music", ja: "音楽を作る", ko: "음악 만들기" },
+      },
+      {
+        key: "music-my",
+        href: "/music/my",
+        label: { tw: "我的音樂", en: "My Music", ja: "マイミュージック", ko: "내 음악" },
+      },
+    ],
+  },
+  {
     items: [
       {
         key: "blog",
