@@ -193,39 +193,58 @@
   color: #ffffff;
 }
 
-/* ─── 暗色文字 fallback(處理 inline rgba(192,192,208,…))
-     對比加強策略:0.6 以上 → primary 黑;0.4-0.55 → muted(現在已比之前深);
-     不再有「subtle」(太淡)的層級用在使用者讀的內容上。 */
-.admin-light [style*="rgba(192,192,208,0.85)"],
-.admin-light [style*="rgba(192,192,208,0.9)"],
-.admin-light [style*="rgba(192,192,208,0.8)"],
-.admin-light [style*="rgba(192,192,208,0.75)"],
-.admin-light [style*="rgba(192,192,208,0.7)"],
-.admin-light [style*="rgba(192,192,208,0.65)"],
-.admin-light [style*="rgba(192,192,208,0.6)"] {
+/* ──────────────────────────────────────────────────────────────────
+   暗色文字 fallback — 全部一律拉到 primary text,不再分層級
+   ────────────────────────────────────────────────────────────────────
+   admin 後台的核心任務是「快速看清資料」,不是「展示優雅的層級」。
+   過往前台 dark theme 用大量 rgba(192,192,208,*) 當「不同弱化等級」,
+   套到 admin 白底後變得跟背景對比不足。這裡用 partial substring 匹配
+   把所有 opacity 一律打成 primary text,保證任何子頁面都看得清楚 —
+   包含未來新加的頁面。
+
+   trade-off:會吃掉「日期欄位該稍微淡一點」這種設計細節。優先換取「
+   管理員不會看不見字」。 */
+.admin-light [style*="color: rgba(192,192,208"],
+.admin-light [style*="color:rgba(192,192,208"],
+.admin-light [style*="color: rgba(232,232,240"],
+.admin-light [style*="color:rgba(232,232,240"] {
   color: var(--al-text) !important;
 }
-.admin-light [style*="rgba(192,192,208,0.55)"],
-.admin-light [style*="rgba(192,192,208,0.5)"],
-.admin-light [style*="rgba(192,192,208,0.45)"],
-.admin-light [style*="rgba(192,192,208,0.4)"],
-.admin-light [style*="rgba(192,192,208,0.35)"],
-.admin-light [style*="rgba(192,192,208,0.3)"] {
-  color: var(--al-text-muted) !important;
-}
 
-/* 同樣處理灰白系 #e8e8f0(部分 input/label 用) */
+/* 灰階 hex(來自 dark-theme palette,在白底完全不夠對比) */
 .admin-light [style*="color: #e8e8f0"],
-.admin-light [style*="color:#e8e8f0"] {
+.admin-light [style*="color:#e8e8f0"],
+.admin-light [style*="color: #9aa5b8"],
+.admin-light [style*="color:#9aa5b8"],
+.admin-light [style*="color: #8a99b0"],
+.admin-light [style*="color:#8a99b0"],
+.admin-light [style*="color: #5a6a82"],
+.admin-light [style*="color:#5a6a82"],
+.admin-light [style*="color: #3a4554"],
+.admin-light [style*="color:#3a4554"],
+.admin-light [style*="color: #c0c0d0"],
+.admin-light [style*="color:#c0c0d0"] {
   color: var(--al-text) !important;
 }
 
-/* ─── 金色 inline 改成藍 ─── */
+/* ─── 金色 inline(d4a855 / 212,168,85)→ 深藍品牌色 ─── */
 .admin-light [style*="color: #d4a855"],
 .admin-light [style*="color:#d4a855"],
 .admin-light [style*="color: rgba(212,168,85"],
 .admin-light [style*="color:rgba(212,168,85"] {
   color: var(--al-brand-700) !important;
+  font-weight: 500;
+}
+
+/* ─── 黃色 / 琥珀 inline(語意上是 warn,如「未保存」「待處理」)→ 深 warn 色 ─── */
+.admin-light [style*="color: #fde68a"],
+.admin-light [style*="color:#fde68a"],
+.admin-light [style*="color: #fbbf24"],
+.admin-light [style*="color:#fbbf24"],
+.admin-light [style*="color: #ffd99a"],
+.admin-light [style*="color:#ffd99a"] {
+  color: var(--al-warn) !important;
+  font-weight: 600;
 }
 .admin-light [style*="background: rgba(212,168,85,0.06)"],
 .admin-light [style*="background: rgba(212,168,85,0.04)"],
@@ -248,18 +267,22 @@
   background: var(--al-surface) !important;
 }
 
-/* ─── 狀態色語意對齊 ─── */
+/* ─── 狀態色語意對齊(success / danger / warn 一律 bold + 深色) ─── */
 .admin-light [style*="color: #6ee7b7"],
-.admin-light [style*="color:#6ee7b7"] {
+.admin-light [style*="color:#6ee7b7"],
+.admin-light [style*="color: #86efac"],
+.admin-light [style*="color:#86efac"],
+.admin-light [style*="color: rgba(110,231,183"],
+.admin-light [style*="color:rgba(110,231,183"] {
   color: var(--al-success) !important;
+  font-weight: 600;
 }
 .admin-light [style*="color: #fca5a5"],
-.admin-light [style*="color:#fca5a5"] {
+.admin-light [style*="color:#fca5a5"],
+.admin-light [style*="color: rgba(248,113,113"],
+.admin-light [style*="color:rgba(248,113,113"] {
   color: var(--al-danger) !important;
-}
-.admin-light [style*="color: #ffd99a"],
-.admin-light [style*="color:#ffd99a"] {
-  color: var(--al-warn) !important;
+  font-weight: 600;
 }
 
 .admin-light [style*="background: rgba(110,231,183"] {
@@ -562,8 +585,36 @@
 /* ─── Heading 字色保險 ─── */
 .admin-light h1:not(.text-gold-gradient),
 .admin-light h2:not(.text-gold-gradient),
-.admin-light h3:not(.text-gold-gradient) {
+.admin-light h3:not(.text-gold-gradient),
+.admin-light h4:not(.text-gold-gradient),
+.admin-light h5:not(.text-gold-gradient),
+.admin-light h6:not(.text-gold-gradient) {
   color: var(--al-text);
+}
+
+/* ─── 防禦性預設:未來新增的 admin 頁面只要不寫離譜的色碼就會繼承高對比 ───
+   不用 !important — 任何頁面想要更深/不同的顏色都還是能蓋過去。 */
+.admin-light label {
+  color: var(--al-text);
+  font-weight: 500;
+}
+
+.admin-light small,
+.admin-light caption,
+.admin-light legend,
+.admin-light figcaption {
+  color: var(--al-text-muted);
+}
+
+/* button 沒有 inline color 時也用 primary */
+.admin-light button:not([style*="color"]) {
+  color: var(--al-text);
+}
+
+/* placeholder 至少維持可讀 */
+.admin-light input::placeholder,
+.admin-light textarea::placeholder {
+  color: var(--al-text-subtle) !important;
 }
 
 /* ─── Tailwind 自訂色覆蓋(dashboard StatCard / TrendChart 等使用) ───
