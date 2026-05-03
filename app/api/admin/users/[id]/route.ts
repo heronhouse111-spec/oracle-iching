@@ -30,8 +30,10 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
   const supabase = await createClient();
 
-  // 平行抓 4 個資料源
-  const [profileResult, userResult, divinationsResult, grantsResult] =
+  // 平行抓 6 個資料源
+  // - spendTxs:該 user 所有 spend_* 流水(用來對應 divinations 顯示扣點 + 餘額)
+  // - rewardTxs:該 user 所有 collection_milestone 流水(用來算「卡牌已發獎勵」總額)
+  const [profileResult, userResult, divinationsResult, grantsResult, spendTxsResult, rewardTxsResult] =
     await Promise.all([
       supabase
         .from("admin_users_view")
@@ -63,6 +65,20 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         .eq("user_id", id)
         .order("created_at", { ascending: false })
         .limit(20),
+      // 撈最近的 spend_* 流水給 divinations 對應 — 拉 100 筆夠 cover 20 筆占卜
+      supabase
+        .from("credit_transactions")
+        .select("delta, balance_after, reason, created_at")
+        .eq("user_id", id)
+        .like("reason", "spend_%")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      // 收集里程碑發出的所有獎勵
+      supabase
+        .from("credit_transactions")
+        .select("delta, created_at")
+        .eq("user_id", id)
+        .eq("reason", "collection_milestone"),
     ]);
 
   if (!profileResult.data) {
@@ -97,6 +113,53 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
             (!expiresAt || new Date(expiresAt).getTime() > Date.now()),
         };
 
+  // ── 對應每筆 divination 找到「最接近的 spend transaction」──
+  // 因為 saveDivination 是 client-side 寫入(在 spend_credits server-side 執行之後),
+  // tx.created_at < divination.created_at,差距通常 1-30 秒(視 AI streaming 長度)。
+  // 用「最接近」配對,並 dedupe(同一 tx 不會被兩筆 divination 用到)。
+  interface SpendTx {
+    delta: number;
+    balance_after: number;
+    reason: string;
+    created_at: string;
+  }
+  const spendTxs: SpendTx[] = (spendTxsResult.data ?? []) as SpendTx[];
+  const usedTxIdx = new Set<number>();
+  const divinations = (divinationsResult.data ?? []).map((d) => {
+    const dTime = new Date(d.created_at).getTime();
+    let bestIdx = -1;
+    let bestDiff = Infinity;
+    for (let i = 0; i < spendTxs.length; i++) {
+      if (usedTxIdx.has(i)) continue;
+      const tx = spendTxs[i];
+      const txTime = new Date(tx.created_at).getTime();
+      // window: tx 在 divination 之前 60s 內,或之後 5s 內(時鐘漂移)
+      if (txTime > dTime + 5000 || txTime < dTime - 60000) continue;
+      const diff = Math.abs(txTime - dTime);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) {
+      usedTxIdx.add(bestIdx);
+      const tx = spendTxs[bestIdx];
+      return {
+        ...d,
+        spent_credits: -tx.delta, // delta 是負的,顯示成正數
+        balance_after: tx.balance_after,
+      };
+    }
+    return { ...d, spent_credits: null, balance_after: null };
+  });
+
+  // ── 收集里程碑獎勵總額 ──
+  const collectionRewardsTotal = (rewardTxsResult.data ?? []).reduce(
+    (sum, t) => sum + (t.delta ?? 0),
+    0,
+  );
+  const collectionRewardsCount = rewardTxsResult.data?.length ?? 0;
+
   return NextResponse.json({
     profile: {
       ...profileResult.data,
@@ -104,7 +167,9 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       credits_refills_at: userResult.data?.credits_refills_at ?? null,
     },
     subscription,
-    divinations: divinationsResult.data ?? [],
+    divinations,
     grants: grantsResult.data ?? [],
+    collectionRewardsTotal,
+    collectionRewardsCount,
   });
 }
