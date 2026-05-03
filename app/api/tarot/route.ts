@@ -57,6 +57,9 @@ export async function POST(request: NextRequest) {
       spreadId,
       personaId,
       depth,
+      // 二選一牌陣才有 — 使用者填寫的兩個具體選項
+      twoOptionA,
+      twoOptionB,
     }: {
       cards: DrawnCardRequest[];
       question: string;
@@ -67,10 +70,17 @@ export async function POST(request: NextRequest) {
       spreadId?: string;
       personaId?: string;
       depth?: "quick" | "deep";
+      twoOptionA?: string;
+      twoOptionB?: string;
     } = body;
 
     const spread = getSpread(spreadId);
     const isDeep = depth === "deep";
+
+    // 二選一才生效;其他牌陣即使誤帶也忽略,避免 prompt 裡出現無意義段落
+    const optA = spread.id === "two-options" && typeof twoOptionA === "string" ? twoOptionA.trim().slice(0, 200) : "";
+    const optB = spread.id === "two-options" && typeof twoOptionB === "string" ? twoOptionB.trim().slice(0, 200) : "";
+    const hasTwoOptions = spread.id === "two-options" && optA.length > 0 && optB.length > 0;
 
     if (!Array.isArray(cards) || cards.length !== spread.cardCount) {
       return new Response(
@@ -185,13 +195,21 @@ export async function POST(request: NextRequest) {
     const spreadNameZh = spread.nameZh;
     const spreadNameEn = spread.nameEn;
 
+    // 二選一專屬指引 — 牌陣的「選擇 A」「選擇 B」位置實際對應的就是使用者寫下的 optA / optB
+    const twoOptionsHintZh = hasTwoOptions
+      ? `\n注意:此牌陣的「選擇 A」位置代表問事者在思考的具體選項「${optA}」,「選擇 B」位置代表「${optB}」。請在解盤中明確以這兩個具體選項的名稱來談,例如「就 ${optA} 這條路而言...」「相對地若選 ${optB}...」,最後比較兩條路的能量並給出傾向建議。`
+      : "";
+    const twoOptionsHintEn = hasTwoOptions
+      ? `\nNote: in this spread the "Option A" position represents the querent's actual choice "${optA}", and "Option B" represents "${optB}". Refer to these by name in your reading (e.g. "On the ${optA} path..." vs "Whereas if you choose ${optB}..."), then compare the energies and give a directional recommendation at the end.`
+      : "";
+
     const baseSystemZh = isFollowUp
-      ? `你是一位深諳塔羅的占卜師。這是問事者就同一件事所做的「衍伸占卜」——你已經幫他做過前一輪(易經或塔羅)的解盤,也跟他在聊天框裡對話過。現在他針對同件事提出更深入的問題,又抽了「${spreadNameZh}」(${spread.cardCount} 張)。請把「前一輪結果 + 先前對話 + 新牌陣」串成連貫的延伸解說,直接呼應前面講過的脈絡(例如「承接剛才我們談到的...」),${wordTargetZh}。每張牌的牌義系統已提供,不要逐張複述,而是把整個牌陣串成回應問題的故事。使用繁體中文,用段落書寫,不要列點。`
-      : `你是一位深諳塔羅的占卜師。使用者用「${spreadNameZh}」(${spread.cardCount} 張)針對一個問題占卜。每張牌的牌義(正位/逆位)以及它在牌陣中對應的位置與意義已由系統提供,你不需要重複牌義,而是要把所有牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。${effectiveDepth === "deep" ? "Deep Insight 模式 — 請特別交叉比對牌之間的關係(例如哪兩張牌互相呼應、哪一張在拖後腿)、揭示牌組合背後的潛在模式,並給出具體可執行的下一步。" : ""}語氣溫暖、貼近生活。${wordTargetZh},用段落書寫,不要列點。使用繁體中文。`;
+      ? `你是一位深諳塔羅的占卜師。這是問事者就同一件事所做的「衍伸占卜」——你已經幫他做過前一輪(易經或塔羅)的解盤,也跟他在聊天框裡對話過。現在他針對同件事提出更深入的問題,又抽了「${spreadNameZh}」(${spread.cardCount} 張)。請把「前一輪結果 + 先前對話 + 新牌陣」串成連貫的延伸解說,直接呼應前面講過的脈絡(例如「承接剛才我們談到的...」),${wordTargetZh}。每張牌的牌義系統已提供,不要逐張複述,而是把整個牌陣串成回應問題的故事。使用繁體中文,用段落書寫,不要列點。${twoOptionsHintZh}`
+      : `你是一位深諳塔羅的占卜師。使用者用「${spreadNameZh}」(${spread.cardCount} 張)針對一個問題占卜。每張牌的牌義(正位/逆位)以及它在牌陣中對應的位置與意義已由系統提供,你不需要重複牌義,而是要把所有牌串成一個針對問事者具體問題的連貫故事,並給出實際可行的建議。${effectiveDepth === "deep" ? "Deep Insight 模式 — 請特別交叉比對牌之間的關係(例如哪兩張牌互相呼應、哪一張在拖後腿)、揭示牌組合背後的潛在模式,並給出具體可執行的下一步。" : ""}語氣溫暖、貼近生活。${wordTargetZh},用段落書寫,不要列點。使用繁體中文。${twoOptionsHintZh}`;
 
     const baseSystemEn = isFollowUp
-      ? `You are a skilled tarot reader. This is a FOLLOW-UP reading on the same matter — you've already done a prior reading (I Ching or tarot) for this querent and chatted with them. They're asking a deeper question and drew the "${spreadNameEn}" (${spread.cardCount} cards). Weave "prior result + earlier conversation + new spread" into a coherent continuation, explicitly referencing the prior context. ${wordTargetEn}. Card meanings are already provided — don't restate; weave the whole spread into a story answering their question. Warm flowing paragraphs, no bullets.`
-      : `You are a skilled tarot reader. The querent drew the "${spreadNameEn}" (${spread.cardCount} cards) for a specific question. Card meanings (upright/reversed) and each position's significance are provided by the system — do NOT simply repeat them. Weave the entire spread into a coherent narrative about the querent's actual question and give practical, concrete advice. ${effectiveDepth === "deep" ? "Deep Insight mode — cross-reference relationships between cards (which echo each other, which holds back), reveal latent patterns, and give specific actionable next steps." : ""}Warm tone, ${wordTargetEn}, flowing paragraphs (no bullets).`;
+      ? `You are a skilled tarot reader. This is a FOLLOW-UP reading on the same matter — you've already done a prior reading (I Ching or tarot) for this querent and chatted with them. They're asking a deeper question and drew the "${spreadNameEn}" (${spread.cardCount} cards). Weave "prior result + earlier conversation + new spread" into a coherent continuation, explicitly referencing the prior context. ${wordTargetEn}. Card meanings are already provided — don't restate; weave the whole spread into a story answering their question. Warm flowing paragraphs, no bullets.${twoOptionsHintEn}`
+      : `You are a skilled tarot reader. The querent drew the "${spreadNameEn}" (${spread.cardCount} cards) for a specific question. Card meanings (upright/reversed) and each position's significance are provided by the system — do NOT simply repeat them. Weave the entire spread into a coherent narrative about the querent's actual question and give practical, concrete advice. ${effectiveDepth === "deep" ? "Deep Insight mode — cross-reference relationships between cards (which echo each other, which holds back), reveal latent patterns, and give specific actionable next steps." : ""}Warm tone, ${wordTargetEn}, flowing paragraphs (no bullets).${twoOptionsHintEn}`;
 
     const baseSystemPrompt = isZh ? baseSystemZh : baseSystemEn;
     const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
@@ -235,9 +253,15 @@ export async function POST(request: NextRequest) {
       ? (isFollowUp ? `新問題(${category}):${question}` : `問題(${category}):${question}`)
       : (isFollowUp ? `New question (${category}): ${question}` : `Question (${category}): ${question}`);
 
+    const optionsBlock = hasTwoOptions
+      ? (isZh
+          ? `\n\n問事者正在權衡的兩個具體選項:\n  選項 A:${optA}\n  選項 B:${optB}\n(請在解盤中以這兩個名稱稱呼,並比較兩條路的能量。)`
+          : `\n\nThe querent is weighing these two concrete options:\n  Option A: ${optA}\n  Option B: ${optB}\n(Refer to them by name in the reading and compare the two paths.)`)
+      : "";
+
     const userMessage = isZh
-      ? `${contextBlock}${newQuestionLine}\n\n本次牌陣:${spreadNameZh}(共 ${spread.cardCount} 張)\n\n${cardDescriptions}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與這個牌陣,給出連貫的延伸解說,${wordTargetZh}。` : `請把整個牌陣串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,${wordTargetZh}。`}`
-      : `${contextBlock}${newQuestionLine}\n\nSpread: ${spreadNameEn} (${spread.cardCount} cards)\n\n${cardDescriptions}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading from this new spread for my new question. ${wordTargetEn}.` : `Weave the whole spread into a coherent narrative addressing my specific question, with practical advice. ${wordTargetEn}.`}`;
+      ? `${contextBlock}${newQuestionLine}${optionsBlock}\n\n本次牌陣:${spreadNameZh}(共 ${spread.cardCount} 張)\n\n${cardDescriptions}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與這個牌陣,給出連貫的延伸解說,${wordTargetZh}。` : `請把整個牌陣串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,${wordTargetZh}。`}`
+      : `${contextBlock}${newQuestionLine}${optionsBlock}\n\nSpread: ${spreadNameEn} (${spread.cardCount} cards)\n\n${cardDescriptions}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading from this new spread for my new question. ${wordTargetEn}.` : `Weave the whole spread into a coherent narrative addressing my specific question, with practical advice. ${wordTargetEn}.`}`;
 
     const maxTokens = effectiveDepth === "deep" ? 1400 : 600;
 
