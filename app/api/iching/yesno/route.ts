@@ -21,7 +21,8 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
-import { recordCardObtained } from "@/lib/cardCollection";
+// Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
+// 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
 
 export type YesNoVerdict = "yes" | "no" | "depends";
 
@@ -202,22 +203,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 卡牌收藏(訪客不收)— 是非占卜抽到一卦
-    let collectionIsNew = false;
-    let collectionCount = 0;
-    let collectionRewards = 0;
-    if (user) {
-      const r = await recordCardObtained({
-        userId: user.id,
-        collectionType: "iching",
-        cardId: String(hex.number),
-        source: "yes_no",
-      });
-      collectionIsNew = r.isNew;
-      collectionCount = r.distinctCount;
-      collectionRewards = r.rewardCredits;
-    }
-
     const hexName = pickStr(safeLocale, hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
     const judgmentModern = pickStr(
       safeLocale,
@@ -321,9 +306,6 @@ export async function POST(request: NextRequest) {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
         "X-YesNo-Verdict": verdict,
-        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
-        "X-Collection-Count": String(collectionCount),
-        "X-Collection-Rewards": String(collectionRewards),
       },
     });
   } catch (error) {

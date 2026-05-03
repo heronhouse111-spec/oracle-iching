@@ -163,10 +163,10 @@ export default function YesNoPage() {
           </p>
           <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, marginTop: 6 }}>
             {t(
-              "每次占卜消耗 1 點",
-              "Each reading costs 1 credit",
-              "1 回の占いで 1 ポイント消費",
-              "1회 점 1 포인트 소모"
+              "每次占卜消耗 2 點",
+              "Each reading costs 2 credits",
+              "1 回の占いで 2 ポイント消費",
+              "1회 점 2 포인트 소모"
             )}
           </div>
         </div>
