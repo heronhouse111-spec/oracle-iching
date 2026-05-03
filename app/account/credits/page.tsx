@@ -59,6 +59,46 @@ export default function CreditsPurchasePage() {
   // 防止 autoBuy URL param 被多次觸發(StrictMode 雙呼叫 / 重渲染)
   const autoBuyTriggeredRef = useRef(false);
 
+  // 是否有過任何付費紀錄 — 用來決定要不要顯示 firstTimeOnly 的 pack(如 starter)
+  // null = 還沒查;訪客 fetch 後也會是 null(視同未購,可看 starter)
+  const [hasPurchased, setHasPurchased] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/account/has-purchased", {
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const j = (await res.json()) as {
+          authenticated: boolean;
+          hasPurchased?: boolean;
+        };
+        // 訪客一律視為「未購」可看 starter;登入用戶按 server 結果走
+        setHasPurchased(j.authenticated ? Boolean(j.hasPurchased) : false);
+      } catch {
+        // 失敗保守 → 視為已購買,避免漏發 starter 多次
+        if (!cancelled) setHasPurchased(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 過濾出可以顯示的 packs:
+  //   - firstTimeOnly 的要 hasPurchased === false
+  //   - TWA 環境(Play Billing)下,starter pack 暫時隱藏
+  //     (因為 Play Console 還沒建立 orc.credits.pack100_starter SKU)
+  const visiblePacks = CREDIT_PACKS.filter((p) => {
+    if (p.firstTimeOnly) {
+      if (hasPurchased !== false) return false;
+      if (isTwa) return false;  // TWA 暫時走 ECPay 路徑無 starter,等 Play SKU 建好移除
+    }
+    return true;
+  });
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setAuthed(false);
@@ -288,10 +328,10 @@ export default function CreditsPurchasePage() {
           }}
         >
           {t(
-            "每次 AI 占卜分析扣 5 點、衍伸問卜扣 10 點、追問每則 1 點",
-            "Main divination costs 5 credits; follow-up reading 10; each chat message 1.",
-            "AI 占い解析は 5 ポイント、フォローアップ占いは 10 ポイント、追加質問は 1 件 1 ポイント。",
-            "AI 점 해석은 5 포인트, 후속 점은 10 포인트, 추가 질문은 1건당 1 포인트."
+            "每次 AI 占卜分析扣 5 點、衍伸問卜扣 10 點、追問每則 2 點",
+            "Main divination costs 5 credits; follow-up reading 10; each chat message 2.",
+            "AI 占い解析は 5 ポイント、フォローアップ占いは 10 ポイント、追加質問は 1 件 2 ポイント。",
+            "AI 점 해석은 5 포인트, 후속 점은 10 포인트, 추가 질문은 1건당 2 포인트."
           )}
         </p>
 
@@ -458,7 +498,7 @@ export default function CreditsPurchasePage() {
             marginBottom: 24,
           }}
         >
-          {CREDIT_PACKS.map((pack) => {
+          {visiblePacks.map((pack) => {
             return (
               <div
                 key={pack.id}
@@ -492,6 +532,27 @@ export default function CreditsPurchasePage() {
                     }}
                   >
                     {t("最划算", "BEST VALUE", "最もお得", "최고 가성비")}
+                  </div>
+                )}
+                {pack.firstTimeOnly && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -10,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background:
+                        "linear-gradient(135deg, #f97316 0%, #fb923c 50%, #f97316 100%)",
+                      color: "#0a0a1a",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 9999,
+                      letterSpacing: 1,
+                      boxShadow: "0 2px 8px rgba(249,115,22,0.45)",
+                    }}
+                  >
+                    {t("新手限定 · 一次", "STARTER · ONE-TIME", "新規限定 · 一度のみ", "신규 한정 · 1회")}
                   </div>
                 )}
                 <div

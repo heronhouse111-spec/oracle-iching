@@ -18,7 +18,11 @@ export interface Price {
   USD: number;
 }
 
-export type CreditPackId = "pack_200" | "pack_500" | "pack_1200";
+export type CreditPackId =
+  | "pack_100_starter"
+  | "pack_200"
+  | "pack_500"
+  | "pack_1200";
 
 export interface CreditPack {
   id: CreditPackId;
@@ -27,6 +31,9 @@ export interface CreditPack {
   price: Price;
   /** 標示是否為熱門選項(UI 會加外框特效) */
   highlighted?: boolean;
+  /** true = 限首購一次性。checkout 端 + UI 端都會驗:用戶若有過任何
+   *  ecpay_purchase / play_billing_purchase / purchase_pack 紀錄即不可購買。 */
+  firstTimeOnly?: boolean;
 }
 
 /**
@@ -47,6 +54,18 @@ export interface CreditPack {
  *   pack_1200  :  $15.99
  */
 export const CREDIT_PACKS: CreditPack[] = [
+  {
+    // Phase 26 新增 — 限首購一次,新手體驗包
+    // 邏輯:checkout API 會 query credit_transactions 是否有 ecpay_purchase /
+    // play_billing_purchase / purchase_pack 任一筆;有就 reject。
+    // 30 點 bonus 讓單價 NT$60/130pt = NT$0.46/pt,介於 pack_200 (NT$0.60) 與
+    // pack_500 含贈 (NT$0.436) 之間,引導首購用戶下次直接跳到 pack_500。
+    id: "pack_100_starter",
+    credits: 100,
+    bonusCredits: 30,
+    price: { TWD: 60, USD: 1.99 },
+    firstTimeOnly: true,
+  },
   {
     id: "pack_200",
     credits: 200,

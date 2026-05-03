@@ -1,11 +1,10 @@
 /**
- * ECPay(綠界)實作 —— TWD 專用。
+ * @deprecated 這支 stub 已被 hub-based 架構取代,實際的 ECPay 串接在:
+ *   - app/api/billing/ecpay/checkout/route.ts  (建單,委派 pay.heronhouse.me hub)
+ *   - app/api/billing/ecpay/granted/route.ts   (hub 回 callback,補點 / 啟用訂閱)
  *
- * 目前階段 1:綠界帳號申請中,createCheckout 回傳 coming_soon。
- * 階段 2 綠界核可後,改成:
- *   1. POST /api/payments/ecpay/create 建訂單 + 回傳 checkout form URL
- *   2. 前端導向該 URL 填卡
- *   3. ECPay webhook → /api/payments/ecpay/webhook 更新訂單狀態 + 補點
+ * 保留這支 + index.ts 的抽象介面是為了未來若要做不同 provider 路由(如 Paddle/Stripe)時
+ * 仍有一致的 PaymentProvider 介面。但目前路由邏輯沒走這裡。
  */
 
 import type {

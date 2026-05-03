@@ -98,6 +98,38 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    // 首購限定 pack:檢查 user 是否已有任何付費紀錄。
+    // 失敗保守 → 視為已購買,避免漏發 starter 卡多次。
+    if (pack.firstTimeOnly) {
+      const { data: existingPurchase, error: histErr } = await supabase
+        .from("credit_transactions")
+        .select("id")
+        .eq("user_id", user.id)
+        .in("reason", [
+          "ecpay_purchase",
+          "play_billing_purchase",
+          "purchase_pack",
+          "subscription_refill",
+        ])
+        .limit(1)
+        .maybeSingle();
+      if (histErr) {
+        console.error("[ecpay/checkout] first-time check failed:", histErr);
+        return NextResponse.json(
+          { error: "first_time_check_failed" },
+          { status: 500 },
+        );
+      }
+      if (existingPurchase) {
+        return NextResponse.json(
+          {
+            error: "first_time_only",
+            detail: `${pack.id} 限首購,你已有付費紀錄,請選其他方案`,
+          },
+          { status: 403 },
+        );
+      }
+    }
     amount = pack.price.TWD;
     const total = pack.credits + pack.bonusCredits;
     itemName = `易問 ${total} 點`;
