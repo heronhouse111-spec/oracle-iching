@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { SPREADS, spreadImageSlot } from "@/data/spreads";
+import { tarotSpreadCostByCardCount } from "@/lib/uiCreditCosts";
 
 interface Props {
   uiImages: Record<string, string>;
@@ -44,6 +45,7 @@ export default function TarotSpreadIndexView({ uiImages }: Props) {
           const thumb = uiImages[spreadImageSlot(s.id)];
           const sName = t(s.nameZh, s.nameEn, s.nameJa, s.nameKo);
           const sTagline = t(s.taglineZh, s.taglineEn, s.taglineJa, s.taglineKo);
+          const spreadCost = tarotSpreadCostByCardCount(s.cardCount);
           return (
             <Link
               key={s.id}
@@ -91,8 +93,28 @@ export default function TarotSpreadIndexView({ uiImages }: Props) {
                   >
                     {sName}
                   </h2>
-                  <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 12, whiteSpace: "nowrap" }}>
-                    {t(`${s.cardCount} 張`, `${s.cardCount} cards`, `${s.cardCount}枚`, `${s.cardCount}장`)}
+                  <span style={{ display: "inline-flex", gap: 6, alignItems: "center", whiteSpace: "nowrap" }}>
+                    <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 12 }}>
+                      {t(`${s.cardCount} 張`, `${s.cardCount} cards`, `${s.cardCount}枚`, `${s.cardCount}장`)}
+                    </span>
+                    <span
+                      style={{
+                        color: "#d4a855",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: "rgba(212,168,85,0.12)",
+                        border: "1px solid rgba(212,168,85,0.3)",
+                        padding: "2px 9px",
+                        borderRadius: 9999,
+                      }}
+                    >
+                      {t(
+                        `${spreadCost} 點`,
+                        `${spreadCost} credits`,
+                        `${spreadCost} ポイント`,
+                        `${spreadCost} 포인트`
+                      )}
+                    </span>
                   </span>
                 </div>
                 <p style={{ color: "#e8e8f0", fontSize: 14, lineHeight: 1.7, margin: 0 }}>

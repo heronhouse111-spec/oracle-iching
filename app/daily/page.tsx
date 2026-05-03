@@ -197,6 +197,27 @@ export default function DailyPage() {
               "One card a day — a reminder for today's energy."
             )}
           </p>
+          <div style={{ marginTop: 10 }}>
+            <span
+              style={{
+                display: "inline-block",
+                color: "#d4a855",
+                fontSize: 12,
+                fontWeight: 600,
+                background: "rgba(212,168,85,0.12)",
+                border: "1px solid rgba(212,168,85,0.3)",
+                padding: "4px 12px",
+                borderRadius: 9999,
+              }}
+            >
+              {t(
+                "每天 1 點(同日重抽免費)",
+                "1 credit per day (re-open free)",
+                "1 日 1 ポイント(同日再表示は無料)",
+                "하루 1 포인트(같은 날 재열람 무료)"
+              )}
+            </span>
+          </div>
           {dateLabel && (
             <div style={{ color: "rgba(212,168,85,0.85)", fontSize: 13, marginTop: 6 }}>
               {dateLabel}
@@ -257,14 +278,6 @@ export default function DailyPage() {
                   "✦ 로그인하여 오늘의 카드 뽑기"
                 )}
               </button>
-              <div style={{ color: "rgba(212,168,85,0.6)", fontSize: 11, marginTop: 12 }}>
-                {t(
-                  "每天 1 點(同日重抽免費)",
-                  "1 credit per day (no recharge on re-open)",
-                  "1 日 1 ポイント(同日の再表示は無料)",
-                  "하루 1 포인트(같은 날 재표시 무료)"
-                )}
-              </div>
             </motion.div>
           )}
 

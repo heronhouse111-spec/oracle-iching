@@ -36,6 +36,29 @@ async function tarotCostFor(spread: Spread, isFollowUp: boolean): Promise<number
   }
 }
 
+/**
+ * 各牌陣的 AI 解讀篇幅
+ *   love-cross  : 600 字 / ~450 words(5 張要彼此呼應,寫得完整)
+ *   celtic-cross: 1000 字 / ~750 words(10 張完整人生命題,需要長篇)
+ *   其他牌陣 → 沿用 depth 規則:Quick 約 200 / Deep 約 500
+ * max_tokens 抓字數 × ~2(中文約 1 token/字,留 buffer 讓模型完成段落)
+ */
+function tarotWordTargetFor(spread: Spread, isDeep: boolean): {
+  zh: string;
+  en: string;
+  maxTokens: number;
+} {
+  if (spread.id === "love-cross") {
+    return { zh: "約 600 字", en: "around 450 words", maxTokens: 1600 };
+  }
+  if (spread.id === "celtic-cross") {
+    return { zh: "約 1000 字", en: "around 750 words", maxTokens: 2400 };
+  }
+  return isDeep
+    ? { zh: "約 500 字", en: "around 350 words", maxTokens: 1400 }
+    : { zh: "約 200 字", en: "around 150 words", maxTokens: 600 };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -223,9 +246,10 @@ export async function POST(request: NextRequest) {
       collectionRewards = agg.totalRewardCredits;
     }
 
-    // 字數規格:Quick 約 200 字 / Deep 約 500 字
-    const wordTargetZh = effectiveDepth === "deep" ? "約 500 字" : "約 200 字";
-    const wordTargetEn = effectiveDepth === "deep" ? "around 350 words" : "around 150 words";
+    // 字數規格:愛情十字 600 字 / 凱爾特十字 1000 字 / 其他依 depth(Quick 200、Deep 500)
+    const wordTarget = tarotWordTargetFor(spread, effectiveDepth === "deep");
+    const wordTargetZh = wordTarget.zh;
+    const wordTargetEn = wordTarget.en;
     const spreadNameZh = spread.nameZh;
     const spreadNameEn = spread.nameEn;
 
@@ -297,7 +321,7 @@ export async function POST(request: NextRequest) {
       ? `${contextBlock}${newQuestionLine}${optionsBlock}\n\n本次牌陣:${spreadNameZh}(共 ${spread.cardCount} 張)\n\n${cardDescriptions}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與這個牌陣,給出連貫的延伸解說,${wordTargetZh}。` : `請把整個牌陣串成一個連貫的故事,回應我的具體問題,並給出實際可行的建議,${wordTargetZh}。`}`
       : `${contextBlock}${newQuestionLine}${optionsBlock}\n\nSpread: ${spreadNameEn} (${spread.cardCount} cards)\n\n${cardDescriptions}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading from this new spread for my new question. ${wordTargetEn}.` : `Weave the whole spread into a coherent narrative addressing my specific question, with practical advice. ${wordTargetEn}.`}`;
 
-    const maxTokens = effectiveDepth === "deep" ? 1400 : 600;
+    const maxTokens = wordTarget.maxTokens;
 
     // DeepSeek API is OpenAI-compatible
     const response = await fetch("https://api.deepseek.com/chat/completions", {

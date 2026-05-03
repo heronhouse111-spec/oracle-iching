@@ -168,8 +168,26 @@ export default function IChingYesNoPage() {
               "명확한 양자택일 질문을 던지고, 64괘에서 한 괘를 즉시 뽑아 방향을 봅니다."
             )}
           </p>
-          <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, marginTop: 6 }}>
-            {t("每次占卜消耗 2 點", "Each reading costs 2 credits", "1回につき 2 ポイント消費", "1회 점에 2포인트 소모")}
+          <div style={{ marginTop: 10 }}>
+            <span
+              style={{
+                display: "inline-block",
+                color: "#d4a855",
+                fontSize: 12,
+                fontWeight: 600,
+                background: "rgba(212,168,85,0.12)",
+                border: "1px solid rgba(212,168,85,0.3)",
+                padding: "4px 12px",
+                borderRadius: 9999,
+              }}
+            >
+              {t(
+                "每次占卜 2 點",
+                "2 credits per reading",
+                "1回につき 2 ポイント",
+                "1회 점에 2포인트"
+              )}
+            </span>
           </div>
         </div>
 

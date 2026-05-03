@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { UI_CREDIT_COSTS } from "@/lib/uiCreditCosts";
 
 interface MethodEntry {
   id: string;
@@ -31,6 +32,8 @@ interface MethodEntry {
   taglineKo: string;
   /** badge tier — 跟 /iching/methods 同色系 */
   tier: "main" | "instant" | "advanced";
+  /** 此占法的點數 cost(從 UI_CREDIT_COSTS 取) */
+  cost: number;
 }
 
 const METHODS: MethodEntry[] = [
@@ -52,6 +55,7 @@ const METHODS: MethodEntry[] = [
     taglineJa: "六回投げて完全な卦を成し、AIが卦辞・象辞・動爻を踏まえて読み解く",
     taglineKo: "여섯 번 던져 완전한 괘를 이루고, AI가 괘사·상사·동효를 종합해 풀이",
     tier: "main",
+    cost: UI_CREDIT_COSTS.DIVINE,
   },
   {
     id: "plum-blossom",
@@ -70,6 +74,7 @@ const METHODS: MethodEntry[] = [
     taglineJa: "宋代の邵雍が創始 — 銭を投げず、問いを立てた時刻から卦を起こし、AIが読み解く",
     taglineKo: "송대 소옹이 창안 — 동전 없이 질문 시점의 시간으로 괘를 세우고 AI가 풀이",
     tier: "instant",
+    cost: UI_CREDIT_COSTS.PLUM_BLOSSOM,
   },
   {
     id: "direction-hexagram",
@@ -88,6 +93,7 @@ const METHODS: MethodEntry[] = [
     taglineJa: "二段階の占法 — 先に方位で「どこで、誰に」を定め、後に全卦で「どう運ぶか」を見る",
     taglineKo: "두 단계 점법 — 먼저 방위로 '어디서, 누구'를 정하고, 이후 전괘로 '어떻게 흐를지'를 봅니다",
     tier: "advanced",
+    cost: UI_CREDIT_COSTS.DIRECTION_HEX,
   },
 ];
 
@@ -295,6 +301,25 @@ export default function IchingMethodSelectView() {
                   }}
                 >
                   {tierLabel}
+                </span>
+                <span
+                  style={{
+                    color: "#d4a855",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    background: "rgba(212,168,85,0.12)",
+                    border: "1px solid rgba(212,168,85,0.3)",
+                    padding: "2px 9px",
+                    borderRadius: 100,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {t(
+                    `${m.cost} 點`,
+                    `${m.cost} credits`,
+                    `${m.cost} ポイント`,
+                    `${m.cost} 포인트`
+                  )}
                 </span>
               </div>
               <p

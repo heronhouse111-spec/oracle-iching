@@ -33,9 +33,10 @@ export const CREDIT_COSTS = {
   YESNO: 2,
   /** 每日一卡 — 每天 1 點當回訪鉤子(同 user 同日重抽走 cache 不再扣) */
   DAILY: 1,
-  /** 多牌陣加價(牌數 × 解讀深度) — 愛情十字 5 卡 / 凱爾特十字 10 卡 / 年度 12 卡 */
-  TAROT_5_CARD: 8,
-  TAROT_10_CARD: 12,
+  /** 多牌陣加價(牌數 × 解讀深度) — 愛情十字 5 卡 / 凱爾特十字 10 卡 / 年度 12 卡(已下架)
+   *  愛情十字漲到 10、凱爾特十字漲到 20:長 prompt + 600/1000 字 AI 回應的 token 成本。 */
+  TAROT_5_CARD: 10,
+  TAROT_10_CARD: 20,
   TAROT_12_CARD: 14,
   /** Deep Insight 模式加成(訂閱戶才能用,免費版鎖在 Quick) */
   DEEP_INSIGHT_SURCHARGE: 3,

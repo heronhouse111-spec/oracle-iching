@@ -43,6 +43,7 @@ import {
   notifyCreditsChanged,
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
+import { tarotSpreadCostByCardCount, UI_CREDIT_COSTS } from "@/lib/uiCreditCosts";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
@@ -125,12 +126,15 @@ function FreeToolCard({
   title,
   desc,
   cta,
+  costLabel,
 }: {
   href: string;
   imageUrl: string | undefined;
   title: string;
   desc: string;
   cta: string;
+  /** 已 i18n 過的點數標示文字。傳 undefined 表示純資訊頁(不扣點) */
+  costLabel?: string;
 }) {
   return (
     <Link
@@ -152,6 +156,24 @@ function FreeToolCard({
         <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
           {desc}
         </div>
+        {costLabel && (
+          <div style={{ marginTop: 8 }}>
+            <span
+              style={{
+                display: "inline-block",
+                color: "#d4a855",
+                fontSize: 10,
+                fontWeight: 600,
+                background: "rgba(212,168,85,0.12)",
+                border: "1px solid rgba(212,168,85,0.3)",
+                padding: "2px 8px",
+                borderRadius: 9999,
+              }}
+            >
+              {costLabel}
+            </span>
+          </div>
+        )}
         <div style={{ color: "#d4a855", fontSize: 12, fontWeight: 600, marginTop: 10 }}>
           {cta} →
         </div>
@@ -2799,6 +2821,12 @@ export default function Home() {
                       title={t("Yes / No 一卦速答", "Yes / No I Ching", "Yes / No 一卦速答", "Yes / No 주역")}
                       desc={t("從 64 卦抽一卦", "Pull one of the 64", "64卦から1卦", "64괘 중 한 괘")}
                       cta={t("來問問看", "Try it", "試してみる", "물어보기")}
+                      costLabel={t(
+                        `${UI_CREDIT_COSTS.YESNO} 點 / 次`,
+                        `${UI_CREDIT_COSTS.YESNO} credits / use`,
+                        `${UI_CREDIT_COSTS.YESNO} ポイント/回`,
+                        `${UI_CREDIT_COSTS.YESNO} 포인트/회`
+                      )}
                     />
                     <FreeToolCard
                       href="/iching/daily"
@@ -2806,6 +2834,12 @@ export default function Home() {
                       title={t("每日一卦", "Daily Hexagram", "毎日の卦", "오늘의 괘")}
                       desc={t("今日能量指引", "Today's energy", "今日のエネルギー", "오늘의 에너지")}
                       cta={t("看今天的", "Today", "今日を見る", "오늘 보기")}
+                      costLabel={t(
+                        `${UI_CREDIT_COSTS.DAILY} 點 / 天`,
+                        `${UI_CREDIT_COSTS.DAILY} credit / day`,
+                        `${UI_CREDIT_COSTS.DAILY} ポイント/日`,
+                        `${UI_CREDIT_COSTS.DAILY} 포인트/일`
+                      )}
                     />
                     <FreeToolCard
                       href="/iching/methods"
@@ -2813,6 +2847,7 @@ export default function Home() {
                       title={t("卜卦方式介紹", "Divination Methods", "卜卦の方法", "점치는 법")}
                       desc={t("五種主流卜卦法", "Five mainstream methods", "5つの主要な方法", "다섯 가지 방법")}
                       cta={t("看方式", "Browse", "方法を見る", "방법 보기")}
+                      costLabel={t("免費瀏覽", "Free to browse", "無料で閲覧", "무료 열람")}
                     />
                   </div>
 
@@ -2837,6 +2872,12 @@ export default function Home() {
                       title={t("Yes / No 速答", "Yes / No Quick", "Yes / No 即答", "Yes / No 즉답")}
                       desc={t("簡單問題秒回", "Single-card answer", "シンプルな質問に即答", "간단 질문 즉답")}
                       cta={t("來問問看", "Try it", "試してみる", "물어보기")}
+                      costLabel={t(
+                        `${UI_CREDIT_COSTS.YESNO} 點 / 次`,
+                        `${UI_CREDIT_COSTS.YESNO} credits / use`,
+                        `${UI_CREDIT_COSTS.YESNO} ポイント/回`,
+                        `${UI_CREDIT_COSTS.YESNO} 포인트/회`
+                      )}
                     />
                     <FreeToolCard
                       href="/daily"
@@ -2844,6 +2885,12 @@ export default function Home() {
                       title={t("每日一卡", "Daily Card", "毎日のカード", "오늘의 카드")}
                       desc={t("今日能量指引", "Today's energy", "今日のエネルギー", "오늘의 에너지")}
                       cta={t("看今天的", "Today", "今日を見る", "오늘 보기")}
+                      costLabel={t(
+                        `${UI_CREDIT_COSTS.DAILY} 點 / 天`,
+                        `${UI_CREDIT_COSTS.DAILY} credit / day`,
+                        `${UI_CREDIT_COSTS.DAILY} ポイント/日`,
+                        `${UI_CREDIT_COSTS.DAILY} 포인트/일`
+                      )}
                     />
                     <FreeToolCard
                       href="/tarot-spread"
@@ -2851,6 +2898,7 @@ export default function Home() {
                       title={t("牌陣介紹", "Spreads Guide", "スプレッドガイド", "스프레드 가이드")}
                       desc={t("認識經典牌陣", "Classic spreads", "定番スプレッド", "대표 스프레드")}
                       cta={t("看牌陣", "Browse", "スプレッドを見る", "스프레드 보기")}
+                      costLabel={t("免費瀏覽", "Free to browse", "無料で閲覧", "무료 열람")}
                     />
                   </div>
                 </div>
@@ -3208,8 +3256,29 @@ export default function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 32 }}>☯</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("易經占卜", "I Ching", "易経占い", "주역 점")}
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                        <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16 }}>
+                          {t("易經占卜", "I Ching", "易経占い", "주역 점")}
+                        </div>
+                        <span
+                          style={{
+                            color: "#d4a855",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: "rgba(212,168,85,0.12)",
+                            border: "1px solid rgba(212,168,85,0.3)",
+                            padding: "2px 9px",
+                            borderRadius: 9999,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {t(
+                            `${UI_CREDIT_COSTS.DIVINE} 點`,
+                            `${UI_CREDIT_COSTS.DIVINE} credits`,
+                            `${UI_CREDIT_COSTS.DIVINE} ポイント`,
+                            `${UI_CREDIT_COSTS.DIVINE} 포인트`
+                          )}
+                        </span>
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -3238,8 +3307,29 @@ export default function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ fontSize: 32 }}>🎴</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-                        {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                        <div style={{ color: "#d4a855", fontWeight: 600, fontSize: 16 }}>
+                          {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
+                        </div>
+                        <span
+                          style={{
+                            color: "#d4a855",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            background: "rgba(212,168,85,0.12)",
+                            border: "1px solid rgba(212,168,85,0.3)",
+                            padding: "2px 9px",
+                            borderRadius: 9999,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {t(
+                            `${UI_CREDIT_COSTS.TAROT} 點起`,
+                            `from ${UI_CREDIT_COSTS.TAROT} credits`,
+                            `${UI_CREDIT_COSTS.TAROT} ポイント〜`,
+                            `${UI_CREDIT_COSTS.TAROT} 포인트〜`
+                          )}
+                        </span>
                       </div>
                       <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 13, lineHeight: 1.5 }}>
                         {t(
@@ -3300,6 +3390,7 @@ export default function Home() {
                 {SPREADS.map((s) => {
                   const thumb = uiImages[spreadImageSlot(s.id)];
                   const lockedForGuest = !isSignedIn && s.cardCount > 3;
+                  const spreadCost = tarotSpreadCostByCardCount(s.cardCount);
                   return (
                     <motion.button
                       key={s.id}
@@ -3353,8 +3444,28 @@ export default function Home() {
                               {locale === "en" ? s.nameZh : s.nameEn}
                             </span>
                           </div>
-                          <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, whiteSpace: "nowrap" }}>
-                            {t(`${s.cardCount} 張`, `${s.cardCount} cards`, `${s.cardCount}枚`, `${s.cardCount}장`)}
+                          <span style={{ display: "inline-flex", gap: 6, alignItems: "center", whiteSpace: "nowrap" }}>
+                            <span style={{ color: "rgba(212,168,85,0.7)", fontSize: 11 }}>
+                              {t(`${s.cardCount} 張`, `${s.cardCount} cards`, `${s.cardCount}枚`, `${s.cardCount}장`)}
+                            </span>
+                            <span
+                              style={{
+                                color: "#d4a855",
+                                fontSize: 11,
+                                fontWeight: 600,
+                                background: "rgba(212,168,85,0.12)",
+                                border: "1px solid rgba(212,168,85,0.3)",
+                                padding: "2px 8px",
+                                borderRadius: 9999,
+                              }}
+                            >
+                              {t(
+                                `${spreadCost} 點`,
+                                `${spreadCost} credits`,
+                                `${spreadCost} ポイント`,
+                                `${spreadCost} 포인트`
+                              )}
+                            </span>
                           </span>
                         </div>
                         <p style={{ color: "rgba(192,192,208,0.75)", fontSize: 12, lineHeight: 1.55, margin: "4px 0 0" }}>
