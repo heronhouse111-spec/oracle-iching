@@ -40,9 +40,9 @@ export const CREDIT_COSTS = {
   TAROT_12_CARD: 14,
   /** Deep Insight 模式加成(訂閱戶才能用,免費版鎖在 Quick) */
   DEEP_INSIGHT_SURCHARGE: 3,
-  /** 方位卦象合參 — 兩段式占法(羅盤方位 + 完整六爻),含 AI 合參解讀。
-   *  比一般 DIVINE 多一段卜方位的解讀,但又比 DIVINE_FOLLOWUP 簡單,定 6 點。 */
-  DIRECTION_HEX: 6,
+  /** 方位卦象合參 — 兩段式占法(羅盤方位 + 完整六爻),含 AI 合參 600 字解讀。
+   *  兩段卜法 + 長 prompt + 600 字回應,token 成本接近愛情十字,定 10 點。 */
+  DIRECTION_HEX: 10,
   /** 梅花易數 — 時間起卦不擲錢,但仍是完整六爻 + AI 解卦,跟 DIVINE 同價。 */
   PLUM_BLOSSOM: 5,
 } as const;

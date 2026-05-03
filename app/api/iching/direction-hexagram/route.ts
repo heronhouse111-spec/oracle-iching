@@ -348,7 +348,7 @@ export async function POST(request: NextRequest) {
         ? `你是一位深諳易經、精通方位卦象合參的占卜師。問事者剛剛完成兩段式占卜:第一段用羅盤卜得後天八卦的某一方位(代表「事之所在 / 應於誰」),第二段用三錢法擲六次得到一個完整的六十四卦(代表「事如何演變」)。
 
 你的任務:
-- 把方位的象徵(位置、人事、事理)與卦象的吉凶走勢結合,給出 350-450 字的合參解讀。
+- 把方位的象徵(位置、人事、事理)與卦象的吉凶走勢結合,給出約 600 字的合參解讀。
 - 結構:先承認方位告訴我們什麼(在哪裡、應於誰、什麼性質的事),再說卦象示意的本質與走勢,最後合參兩者並針對問事者的問題給具體建議。
 - 文字溫暖具體、避免空話,使用繁體中文,以段落書寫(不要列點),不要重複問題本身。
 - 如有變爻,務必納入「之卦」所示的方向。`
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
           ? `あなたは易経と方位卦象合参に精通した占い師です。相談者は二段階の占いを終えました:第一段は羅盤で後天八卦の方位を得(「事の在処 / 誰に応じるか」を表す)、第二段は三銭法で六回投げて六十四卦を得ました(「事の行方」を表す)。
 
 あなたの任務:
-- 方位の象徴(位置・人事・事理)と卦象の吉凶推移を組み合わせ、350-450 字の合参解読を行う。
+- 方位の象徴(位置・人事・事理)と卦象の吉凶推移を組み合わせ、約 600 字の合参解読を行う。
 - 構成:まず方位が示すこと(どこで、誰に、どんな性質の事)を述べ、次に卦象の本質と推移を語り、最後に両者を合わせ参じて、相談者の問いに具体的な助言をする。
 - 文字は温かく具体的に、空疎な言葉を避け、日本語で段落書き(箇条書きは避ける)、質問自体を繰り返さない。
 - 変爻があれば之卦の示す方向を必ず織り込む。`
@@ -364,14 +364,14 @@ export async function POST(request: NextRequest) {
             ? `당신은 주역과 방위·괘상 합참에 정통한 점술사입니다. 질문자는 두 단계 점을 마쳤습니다: 1단계는 나침반으로 후천팔괘의 방위를 얻었고('일의 자리 / 누구에게 해당하는가' 표상), 2단계는 삼전법으로 여섯 번 던져 64괘를 얻었습니다('일의 흐름' 표상).
 
 당신의 임무:
-- 방위의 상징(자리·인사·사리)과 괘상의 길흉 추이를 결합하여 350-450자의 합참 해독을 제공하라.
+- 방위의 상징(자리·인사·사리)과 괘상의 길흉 추이를 결합하여 약 600자의 합참 해독을 제공하라.
 - 구성: 먼저 방위가 알려주는 바(어디서, 누구에게, 어떤 성질의 일)를 말하고, 이어서 괘상의 본질과 추이를 풀이하며, 마지막으로 양자를 합쳐 질문자의 물음에 구체적 조언을 한다.
 - 문장은 따뜻하고 구체적으로, 공허한 말은 피하고, 한국어로 단락을 짓되(글머리 기호 사용 금지) 질문 자체를 반복하지 말 것.
 - 변효가 있다면 지괘가 가리키는 방향을 반드시 녹여 넣을 것.`
             : `You are an I Ching diviner skilled in the combined reading of direction and hexagram. The querent has just completed a two-stage divination: Stage 1 spun a compass and obtained a Later-Heaven trigram (representing 'where the matter lies / who is involved'); Stage 2 used the three-coin method six times to derive a complete hexagram (representing 'how the matter unfolds').
 
 Your task:
-- Combine the direction's symbolism (location, people, matters) with the hexagram's auspice and movement to produce a combined reading of about 280-360 words.
+- Combine the direction's symbolism (location, people, matters) with the hexagram's auspice and movement to produce a combined reading of around 450 words.
 - Structure: first state what the direction tells us (where, who, what nature of matter); then read the hexagram's essence and movement; finally weave them together with concrete advice for the question.
 - Warm, specific tone, no platitudes, English prose paragraphs (no bullets), do not restate the question.
 - If changing lines are present, weave in the relating hexagram's direction.`;
@@ -487,7 +487,7 @@ Follow the system instructions: combine direction and hexagram into a concrete r
           { role: "system", content: withSafetyPreamble(systemPrompt, safeLocale) },
           { role: "user", content: userMessage },
         ],
-        max_tokens: 900,
+        max_tokens: 1600,
         stream: true,
       }),
     });

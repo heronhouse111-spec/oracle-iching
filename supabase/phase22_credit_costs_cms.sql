@@ -70,8 +70,8 @@ values
    '接續前一輪占卜的延伸解說(讀脈絡 + 較長回覆)', 'Continuation reading (longer + reads context)', 'iching', 20),
   ('PLUM_BLOSSOM',   5,  '梅花易數',            'Plum Blossom',
    '時間起卦 + AI 解卦,跟主流同價',               'Time-cast + AI reading, same as main',         'iching', 30),
-  ('DIRECTION_HEX',  6,  '方位卦象合參',        'Direction-Hexagram',
-   '羅盤方位 + 完整六爻 + AI 合參解讀',            'Compass + 6-line + combined AI reading',       'iching', 40),
+  ('DIRECTION_HEX',  10, '方位卦象合參',        'Direction-Hexagram',
+   '羅盤方位 + 完整六爻 + AI 合參 600 字解讀',      'Compass + 6-line + combined AI 450-word reading', 'iching', 40),
   ('YESNO',          2,  'Yes/No 一卦速答',     'Yes/No quick reading',
    'phase 21 由 1 點漲到 2 點(防 Yes/No 套利收集)', 'Bumped 1→2 in phase 21 (anti-collection-arb)', 'iching', 50),
 

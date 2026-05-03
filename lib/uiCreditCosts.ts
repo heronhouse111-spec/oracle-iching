@@ -28,7 +28,7 @@ export const UI_CREDIT_COSTS = {
   TAROT_10_CARD: 20,   // 凱爾特十字
   TAROT_12_CARD: 14,
   DEEP_INSIGHT_SURCHARGE: 3,
-  DIRECTION_HEX: 6,
+  DIRECTION_HEX: 10,   // 方位卦象合參
   PLUM_BLOSSOM: 5,
 } as const;
 
