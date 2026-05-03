@@ -12,7 +12,6 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import AdminNav from "@/components/admin/AdminNav";
 
 type CollectionType = "iching" | "tarot";
 type Kind = "distinct_count" | "subkind_full";
@@ -173,7 +172,6 @@ export default function AdminMilestonesPage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <AdminNav />
       <main
         style={{
           paddingTop: 24,

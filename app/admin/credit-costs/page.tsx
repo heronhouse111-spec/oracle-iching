@@ -11,7 +11,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Header from "@/components/Header";
-import AdminNav from "@/components/admin/AdminNav";
 
 interface CreditCost {
   id: string;
@@ -140,7 +139,6 @@ export default function AdminCreditCostsPage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <AdminNav />
       <main
         style={{
           paddingTop: 24,
