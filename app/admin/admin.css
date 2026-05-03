@@ -20,9 +20,11 @@
   --al-border: #dbe3ee;
   --al-border-strong: #c2d0e3;
 
-  --al-text: #0f1a2e;
-  --al-text-muted: #5a6a82;
-  --al-text-subtle: #8a99b0;
+  /* 對比拉高:secondary 從 #5a6a82 → #36445c,tertiary 從 #8a99b0 → #5e6b82。
+     後台主要任務是「閱讀資料表」,寧可稍嫌厚重也要看得清楚。 */
+  --al-text: #0a1320;
+  --al-text-muted: #36445c;
+  --al-text-subtle: #5e6b82;
 
   --al-brand-50: #eef4fa;
   --al-brand-100: #dae8f3;
@@ -74,16 +76,17 @@
   backdrop-filter: none;
 }
 
-/* ─── 金色漸層文字改藍色漸層 ─── */
+/* ─── 金色漸層文字改藍色漸層 — 縮小漸層範圍提高對比 ─── */
 .admin-light .text-gold-gradient {
   background: linear-gradient(
     135deg,
     var(--al-brand-900) 0%,
-    var(--al-brand-500) 100%
+    var(--al-brand-700) 100%
   ) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
+  font-weight: 700;
 }
 
 /* ─── 金色按鈕改藍色 ─── */
@@ -135,10 +138,21 @@
   border-color: var(--al-brand-500) !important;
 }
 
-/* ─── 表格表頭 ─── */
+/* ─── 表格表頭 — 加強對比 ─── */
 .admin-light table thead tr {
-  background: var(--al-brand-50) !important;
-  color: var(--al-text-muted) !important;
+  background: var(--al-brand-100) !important;
+  color: var(--al-brand-900) !important;
+  font-weight: 600;
+}
+
+.admin-light table thead th {
+  color: var(--al-brand-900) !important;
+  font-weight: 600 !important;
+}
+
+/* 表格內文 — 強制 primary 字色,蓋過 page 內 inline 的淡色 */
+.admin-light table tbody td {
+  color: var(--al-text) !important;
 }
 
 .admin-light table tbody tr {
@@ -169,30 +183,38 @@
   color: var(--al-brand-700);
 }
 
-/* ─── 暗色文字 fallback(處理 inline rgba(192,192,208,…)) ─── */
+/* ─── 暗色文字 fallback(處理 inline rgba(192,192,208,…))
+     對比加強策略:0.6 以上 → primary 黑;0.4-0.55 → muted(現在已比之前深);
+     不再有「subtle」(太淡)的層級用在使用者讀的內容上。 */
 .admin-light [style*="rgba(192,192,208,0.85)"],
-.admin-light [style*="rgba(192,192,208,0.9)"] {
+.admin-light [style*="rgba(192,192,208,0.9)"],
+.admin-light [style*="rgba(192,192,208,0.8)"],
+.admin-light [style*="rgba(192,192,208,0.75)"],
+.admin-light [style*="rgba(192,192,208,0.7)"],
+.admin-light [style*="rgba(192,192,208,0.65)"],
+.admin-light [style*="rgba(192,192,208,0.6)"] {
   color: var(--al-text) !important;
 }
-.admin-light [style*="rgba(192,192,208,0.7)"],
-.admin-light [style*="rgba(192,192,208,0.75)"],
-.admin-light [style*="rgba(192,192,208,0.8)"] {
-  color: var(--al-text-muted) !important;
-}
-.admin-light [style*="rgba(192,192,208,0.5)"],
 .admin-light [style*="rgba(192,192,208,0.55)"],
-.admin-light [style*="rgba(192,192,208,0.6)"],
-.admin-light [style*="rgba(192,192,208,0.65)"] {
+.admin-light [style*="rgba(192,192,208,0.5)"],
+.admin-light [style*="rgba(192,192,208,0.45)"],
+.admin-light [style*="rgba(192,192,208,0.4)"],
+.admin-light [style*="rgba(192,192,208,0.35)"],
+.admin-light [style*="rgba(192,192,208,0.3)"] {
   color: var(--al-text-muted) !important;
 }
-.admin-light [style*="rgba(192,192,208,0.4)"],
-.admin-light [style*="rgba(192,192,208,0.45)"] {
-  color: var(--al-text-subtle) !important;
+
+/* 同樣處理灰白系 #e8e8f0(部分 input/label 用) */
+.admin-light [style*="color: #e8e8f0"],
+.admin-light [style*="color:#e8e8f0"] {
+  color: var(--al-text) !important;
 }
 
 /* ─── 金色 inline 改成藍 ─── */
 .admin-light [style*="color: #d4a855"],
-.admin-light [style*="color:#d4a855"] {
+.admin-light [style*="color:#d4a855"],
+.admin-light [style*="color: rgba(212,168,85"],
+.admin-light [style*="color:rgba(212,168,85"] {
   color: var(--al-brand-700) !important;
 }
 .admin-light [style*="background: rgba(212,168,85,0.06)"],
@@ -285,7 +307,7 @@
     var(--al-brand-900) 0%,
     var(--al-brand-800) 100%
   );
-  color: #cdd7e6;
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -308,7 +330,7 @@
 
 .admin-sidebar__brand-sub {
   font-size: 11px;
-  color: rgba(205, 215, 230, 0.55);
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 4px;
   letter-spacing: 0.05em;
 }
@@ -327,11 +349,12 @@
 }
 
 .admin-sidebar__group-title {
-  font-size: 10px;
+  font-size: 10.5px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(205, 215, 230, 0.4);
+  color: rgba(255, 255, 255, 0.65);
   padding: 6px 18px;
+  font-weight: 600;
 }
 
 .admin-sidebar__item {
@@ -339,8 +362,8 @@
   align-items: center;
   gap: 10px;
   padding: 9px 18px;
-  font-size: 13.5px;
-  color: rgba(205, 215, 230, 0.85);
+  font-size: 14px;
+  color: #ffffff;
   text-decoration: none;
   border-left: 3px solid transparent;
   transition:
@@ -350,7 +373,7 @@
 }
 
 .admin-sidebar__item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
@@ -405,7 +428,7 @@
 
 .admin-sidebar__user-email {
   font-size: 10.5px;
-  color: rgba(205, 215, 230, 0.55);
+  color: rgba(255, 255, 255, 0.75);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -413,8 +436,8 @@
 
 .admin-sidebar__logout {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(205, 215, 230, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -533,19 +556,18 @@
   color: var(--al-text);
 }
 
-/* ─── Tailwind 自訂色覆蓋(dashboard StatCard / TrendChart 等使用) ─── */
+/* ─── Tailwind 自訂色覆蓋(dashboard StatCard / TrendChart 等使用) ───
+     對比加強:6 以上一律 primary,3-5 才用 muted。 */
 .admin-light [class*="text-mystic-silver/9"],
-.admin-light [class*="text-mystic-silver/8"] {
-  color: var(--al-text) !important;
-}
+.admin-light [class*="text-mystic-silver/8"],
 .admin-light [class*="text-mystic-silver/7"],
 .admin-light [class*="text-mystic-silver/6"] {
-  color: var(--al-text-muted) !important;
+  color: var(--al-text) !important;
 }
 .admin-light [class*="text-mystic-silver/5"],
 .admin-light [class*="text-mystic-silver/4"],
 .admin-light [class*="text-mystic-silver/3"] {
-  color: var(--al-text-subtle) !important;
+  color: var(--al-text-muted) !important;
 }
 .admin-light [class*="text-mystic-gold"] {
   color: var(--al-brand-700) !important;
