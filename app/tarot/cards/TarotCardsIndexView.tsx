@@ -20,6 +20,7 @@ const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
 export default function TarotCardsIndexView() {
   const { t } = useLanguage();
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
+  const [obtainCounts, setObtainCounts] = useState<Map<string, number>>(new Map());
   const suitName = (s: typeof SUIT_ORDER[number]) =>
     t(SUIT_NAMES_ZH[s], SUIT_NAMES_EN[s], SUIT_NAMES_JA[s], SUIT_NAMES_KO[s]);
 
@@ -73,7 +74,10 @@ export default function TarotCardsIndexView() {
       <CollectionProgress
         type="tarot"
         total={78}
-        onLoaded={(d) => setOwnedIds(d.ownedIds)}
+        onLoaded={(d) => {
+          setOwnedIds(d.ownedIds);
+          setObtainCounts(d.obtainCounts);
+        }}
       />
 
       {grouped.map(({ suit, name, cards }) => (
@@ -103,6 +107,7 @@ export default function TarotCardsIndexView() {
           >
             {cards.map((card) => {
               const owned = ownedIds.has(card.id);
+              const cardCount = obtainCounts.get(card.id) ?? 0;
               return (
                 <Link
                   key={card.id}
@@ -123,20 +128,31 @@ export default function TarotCardsIndexView() {
                     transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
                   }}
                 >
+                  {/* 角標:抽到 1 次 → ✓;抽到 ≥2 次 → ×N(取代 ✓ 避免重複) */}
                   {owned && (
                     <span
-                      title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+                      title={
+                        cardCount >= 2
+                          ? t(
+                              `已抽到 ${cardCount} 次`,
+                              `Drawn ${cardCount} times`,
+                              `${cardCount} 回引いた`,
+                              `${cardCount}회 뽑음`
+                            )
+                          : t("已收藏", "Collected", "収集済み", "수집 완료")
+                      }
                       style={{
                         position: "absolute",
                         top: 4,
                         right: 4,
-                        width: 18,
+                        minWidth: 18,
                         height: 18,
-                        borderRadius: "50%",
+                        borderRadius: 9999,
                         background: "linear-gradient(135deg,#d4a855,#fde68a)",
                         color: "#0a0a1a",
                         fontSize: 10,
                         fontWeight: 700,
+                        padding: cardCount >= 2 ? "0 6px" : 0,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -144,7 +160,7 @@ export default function TarotCardsIndexView() {
                         boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
                       }}
                     >
-                      ✓
+                      {cardCount >= 2 ? `×${cardCount}` : "✓"}
                     </span>
                   )}
                   <div

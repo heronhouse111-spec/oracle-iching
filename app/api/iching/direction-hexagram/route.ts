@@ -235,20 +235,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 卡牌收藏 — 只計入「本卦」,不收之卦(避免 2 卦 / 6 點套利)
+    // 卡牌收藏:
+    //   - 本卦(hexagram)→ collection_type 'iching'(只計本卦,之卦不收避免套利)
+    //   - 第一段抽到的方位 trigram → collection_type 'iching_trigram'(獨立分類)
+    // 兩者各自累進、各自觸發里程碑;cardId 跟 hex.number / trigram code 對齊。
     let collectionNewCount = 0;
     let collectionFinalCount = 0;
     let collectionRewards = 0;
     if (user) {
-      const r = await recordCardObtained({
+      const hexResult = await recordCardObtained({
         userId: user.id,
         collectionType: "iching",
         cardId: String(hex.number),
         source: "direction",
       });
-      collectionNewCount = r.isNew ? 1 : 0;
-      collectionFinalCount = r.distinctCount;
-      collectionRewards = r.rewardCredits;
+      const trigramResult = await recordCardObtained({
+        userId: user.id,
+        collectionType: "iching_trigram",
+        cardId: directionTrigram,  // 3-bit code: '111' / '000' / ...
+        source: "direction",
+      });
+      collectionNewCount = (hexResult.isNew ? 1 : 0) + (trigramResult.isNew ? 1 : 0);
+      // distinctCount 用 hex 的(主畫面顯示「23/64」),trigram 圖鑑頁自己再 fetch
+      collectionFinalCount = hexResult.distinctCount;
+      collectionRewards = hexResult.rewardCredits + trigramResult.rewardCredits;
     }
 
     // ──────────────────────────────────────────

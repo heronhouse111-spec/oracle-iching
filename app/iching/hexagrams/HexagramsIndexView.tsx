@@ -20,6 +20,12 @@ const SECTIONS = [
 export default function HexagramsIndexView({ images }: Props) {
   const { t } = useLanguage();
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
+  // hexagram 重複次數:cardId('1'..'64') → 抽到次數
+  const [hexCounts, setHexCounts] = useState<Map<string, number>>(new Map());
+  // 八卦 trigram 收藏 — 跟 hexagram 分開的 collection_type='iching_trigram'
+  // 抽到的途徑只有方位卦象合參(/iching/direction-hexagram)
+  const [ownedTrigrams, setOwnedTrigrams] = useState<Set<string>>(new Set());
+  const [trigramCounts, setTrigramCounts] = useState<Map<string, number>>(new Map());
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
@@ -66,7 +72,10 @@ export default function HexagramsIndexView({ images }: Props) {
       <CollectionProgress
         type="iching"
         total={64}
-        onLoaded={(d) => setOwnedIds(d.ownedIds)}
+        onLoaded={(d) => {
+          setOwnedIds(d.ownedIds);
+          setHexCounts(d.obtainCounts);
+        }}
       />
 
       {/* 卜卦規則 */}
@@ -153,12 +162,23 @@ export default function HexagramsIndexView({ images }: Props) {
           }}
         >
           {t(
-            "後天八卦(文王八卦)方位 — 占卜時用以定「事之所在」,合參卦象見事情如何演變。",
-            "Later-Heaven (King Wen) directions — locate the matter in space, then read the hexagram for how it unfolds.",
-            "後天八卦(文王八卦)の方位 — 占卜では「事の在処」を定め、卦象と合わせて変化を読みます。",
-            "후천팔괘(문왕팔괘) 방위 — 점복 시 '일이 있는 곳'을 정하고 괘상과 합쳐 흐름을 읽습니다."
+            "後天八卦(文王八卦)方位 — 占卜時用以定「事之所在」,合參卦象見事情如何演變。集滿 8 卦的途徑只有「方位卦象合參」占法。",
+            "Later-Heaven (King Wen) directions — locate the matter in space, then read the hexagram for how it unfolds. The only way to collect all 8 trigrams is via the Direction-Hexagram divination.",
+            "後天八卦(文王八卦)の方位 — 占卜では「事の在処」を定め、卦象と合わせて変化を読みます。8卦を集める唯一の方法は「方位卦象合参」占法です。",
+            "후천팔괘(문왕팔괘) 방위 — 점복 시 '일이 있는 곳'을 정하고 괘상과 합쳐 흐름을 읽습니다. 8괘를 모두 모으는 길은 '방위·괘상 합참' 점법뿐입니다."
           )}
         </p>
+
+        {/* 八卦收藏進度 — collection_type='iching_trigram',透過方位卦象合參收集 */}
+        <CollectionProgress
+          type="iching_trigram"
+          total={8}
+          onLoaded={(d) => {
+            setOwnedTrigrams(d.ownedIds);
+            setTrigramCounts(d.obtainCounts);
+          }}
+        />
+
         <div
           style={{
             display: "grid",
@@ -167,6 +187,7 @@ export default function HexagramsIndexView({ images }: Props) {
           }}
         >
           {Object.entries(trigramNames).map(([code, tg]) => {
+            const owned = ownedTrigrams.has(code);
             const imgUrl = images[trigramImageKey(code)];
             const tgName = t(tg.zh, tg.en, tg.ja, tg.ko);
             const direction = t(
@@ -186,18 +207,60 @@ export default function HexagramsIndexView({ images }: Props) {
             return (
               <div
                 key={code}
+                title={
+                  owned
+                    ? undefined
+                    : t(
+                        "未收集 — 用方位卦象合參占卜抽到此卦才會解鎖",
+                        "Not collected — unlock by drawing this trigram via Direction-Hexagram divination",
+                        "未収集 — 方位卦象合参の占いでこの卦を引くと解錠されます",
+                        "미수집 — 방위·괘상 합참 점에서 이 괘를 뽑으면 해제됩니다"
+                      )
+                }
                 style={{
-                  background: "rgba(13,13,43,0.5)",
-                  border: "1px solid rgba(212,168,85,0.15)",
+                  background: owned ? "rgba(13,13,43,0.5)" : "rgba(13,13,43,0.35)",
+                  border: owned
+                    ? "1px solid rgba(212,168,85,0.15)"
+                    : "1px solid rgba(212,168,85,0.08)",
                   borderRadius: 10,
                   padding: 12,
                   display: "grid",
                   gridTemplateColumns: "76px 1fr",
                   gap: 12,
                   alignItems: "start",
+                  opacity: owned ? 1 : 0.55,
+                  transition: "opacity 0.2s",
+                  position: "relative",
                 }}
               >
-                {/* 圖片框 — 仿 64 卦 9:14 直幅 */}
+                {/* ×N 重複收集徽章 — 抽到 ≥2 次才顯示(避免初次收集時干擾視覺) */}
+                {owned && (trigramCounts.get(code) ?? 0) >= 2 && (
+                  <span
+                    title={t(
+                      `已抽到 ${trigramCounts.get(code)} 次`,
+                      `Drawn ${trigramCounts.get(code)} times`,
+                      `${trigramCounts.get(code)} 回引いた`,
+                      `${trigramCounts.get(code)}회 뽑음`
+                    )}
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                      color: "#0a0a1a",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 7px",
+                      borderRadius: 9999,
+                      boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
+                      lineHeight: 1.4,
+                      zIndex: 2,
+                    }}
+                  >
+                    ×{trigramCounts.get(code)}
+                  </span>
+                )}
+                {/* 圖片框 — 仿 64 卦 9:14 直幅;未收集套灰階 */}
                 <div
                   style={{
                     width: 76,
@@ -208,6 +271,7 @@ export default function HexagramsIndexView({ images }: Props) {
                     background:
                       "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
                     flexShrink: 0,
+                    filter: owned ? "none" : "grayscale(1) brightness(0.55)",
                   }}
                 >
                   {imgUrl && (
@@ -393,6 +457,7 @@ export default function HexagramsIndexView({ images }: Props) {
                   `제 ${h.number}괘`
                 );
                 const owned = ownedIds.has(String(h.number));
+                const obtainCount = hexCounts.get(String(h.number)) ?? 0;
                 return (
                   <Link
                     key={h.number}
@@ -413,21 +478,31 @@ export default function HexagramsIndexView({ images }: Props) {
                       transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
                     }}
                   >
-                    {/* 已收藏 → 角標 ✓ */}
+                    {/* 角標:抽到 1 次 → ✓;抽到 ≥2 次 → ×N(取代 ✓ 避免重複) */}
                     {owned && (
                       <span
-                        title={t("已收藏", "Collected", "収集済み", "수집 완료")}
+                        title={
+                          obtainCount >= 2
+                            ? t(
+                                `已抽到 ${obtainCount} 次`,
+                                `Drawn ${obtainCount} times`,
+                                `${obtainCount} 回引いた`,
+                                `${obtainCount}회 뽑음`
+                              )
+                            : t("已收藏", "Collected", "収集済み", "수집 완료")
+                        }
                         style={{
                           position: "absolute",
                           top: 4,
                           right: 4,
-                          width: 18,
+                          minWidth: 18,
                           height: 18,
-                          borderRadius: "50%",
+                          borderRadius: 9999,
                           background: "linear-gradient(135deg,#d4a855,#fde68a)",
                           color: "#0a0a1a",
                           fontSize: 10,
                           fontWeight: 700,
+                          padding: obtainCount >= 2 ? "0 6px" : 0,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -435,7 +510,7 @@ export default function HexagramsIndexView({ images }: Props) {
                           boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
                         }}
                       >
-                        ✓
+                        {obtainCount >= 2 ? `×${obtainCount}` : "✓"}
                       </span>
                     )}
                     <div

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * GET /api/collection?type=iching|tarot
+ * GET /api/collection?type=iching|iching_trigram|tarot
  *
  * 回登入使用者在指定 type 的收藏狀態 + 已領 / 未領里程碑。
  * 未登入 → { authenticated: false, owned: [], milestoneConfigs: [], earnedMilestoneIds: [] }
@@ -22,7 +22,7 @@ interface CollectionItem {
 
 interface MilestoneConfig {
   id: string;
-  collectionType: "iching" | "tarot";
+  collectionType: "iching" | "iching_trigram" | "tarot";
   kind: "distinct_count" | "subkind_full";
   threshold: number;
   param: string | null;
@@ -34,12 +34,14 @@ interface MilestoneConfig {
   sortOrder: number;
 }
 
+const VALID_TYPES = new Set(["iching", "iching_trigram", "tarot"]);
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const type = url.searchParams.get("type");
-  if (type !== "iching" && type !== "tarot") {
+  if (!type || !VALID_TYPES.has(type)) {
     return NextResponse.json(
-      { error: "INVALID_TYPE", message: "type must be 'iching' or 'tarot'" },
+      { error: "INVALID_TYPE", message: "type must be 'iching' | 'iching_trigram' | 'tarot'" },
       { status: 400 },
     );
   }

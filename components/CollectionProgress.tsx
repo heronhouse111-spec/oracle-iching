@@ -16,7 +16,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 
 interface MilestoneConfig {
   id: string;
-  collectionType: "iching" | "tarot";
+  collectionType: "iching" | "iching_trigram" | "tarot";
   kind: "distinct_count" | "subkind_full";
   threshold: number;
   param: string | null;
@@ -30,7 +30,7 @@ interface MilestoneConfig {
 
 interface CollectionResponse {
   authenticated: boolean;
-  type: "iching" | "tarot";
+  type: "iching" | "iching_trigram" | "tarot";
   owned: Array<{ cardId: string; obtainCount: number; firstObtainedAt: string; lastObtainedAt: string }>;
   ownedCount: number;
   milestoneConfigs: MilestoneConfig[];
@@ -38,7 +38,7 @@ interface CollectionResponse {
 }
 
 interface Props {
-  type: "iching" | "tarot";
+  type: "iching" | "iching_trigram" | "tarot";
   /** 該 type 卡牌總數(易經 64,塔羅 78)— 用於進度條的分母 */
   total: number;
   /** 把 owned set + earned milestone set 回拋給 parent,parent 可以決定 grid 上灰階 / icon */
@@ -47,6 +47,8 @@ interface Props {
     earnedMilestoneIds: Set<string>;
     /** 給 parent 用 — 為了 tarot subkind 統計 */
     ownedCount: number;
+    /** cardId → 抽到次數,給 ×N 重複徽章用 */
+    obtainCounts: Map<string, number>;
   }) => void;
 }
 
@@ -66,10 +68,12 @@ export default function CollectionProgress({ type, total, onLoaded }: Props) {
         if (cancelled) return;
         const ownedIds = new Set(json.owned.map((o) => o.cardId));
         const earnedIds = new Set(json.earnedMilestoneIds);
+        const obtainCounts = new Map(json.owned.map((o) => [o.cardId, o.obtainCount]));
         onLoaded({
           ownedIds,
           earnedMilestoneIds: earnedIds,
           ownedCount: json.ownedCount,
+          obtainCounts,
         });
         setData(json);
       } catch {

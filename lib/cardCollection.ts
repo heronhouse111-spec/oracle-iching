@@ -26,7 +26,17 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TarotSuit } from "@/data/tarot";
 
-export type CollectionType = "iching" | "tarot";
+/**
+ * Collection types:
+ *   - 'iching'         : 64 卦(hexagram),cardId = '1'..'64'
+ *   - 'iching_trigram' : 8 卦(trigram),cardId = 3-bit code('111' / '000' / ...)
+ *   - 'tarot'          : 78 張塔羅,cardId = card.id slug,cardSubkind = suit
+ *
+ * 為何 iching_trigram 跟 iching 分開:
+ *   現有 iching 里程碑是 distinct_count = 64(集滿 64 卦)。如果 trigram 共用同一
+ *   collection_type,8 個 trigram 會「灌水」進那個分母,讓里程碑提早觸發。
+ */
+export type CollectionType = "iching" | "iching_trigram" | "tarot";
 export type CollectionSource =
   | "daily"
   | "main"
@@ -39,7 +49,7 @@ export interface RecordCardParams {
   userId: string;
   collectionType: CollectionType;
   cardId: string;
-  /** 塔羅必填(suit);易經傳 null/undefined */
+  /** 塔羅必填(suit);易經 / 八卦傳 null/undefined */
   cardSubkind?: TarotSuit | null;
   source: CollectionSource;
 }
