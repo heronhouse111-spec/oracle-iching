@@ -253,10 +253,278 @@
   border-color: rgba(184, 112, 20, 0.3) !important;
 }
 
-/* ─── AdminNav 配色 ─── */
-/* AdminNav 維持原本的深色玻璃 chrome,跟上方 Header 一致;
-   下方 admin 內容區才是 light surface — 這個對比讓導覽列像 app chrome,
-   主內容像 dashboard,跟 Stripe / Linear 等專業後台慣例一致。 */
+/* ─── 側欄 + 主內容布局(BBQ-style shell) ─── */
+
+/* 全站 fixed Header 在 admin 路由下完全隱藏 — 側欄就是唯一 chrome。
+   只匹配 inline position:fixed 的 <header> (= 全站 Header.tsx),
+   不會誤殺 page.tsx 內用 className 的語意 <header>。 */
+.admin-light header[style*="position: fixed"],
+.admin-light header[style*="position:fixed"] {
+  display: none !important;
+}
+
+/* AnnouncementBanner 也是 fixed 在頂部,在後台內隱藏避免擋側欄 */
+.admin-light [data-announcement-banner] {
+  display: none !important;
+}
+
+.admin-shell {
+  display: block;
+}
+
+/* ─── 側欄主體 ─── */
+.admin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 240px;
+  z-index: 40;
+  background: linear-gradient(
+    180deg,
+    var(--al-brand-900) 0%,
+    var(--al-brand-800) 100%
+  );
+  color: #cdd7e6;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 2px 0 12px rgba(15, 39, 72, 0.15);
+}
+
+.admin-sidebar__brand {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-sidebar__brand-name {
+  font-family: "Noto Serif TC", serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.admin-sidebar__brand-sub {
+  font-size: 11px;
+  color: rgba(205, 215, 230, 0.55);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+.admin-sidebar__nav {
+  flex: 1;
+  padding: 10px 0 14px;
+}
+
+.admin-sidebar__group {
+  margin-top: 14px;
+}
+
+.admin-sidebar__group:first-child {
+  margin-top: 6px;
+}
+
+.admin-sidebar__group-title {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(205, 215, 230, 0.4);
+  padding: 6px 18px;
+}
+
+.admin-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  color: rgba(205, 215, 230, 0.85);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.admin-sidebar__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.admin-sidebar__item--active {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border-left-color: #d4795a;
+  font-weight: 600;
+}
+
+.admin-sidebar__item-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* ─── 底部使用者卡片 ─── */
+.admin-sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-sidebar__user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d4795a 0%, #b65a3d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__user-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-sidebar__user-name {
+  font-size: 12.5px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.admin-sidebar__user-email {
+  font-size: 10.5px;
+  color: rgba(205, 215, 230, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-sidebar__logout {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(205, 215, 230, 0.85);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.admin-sidebar__logout:hover {
+  background: rgba(212, 121, 90, 0.15);
+  border-color: rgba(212, 121, 90, 0.5);
+  color: #ffffff;
+}
+
+/* ─── 右側主內容 ─── */
+.admin-main {
+  padding-left: 240px;
+  min-height: 100vh;
+}
+
+/* 把 admin pages 內 main.pt-20 / pt-24 (原本給 fixed Header 留空間) 的 padding 抵銷,
+   側欄已不依賴 top padding。 */
+.admin-light .admin-main main.pt-20,
+.admin-light .admin-main main.pt-24 {
+  padding-top: 24px !important;
+}
+
+/* ─── Mobile bar(只在 < 900px 顯示) ─── */
+.admin-sidebar-mobile-bar {
+  display: none;
+}
+
+.admin-sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+  }
+
+  .admin-sidebar--open {
+    transform: translateX(0);
+  }
+
+  .admin-main {
+    padding-left: 0;
+    padding-top: 56px; /* 給 mobile bar 留位 */
+  }
+
+  .admin-sidebar-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
+    border-bottom: 1px solid var(--al-border);
+    z-index: 30;
+  }
+
+  .admin-sidebar-hamburger {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--al-border-strong);
+    background: var(--al-surface);
+    color: var(--al-text);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .admin-sidebar-mobile-brand {
+    font-family: "Noto Serif TC", serif;
+    font-weight: 700;
+    color: var(--al-brand-900);
+    font-size: 15px;
+  }
+
+  .admin-sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 39, 72, 0.45);
+    z-index: 35;
+  }
+
+  /* mobile 時也把 page 內 pt-20/pt-24 抵銷 */
+  .admin-light .admin-main main.pt-20,
+  .admin-light .admin-main main.pt-24 {
+    padding-top: 12px !important;
+  }
+}
 
 /* ─── Heading 字色保險 ─── */
 .admin-light h1:not(.text-gold-gradient),
