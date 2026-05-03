@@ -21,6 +21,7 @@ import {
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 
 /** 取台北今天日期字串 (YYYY-MM-DD, UTC+8) */
 function taipeiTodayKey(): string {
@@ -106,11 +107,12 @@ export async function POST(request: NextRequest) {
 
     const alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
 
+    const dailyCost = await getCreditCost("DAILY");
     if (!alreadyChargedToday) {
       try {
         await spendCredits({
           userId: user.id,
-          amount: CREDIT_COSTS.DAILY,
+          amount: dailyCost,
           reason: "spend_daily_iching",
           metadata: { kind: "iching", dateKey, locale, personaId: persona.id },
         });
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
           return new Response(
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
-              required: CREDIT_COSTS.DAILY,
+              required: dailyCost,
               message: pickStr(
                 "點數不足",
                 "Insufficient credits",

@@ -11,6 +11,7 @@ import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,8 +79,8 @@ export async function POST(request: NextRequest) {
       depth === "deep" && isActiveSubscriber ? "deep" : "quick";
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    let cost = isFollowUp ? CREDIT_COSTS.DIVINE_FOLLOWUP : CREDIT_COSTS.DIVINE;
-    if (effectiveDepth === "deep") cost += CREDIT_COSTS.DEEP_INSIGHT_SURCHARGE;
+    let cost = isFollowUp ? await getCreditCost("DIVINE_FOLLOWUP") : await getCreditCost("DIVINE");
+    if (effectiveDepth === "deep") cost += await getCreditCost("DEEP_INSIGHT_SURCHARGE");
     const reason = isFollowUp ? "spend_divine_followup" : "spend_divine";
 
     if (user) {

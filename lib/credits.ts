@@ -54,6 +54,7 @@ export type CreditReason =
   | "spend_chat"
   | "spend_yesno"
   | "spend_daily"
+  | "spend_daily_iching"
   | "spend_direction_hex"
   | "spend_plum_blossom"
   | "refund_api_error"

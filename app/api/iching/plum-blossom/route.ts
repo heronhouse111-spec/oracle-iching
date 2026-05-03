@@ -31,6 +31,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 
 type Locale = "zh" | "en" | "ja" | "ko";
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
-    const cost = CREDIT_COSTS.PLUM_BLOSSOM;
+    const cost = await getCreditCost("PLUM_BLOSSOM");
 
     if (user) {
       try {

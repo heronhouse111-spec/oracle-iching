@@ -20,6 +20,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 // Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
 // 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
-    const cost = CREDIT_COSTS.YESNO;
+    const cost = await getCreditCost("YESNO");
 
     if (user) {
       try {

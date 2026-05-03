@@ -21,6 +21,7 @@ import {
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 
 type Locale = "zh" | "en" | "ja" | "ko";
 function pickStr(
@@ -110,11 +111,12 @@ export async function POST(request: NextRequest) {
 
     const alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
 
+    const dailyCost = await getCreditCost("DAILY");
     if (!alreadyChargedToday) {
       try {
         await spendCredits({
           userId: user.id,
-          amount: CREDIT_COSTS.DAILY,
+          amount: dailyCost,
           reason: "spend_daily",
           metadata: { dateKey, locale, personaId: persona.id },
         });
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
           return new Response(
             JSON.stringify({
               error: "INSUFFICIENT_CREDITS",
-              required: CREDIT_COSTS.DAILY,
+              required: dailyCost,
               message: pickStr(
                 safeLocale,
                 "點數不足",

@@ -31,6 +31,7 @@ import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { createClient } from "@/lib/supabase/server";
 import { recordCardObtained } from "@/lib/cardCollection";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import {
   spendCredits,
   refundCredits,
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
-    const cost = CREDIT_COSTS.DIRECTION_HEX;
+    const cost = await getCreditCost("DIRECTION_HEX");
 
     if (user) {
       try {

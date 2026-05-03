@@ -24,6 +24,7 @@ const ITEMS: NavItem[] = [
   { href: "/admin/personas", label: "占卜師", emoji: "🧙" },
   { href: "/admin/inspirations", label: "問題靈感", emoji: "✦" },
   { href: "/admin/collection-milestones", label: "收集里程碑", emoji: "🎯" },
+  { href: "/admin/credit-costs", label: "占卜成本", emoji: "✦" },
   { href: "/admin/ui-images", label: "首頁 icon", emoji: "🖼️" },
   { href: "/admin/flags", label: "Feature Flags", emoji: "🚩" },
   { href: "/admin/audit-log", label: "Audit Log", emoji: "🔍" },
