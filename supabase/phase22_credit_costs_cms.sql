@@ -88,8 +88,8 @@ values
    '保留以備重啟年度十二宮',                        'Reserved if year-twelve relaunches',           'tarot', 100),
 
   -- 共用 / 加成
-  ('CHAT',           1,  '老師對話一則',        'One chat with the master',
-   '結果頁的追問對話',                              'Follow-up chat in result page',                 'shared', 110),
+  ('CHAT',           2,  '老師對話一則',        'One chat with the master',
+   '結果頁的追問對話(長對話 context 成本提升)',     'Follow-up chat (long context aware)',           'shared', 110),
   ('DAILY',          1,  '每日一抽',            'Daily draw',
    '每日一卡 / 每日一卦,同日重抽不再扣',            'Daily card or hexagram, free re-read same day', 'shared', 120),
   ('DEEP_INSIGHT_SURCHARGE', 3, 'Deep Insight 加成', 'Deep Insight surcharge',

@@ -281,7 +281,7 @@ insert into public.collection_milestone_configs
    label_zh, label_en, label_ja, label_ko, sort_order)
 values
   -- 易經 64 卦 4 個里程碑
-  ('iching_8',  'iching', 'distinct_count', 8,  null, 10,
+  ('iching_8',  'iching', 'distinct_count', 8,  null, 5,
    '八卦初成', 'Eight Trigrams', '八卦初成', '팔괘 입문', 10),
   ('iching_25', 'iching', 'distinct_count', 25, null, 30,
    '三分易經', 'A Third of the Hexagrams', '易経の三分の一', '주역의 삼분의 일', 20),

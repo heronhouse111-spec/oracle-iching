@@ -21,7 +21,7 @@ export const UI_CREDIT_COSTS = {
   TAROT: 5,
   DIVINE_FOLLOWUP: 10,
   TAROT_FOLLOWUP: 10,
-  CHAT: 1,
+  CHAT: 2,
   YESNO: 2,
   DAILY: 1,
   TAROT_5_CARD: 10,    // 愛情十字
