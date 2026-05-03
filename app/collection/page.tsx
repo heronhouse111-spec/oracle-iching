@@ -296,7 +296,7 @@ export default function CollectionHubPage() {
           >
             ✦ {f("rules.section_title")}
           </h2>
-          {[1, 2, 3, 4, 5].map((n) => {
+          {[1, 2, 3, 4, 5, 6].map((n) => {
             const item = hub.get(`rule.${n}`);
             if (!item) return null;
             return (
