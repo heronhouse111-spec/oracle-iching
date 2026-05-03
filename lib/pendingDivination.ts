@@ -48,6 +48,8 @@ export interface PendingDivinationSnapshot {
   // 訪客在結果頁跟老師的對話(可選 — 舊 snapshot 無此欄位也不會炸)。
   // 登入後一併帶回來,讓使用者看到的畫面跟按下登入前一致。
   chatMessages?: PendingChatMessage[];
+  /** 二選一牌陣才有 — 使用者填寫的 A / B 兩個具體選項;讓登入回來後結果頁仍能顯示。 */
+  tarotTwoOptions?: { a: string; b: string };
 }
 
 export function savePendingDivination(snap: PendingDivinationSnapshot): void {

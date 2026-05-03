@@ -66,6 +66,7 @@ type Step =
   | "question"
   | "divine-type"
   | "tarot-spread-select"
+  | "tarot-options-input"
   | "mode-select"
   | "divination"
   | "tarot-reveal"
@@ -284,6 +285,11 @@ export default function Home() {
   const [selectedSpreadId, setSelectedSpreadId] = useState<string | null>(null);
   const [drawnCards, setDrawnCards] = useState<DrawnCard[]>([]);
   const [revealedCount, setRevealedCount] = useState(0);
+
+  // 二選一牌陣專屬:使用者填寫的兩個具體選項,在抽牌前先讓使用者描述,
+  // 再把字串帶進 API prompt,讓 AI 解盤針對「A:留下 / B:離職」這種具體選項給建議。
+  const [twoOptionA, setTwoOptionA] = useState("");
+  const [twoOptionB, setTwoOptionB] = useState("");
 
   // ── 衍伸問題繼續占卜(follow-up chain) ───────────────────
   // 使用者在結果頁按「相關衍伸問題繼續占卜」→ 填新問題 → 重選易經/塔羅 → 再占一次,
@@ -791,6 +797,10 @@ export default function Home() {
         tarotSpreadId: spread.id,
         personaId,
         chatMessages: chatForSnap,
+        tarotTwoOptions:
+          spread.id === "two-options" && twoOptionA.trim() && twoOptionB.trim()
+            ? { a: twoOptionA.trim(), b: twoOptionB.trim() }
+            : undefined,
       });
     } else if (divineType === "iching") {
       if (!hexagram || !divinationResult) return;
@@ -831,6 +841,8 @@ export default function Home() {
     isSignedIn,
     chatMessages,
     personaId,
+    twoOptionA,
+    twoOptionB,
   ]);
 
   // mount 時:若有暫存占卜就復原;若現在已登入,順便補存 Supabase 拿 id
@@ -880,6 +892,11 @@ export default function Home() {
       if (cards.length === spread.cardCount) {
         setDrawnCards(cards);
         setRevealedCount(spread.cardCount);
+      }
+      // 二選一才會有 tarotTwoOptions;舊 snapshot 沒這欄就維持空字串
+      if (spread.id === "two-options" && snap.tarotTwoOptions) {
+        setTwoOptionA(snap.tarotTwoOptions.a ?? "");
+        setTwoOptionB(snap.tarotTwoOptions.b ?? "");
       }
     }
 
@@ -1298,6 +1315,8 @@ export default function Home() {
     setCurrentThrow(0);
     setCurrentCoins(null);
     setDivineType(null);
+    setTwoOptionA("");
+    setTwoOptionB("");
     // 注意:chatMessages 故意保留 — 衍伸占卜 AI 要看到先前對話
 
     setIsFollowUpMode(true);
@@ -1431,8 +1450,14 @@ export default function Home() {
       // 已從 ?spread=<id> 預選好就直接抽該牌陣;否則進牌陣選單
       if (selectedSpreadId) {
         const spread = getSpread(selectedSpreadId);
-        setDrawnCards(drawSpread(spread));
-        setStep("tarot-reveal");
+        // 二選一牌陣:即使預選了也要先讓使用者填 A / B 選項
+        if (spread.id === "two-options") {
+          setDrawnCards([]);
+          setStep("tarot-options-input");
+        } else {
+          setDrawnCards(drawSpread(spread));
+          setStep("tarot-reveal");
+        }
       } else {
         setDrawnCards([]);
         setStep("tarot-spread-select");
@@ -1450,9 +1475,14 @@ export default function Home() {
     } else if (selectedSpreadId) {
       // 已預選 spread(?spread= deep link 或衍伸佔卜回頭再來一次)→ 直接抽
       const spread = getSpread(selectedSpreadId);
-      setDrawnCards(drawSpread(spread));
-      setRevealedCount(0);
-      setStep("tarot-reveal");
+      // 二選一牌陣:預選了也要先讓使用者填 A / B 選項
+      if (spread.id === "two-options") {
+        setStep("tarot-options-input");
+      } else {
+        setDrawnCards(drawSpread(spread));
+        setRevealedCount(0);
+        setStep("tarot-reveal");
+      }
     } else {
       // 還沒選 spread → 進牌陣選單
       setStep("tarot-spread-select");
@@ -1463,6 +1493,21 @@ export default function Home() {
   const handleSelectSpread = (spreadId: string) => {
     const spread = getSpread(spreadId);
     setSelectedSpreadId(spread.id);
+    // 二選一牌陣特例:抽牌前先讓使用者填寫 A / B 兩個選項,結果頁才能針對具體選項分析
+    if (spread.id === "two-options") {
+      setStep("tarot-options-input");
+      return;
+    }
+    setDrawnCards(drawSpread(spread));
+    setRevealedCount(0);
+    setStep("tarot-reveal");
+  };
+
+  /** 二選一:使用者填完 A / B 兩個選項 → 洗牌進翻牌畫面 */
+  const handleSubmitTwoOptions = () => {
+    const spread = getSpread(selectedSpreadId ?? "two-options");
+    if (spread.id !== "two-options") return;
+    if (!twoOptionA.trim() || !twoOptionB.trim()) return;
     setDrawnCards(drawSpread(spread));
     setRevealedCount(0);
     setStep("tarot-reveal");
@@ -1774,6 +1819,9 @@ export default function Home() {
         spreadId: spread.id,
         personaId,
         depth: readingDepth,
+        // 二選一牌陣才有意義 — 把使用者填寫的 A / B 選項一併送過去,讓 AI prompt 能引用
+        twoOptionA: spread.id === "two-options" ? twoOptionA.trim() : undefined,
+        twoOptionB: spread.id === "two-options" ? twoOptionB.trim() : undefined,
       };
 
       const response = await fetch("/api/tarot", {
@@ -1941,7 +1989,22 @@ export default function Home() {
       );
       const qLabel = t("問題", "Question", "質問", "질문");
       const readingLabel = t("老師解盤", "Reading", "解読", "해석");
-      readingContext = `${qLabel}: ${userQuestion}\n\n${spreadLabel}(${cardCountLabel}):\n${lines}\n\n${readingLabel}: ${aiReading}`;
+      // 二選一牌陣才有 — 把 A / B 的具體選項也帶進聊天 context,讓老師後續對話一直記得使用者在比較什麼
+      const optionsLine =
+        chatSpread.id === "two-options" && twoOptionA.trim() && twoOptionB.trim()
+          ? (() => {
+              const headerLabel = t(
+                "問事者正在權衡的兩個選項",
+                "The two options the querent is weighing",
+                "問い手が比較している2つの選択肢",
+                "질문자가 비교 중인 두 가지 선택지"
+              );
+              const aLabel = t("選項 A", "Option A", "選択肢 A", "선택지 A");
+              const bLabel = t("選項 B", "Option B", "選択肢 B", "선택지 B");
+              return `\n\n${headerLabel}:\n  ${aLabel}: ${twoOptionA.trim()}\n  ${bLabel}: ${twoOptionB.trim()}`;
+            })()
+          : "";
+      readingContext = `${qLabel}: ${userQuestion}${optionsLine}\n\n${spreadLabel}(${cardCountLabel}):\n${lines}\n\n${readingLabel}: ${aiReading}`;
     } else {
       const hexName = t(hexagram!.nameZh, hexagram!.nameEn, hexagram!.nameJa, hexagram!.nameKo);
       const judgmentModern = t(hexagram!.judgmentVernacularZh, hexagram!.judgmentEn, hexagram!.judgmentJa, hexagram!.judgmentKo);
@@ -2088,6 +2151,8 @@ export default function Home() {
     setSelectedSpreadId(null);
     setDrawnCards([]);
     setRevealedCount(0);
+    setTwoOptionA("");
+    setTwoOptionB("");
     // 衍伸占卜 state
     setRootSnapshot(null);
     setFollowUps([]);
@@ -3355,6 +3420,115 @@ export default function Home() {
             </motion.div>
           )}
 
+          {/* ===== STEP 2.7: Two-Options A / B 輸入 (二選一牌陣專屬) ===== */}
+          {step === "tarot-options-input" && (
+            <motion.div key="opts" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
+                <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 12, marginBottom: 4, letterSpacing: 1 }}>
+                  {t("二選一牌陣", "Two Options Spread", "二者択一", "양자택일")}
+                </div>
+                <h2 className="text-gold-gradient" style={{ fontSize: 22, fontFamily: "'Noto Serif TC', serif" }}>
+                  {t("先描述你正在權衡的兩個選項", "Describe the two options you're weighing", "迷っている2つの選択肢を入力", "고민 중인 두 가지 선택지를 적어주세요")}
+                </h2>
+                <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 13, marginTop: 6, lineHeight: 1.7 }}>
+                  {t(
+                    "AI 解盤會針對你寫下的 A 與 B 給具體的方向比較",
+                    "The AI reading will compare options A and B specifically",
+                    "AIはここに書かれた A と B を踏まえて具体的に比較します",
+                    "AI 해석은 여기에 적은 A와 B를 바탕으로 구체적으로 비교합니다"
+                  )}
+                </p>
+              </div>
+
+              <div className="mystic-card" style={{ padding: 24 }}>
+                <label style={{ display: "block", marginBottom: 16 }}>
+                  <span style={{ display: "block", color: "#d4a855", fontSize: 13, fontWeight: 600, marginBottom: 6, fontFamily: "'Noto Serif TC', serif" }}>
+                    {t("選項 A", "Option A", "選択肢 A", "선택지 A")}
+                  </span>
+                  <input
+                    type="text"
+                    value={twoOptionA}
+                    onChange={(e) => setTwoOptionA(e.target.value)}
+                    maxLength={200}
+                    placeholder={t(
+                      "例如:留在現職",
+                      "e.g., Stay at my current job",
+                      "例:今の仕事に残る",
+                      "예: 현재 직장에 남는다"
+                    )}
+                    style={{
+                      width: "100%",
+                      background: "rgba(10,10,26,0.5)",
+                      border: "1px solid rgba(212,168,85,0.2)",
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      color: "white",
+                      fontSize: 15,
+                      outline: "none",
+                      fontFamily: "'Noto Sans TC', sans-serif",
+                    }}
+                  />
+                </label>
+                <label style={{ display: "block", marginBottom: 8 }}>
+                  <span style={{ display: "block", color: "#d4a855", fontSize: 13, fontWeight: 600, marginBottom: 6, fontFamily: "'Noto Serif TC', serif" }}>
+                    {t("選項 B", "Option B", "選択肢 B", "선택지 B")}
+                  </span>
+                  <input
+                    type="text"
+                    value={twoOptionB}
+                    onChange={(e) => setTwoOptionB(e.target.value)}
+                    maxLength={200}
+                    placeholder={t(
+                      "例如:接受新公司的 offer",
+                      "e.g., Accept the offer from the new company",
+                      "例:新しい会社のオファーを受ける",
+                      "예: 새 회사의 제안을 수락한다"
+                    )}
+                    style={{
+                      width: "100%",
+                      background: "rgba(10,10,26,0.5)",
+                      border: "1px solid rgba(212,168,85,0.2)",
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      color: "white",
+                      fontSize: 15,
+                      outline: "none",
+                      fontFamily: "'Noto Sans TC', sans-serif",
+                    }}
+                  />
+                </label>
+
+                <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+                  <button
+                    onClick={() => {
+                      // 退回上一步:回牌陣選單(若是 deep-link 預選的就回 divine-type)
+                      setStep(selectedSpreadId ? "tarot-spread-select" : "divine-type");
+                    }}
+                    style={{
+                      padding: "10px 24px",
+                      borderRadius: 9999,
+                      border: "1px solid rgba(212,168,85,0.3)",
+                      color: "#d4a855",
+                      fontSize: 14,
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t("返回", "Back", "戻る", "돌아가기")}
+                  </button>
+                  <button
+                    onClick={handleSubmitTwoOptions}
+                    disabled={!twoOptionA.trim() || !twoOptionB.trim()}
+                    className="btn-gold"
+                    style={{ flex: 1, fontSize: 15 }}
+                  >
+                    {t("開始洗牌", "Begin Shuffling", "シャッフル開始", "셔플 시작")}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* ===== STEP 2.5: Mode Select (自動 / 手動) ===== */}
           {step === "mode-select" && (
             <motion.div key="mode" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
@@ -3605,6 +3779,8 @@ export default function Home() {
                 .slice(0, 3)
                 .map((p) => t(p.labelZh, p.labelEn, p.labelJa, p.labelKo))
                 .join(" → ") + (spread.positions.length > 3 ? "…" : "");
+            const showTwoOptions =
+              spread.id === "two-options" && twoOptionA.trim() && twoOptionB.trim();
             return (
             <motion.div key="tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
               <div style={{ textAlign: "center", paddingTop: 32, marginBottom: 16 }}>
@@ -3637,6 +3813,46 @@ export default function Home() {
                       )}
                 </p>
               </div>
+
+              {/* 二選一翻牌時把 A / B 顯示出來,讓使用者翻到「選擇 A」這張時知道對應的是哪個選項 */}
+              {showTwoOptions && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 8,
+                    marginBottom: 16,
+                    fontSize: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "rgba(13,13,43,0.55)",
+                      border: "1px solid rgba(212,168,85,0.25)",
+                    }}
+                  >
+                    <span style={{ color: "#d4a855", fontWeight: 700, marginRight: 6 }}>
+                      {t("A", "A", "A", "A")}
+                    </span>
+                    <span style={{ color: "#e8e8f0", wordBreak: "break-word" }}>{twoOptionA}</span>
+                  </div>
+                  <div
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "rgba(13,13,43,0.55)",
+                      border: "1px solid rgba(212,168,85,0.25)",
+                    }}
+                  >
+                    <span style={{ color: "#d4a855", fontWeight: 700, marginRight: 6 }}>
+                      {t("B", "B", "B", "B")}
+                    </span>
+                    <span style={{ color: "#e8e8f0", wordBreak: "break-word" }}>{twoOptionB}</span>
+                  </div>
+                </div>
+              )}
 
               {/* 牌組 — 依 spread.cardCount 決定欄數 */}
               <div style={{
@@ -4534,8 +4750,67 @@ export default function Home() {
               .slice(0, 3)
               .map((p) => t(p.labelZh, p.labelEn, p.labelJa, p.labelKo))
               .join(" · ") + (spread.positions.length > 3 ? "…" : "");
+            const showTwoOptions =
+              spread.id === "two-options" && twoOptionA.trim() && twoOptionB.trim();
             return (
             <motion.div key="res-tarot" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+              {/* 二選一專屬:把使用者填寫的兩個選項顯示在最上面,讓使用者一眼看到「自己問的什麼 → AI 怎麼解」 */}
+              {showTwoOptions && (
+                <div
+                  className="mystic-card"
+                  style={{
+                    padding: 16,
+                    marginTop: 16,
+                    background: "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(139,92,246,0.06))",
+                    border: "1px solid rgba(212,168,85,0.3)",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "rgba(212,168,85,0.85)",
+                      fontSize: 11,
+                      letterSpacing: 1,
+                      marginBottom: 8,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {t("你正在權衡的兩個選項", "The two options you're weighing", "比較している2つの選択肢", "고민 중인 두 가지 선택지")}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div
+                      style={{
+                        background: "rgba(13,13,43,0.55)",
+                        border: "1px solid rgba(212,168,85,0.25)",
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <div style={{ color: "#d4a855", fontSize: 11, fontWeight: 700, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
+                        {t("選項 A", "Option A", "選択肢 A", "선택지 A")}
+                      </div>
+                      <div style={{ color: "#e8e8f0", fontSize: 13, lineHeight: 1.5, wordBreak: "break-word" }}>
+                        {twoOptionA}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        background: "rgba(13,13,43,0.55)",
+                        border: "1px solid rgba(212,168,85,0.25)",
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <div style={{ color: "#d4a855", fontSize: 11, fontWeight: 700, marginBottom: 4, fontFamily: "'Noto Serif TC', serif" }}>
+                        {t("選項 B", "Option B", "選択肢 B", "선택지 B")}
+                      </div>
+                      <div style={{ color: "#e8e8f0", fontSize: 13, lineHeight: 1.5, wordBreak: "break-word" }}>
+                        {twoOptionB}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 牌組展示 */}
               <div className="mystic-card" style={{ padding: 20, marginTop: 16 }}>
                 <div style={{ textAlign: "center", marginBottom: 16 }}>
