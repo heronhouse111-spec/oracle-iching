@@ -183,6 +183,16 @@
   color: var(--al-brand-700);
 }
 
+/* 側欄 item 也是 <a>,要避免被上面那條全域 link 顏色蓋掉 */
+.admin-light .admin-sidebar__item,
+.admin-light .admin-sidebar__item:visited {
+  color: #ffffff;
+}
+
+.admin-light .admin-sidebar__item:hover {
+  color: #ffffff;
+}
+
 /* ─── 暗色文字 fallback(處理 inline rgba(192,192,208,…))
      對比加強策略:0.6 以上 → primary 黑;0.4-0.55 → muted(現在已比之前深);
      不再有「subtle」(太淡)的層級用在使用者讀的內容上。 */
