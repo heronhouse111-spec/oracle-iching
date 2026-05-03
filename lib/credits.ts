@@ -50,6 +50,14 @@ export const CREDIT_COSTS = {
    *  不是「花費」,是「回收率」,但放這裡讓 getCreditCost("REDEEM_DUPLICATE_RATE") 能 fallback。
    *  改 0 等同關閉兌換功能。 */
   REDEEM_DUPLICATE_RATE: 10,
+  /** AI 背景音樂生成(60 秒 ambient) — Phase 27 */
+  MUSIC_GENERATE: 100,
+  /** 5 分鐘內第二次重生 — 半價,首次失敗用戶第二次機會降低差評 */
+  MUSIC_GENERATE_RETRY: 50,
+  /** 收藏排行榜上他人創作的音樂(永久所有權,不能下載) */
+  MUSIC_COLLECT: 20,
+  /** 訂閱戶收藏 8 折 */
+  MUSIC_COLLECT_SUBSCRIBER: 16,
 } as const;
 
 export type CreditReason =
@@ -70,7 +78,18 @@ export type CreditReason =
   | "purchase_pack"
   | "ad_reward"
   | "collection_milestone"
-  | "redeem_duplicates";
+  | "redeem_duplicates"
+  // Phase 27 — 音樂相關
+  | "spend_music_generate"
+  | "spend_music_generate_retry"
+  | "spend_music_collect"
+  | "spend_music_collect_subscriber"
+  | "creator_earning_collect"
+  | "refund_music_generate_failed"
+  | "refund_music_takedown"
+  | "refund_music_moderation"
+  | "clawback_music_takedown"
+  | "forfeit_music_moderation";
 
 export class InsufficientCreditsError extends Error {
   constructor(public required: number) {
