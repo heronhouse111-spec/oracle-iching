@@ -86,6 +86,46 @@ function pickMilestoneLabel(m: MilestoneConfig, locale: Locale): string {
   return m.labelZh;
 }
 
+// 從 milestone 資料 + 語系產出說明文字 — 不寫死字串,讓未來改 threshold / reward 自動同步
+const TAROT_SUIT_LABELS: Record<string, Record<Locale, string>> = {
+  major:     { zh: "大阿爾克那", en: "Major Arcana",  ja: "大アルカナ", ko: "메이저 아르카나" },
+  wands:     { zh: "權杖牌組",   en: "Wands suit",    ja: "ワンドの組", ko: "완드 슈트" },
+  cups:      { zh: "聖杯牌組",   en: "Cups suit",     ja: "カップの組", ko: "컵 슈트" },
+  swords:    { zh: "寶劍牌組",   en: "Swords suit",   ja: "ソードの組", ko: "소드 슈트" },
+  pentacles: { zh: "錢幣牌組",   en: "Pentacles suit", ja: "ペンタクルの組", ko: "펜타클 슈트" },
+};
+
+function buildMilestoneExplanation(m: MilestoneConfig, locale: Locale): string {
+  const reward = m.rewardCredits;
+  const threshold = m.threshold;
+
+  if (m.kind === "subkind_full" && m.param) {
+    const suit = TAROT_SUIT_LABELS[m.param]?.[locale] ?? m.param;
+    if (locale === "en") {
+      return `Collect all ${threshold} cards in the ${suit} to unlock this milestone. Draw them one by one through tarot readings — auto-credited with +${reward} once complete (one-time only).`;
+    }
+    if (locale === "ja") {
+      return `「${suit}」全 ${threshold} 枚を集めると達成。タロット占いで少しずつ引き当ててください。完成すると +${reward} ポイントが自動で入帳されます(一度限り)。`;
+    }
+    if (locale === "ko") {
+      return `"${suit}" 전체 ${threshold}장을 모으면 달성됩니다. 타로 점에서 하나씩 뽑아 모으세요. 완성 시 +${reward} 포인트가 자동 지급됩니다(1회 한정).`;
+    }
+    return `集齊全部 ${threshold} 張「${suit}」即可解鎖。需要在塔羅占卜中陸續抽到全套。完成後自動入帳 +${reward} 點(只發一次)。`;
+  }
+
+  // distinct_count
+  if (locale === "en") {
+    return `Collect ${threshold} different cards in this category (any kind) to unlock. Drawing the same card again does not count. Auto-credited with +${reward} on completion (one-time only).`;
+  }
+  if (locale === "ja") {
+    return `このカテゴリで ${threshold} 枚の異なるカードを集めると達成。同じカードを再度引いてもカウントされません。完成すると +${reward} ポイントが自動で入帳されます(一度限り)。`;
+  }
+  if (locale === "ko") {
+    return `이 카테고리에서 서로 다른 ${threshold}장을 모으면 달성됩니다. 같은 카드를 다시 뽑아도 카운트되지 않습니다. 완성 시 +${reward} 포인트가 자동 지급됩니다(1회 한정).`;
+  }
+  return `在此分類中集滿 ${threshold} 張不同的牌(無論種類)即可解鎖。同一張重複抽到不會多算。完成後自動入帳 +${reward} 點(只發一次)。`;
+}
+
 // ─── Page ─────────────────────────────────────
 
 export default function CollectionHubPage() {
@@ -94,6 +134,10 @@ export default function CollectionHubPage() {
   const [hub, setHub] = useState<Map<string, HubItem>>(new Map());
   const [iching, setIching] = useState<SectionData | null>(null);
   const [tarot, setTarot] = useState<SectionData | null>(null);
+  // Accordion 狀態 — 全頁共用,點開新項目時上一個會自動收起
+  const [expandedMilestoneId, setExpandedMilestoneId] = useState<string | null>(null);
+  const toggleMilestone = (id: string) =>
+    setExpandedMilestoneId((prev) => (prev === id ? null : id));
 
   useEffect(() => {
     let cancelled = false;
@@ -300,12 +344,16 @@ export default function CollectionHubPage() {
             sectionTitle={f("milestones.iching_title")}
             data={iching}
             locale={locale}
+            expandedId={expandedMilestoneId}
+            onToggle={toggleMilestone}
           />
           <div style={{ height: 14 }} />
           <MilestoneList
             sectionTitle={f("milestones.tarot_title")}
             data={tarot}
             locale={locale}
+            expandedId={expandedMilestoneId}
+            onToggle={toggleMilestone}
           />
         </section>
 
@@ -436,10 +484,15 @@ function MilestoneList({
   sectionTitle,
   data,
   locale,
+  expandedId,
+  onToggle,
 }: {
   sectionTitle: string;
   data: SectionData | null;
   locale: Locale;
+  /** 全頁共用的 accordion 開啟中 id;與本 list 的某 milestone 對上時就展開 */
+  expandedId: string | null;
+  onToggle: (id: string) => void;
 }) {
   if (!data) {
     return (
@@ -458,36 +511,96 @@ function MilestoneList({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {data.milestones.map((m) => {
             const earned = data.earnedIds.has(m.id);
+            const isOpen = expandedId === m.id;
+            const explanation = buildMilestoneExplanation(m, locale);
             return (
               <div
                 key={m.id}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 12px",
                   borderRadius: 8,
                   background: earned ? "rgba(110,231,183,0.08)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${earned ? "rgba(110,231,183,0.4)" : "rgba(212,168,85,0.15)"}`,
-                  fontSize: 13,
+                  border: `1px solid ${
+                    isOpen
+                      ? "rgba(212,168,85,0.55)"
+                      : earned
+                        ? "rgba(110,231,183,0.4)"
+                        : "rgba(212,168,85,0.15)"
+                  }`,
+                  overflow: "hidden",
+                  transition: "border-color 0.15s",
                 }}
               >
-                <span style={{ color: earned ? "#6ee7b7" : "#e8e8f0" }}>
-                  {earned ? "✓ " : ""}
-                  {pickMilestoneLabel(m, locale)}
-                </span>
-                <span
+                <button
+                  type="button"
+                  onClick={() => onToggle(m.id)}
+                  aria-expanded={isOpen}
                   style={{
-                    color: "#fde68a",
-                    fontWeight: 700,
-                    fontSize: 12,
-                    background: "rgba(212,168,85,0.12)",
-                    padding: "2px 10px",
-                    borderRadius: 9999,
+                    all: "unset",
+                    cursor: "pointer",
+                    display: "flex",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    fontSize: 13,
+                    gap: 10,
                   }}
                 >
-                  +{m.rewardCredits} ✦
-                </span>
+                  <span
+                    style={{
+                      color: earned ? "#6ee7b7" : "#e8e8f0",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    {earned ? "✓ " : ""}
+                    {pickMilestoneLabel(m, locale)}
+                    <span
+                      aria-hidden
+                      style={{
+                        color: "rgba(212,168,85,0.6)",
+                        fontSize: 10,
+                        marginLeft: 4,
+                        transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        transition: "transform 0.2s",
+                        display: "inline-block",
+                      }}
+                    >
+                      ▾
+                    </span>
+                  </span>
+                  <span
+                    style={{
+                      color: "#fde68a",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      background: "rgba(212,168,85,0.12)",
+                      padding: "2px 10px",
+                      borderRadius: 9999,
+                      flexShrink: 0,
+                    }}
+                  >
+                    +{m.rewardCredits} ✦
+                  </span>
+                </button>
+                {isOpen && (
+                  <div
+                    style={{
+                      padding: "10px 14px 12px",
+                      borderTop: "1px dashed rgba(212,168,85,0.25)",
+                      color: "rgba(232,232,240,0.85)",
+                      fontSize: 12,
+                      lineHeight: 1.75,
+                      whiteSpace: "pre-line",
+                    }}
+                  >
+                    {explanation}
+                  </div>
+                )}
               </div>
             );
           })}
