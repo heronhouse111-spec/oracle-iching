@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import TarotCardsIndexView from "./TarotCardsIndexView";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -27,11 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function TarotCardsIndexPage() {
+export default async function TarotCardsIndexPage() {
+  const redeemRate = await getCreditCost("REDEEM_DUPLICATE_RATE");
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
-      <TarotCardsIndexView />
+      <TarotCardsIndexView redeemRate={redeemRate} />
     </main>
   );
 }

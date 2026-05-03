@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Header from "@/components/Header";
 import { getIchingImages } from "@/lib/ichingImages";
 import { getServerLocale, pickByLocale } from "@/lib/serverLocale";
+import { getCreditCost } from "@/lib/creditCostsDb";
 import HexagramsIndexView from "./HexagramsIndexView";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,11 +30,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function IChingHexagramsIndexPage() {
-  const images = await getIchingImages();
+  const [images, redeemRate] = await Promise.all([
+    getIchingImages(),
+    getCreditCost("REDEEM_DUPLICATE_RATE"),
+  ]);
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
-      <HexagramsIndexView images={images} />
+      <HexagramsIndexView images={images} redeemRate={redeemRate} />
     </main>
   );
 }

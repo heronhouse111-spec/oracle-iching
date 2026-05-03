@@ -12,15 +12,33 @@ import {
   SUIT_NAMES_KO,
 } from "@/data/tarot";
 import CollectionProgress from "@/components/CollectionProgress";
+import RedemptionModal, { type RedemptionResult } from "@/components/RedemptionModal";
+import NewCardToast from "@/components/NewCardToast";
 
 const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
   "major", "wands", "cups", "swords", "pentacles",
 ];
 
-export default function TarotCardsIndexView() {
+const REDEEM_THRESHOLD = 10;
+
+interface Props {
+  /** 每組(10 張)可換的點數,從 server 端 getCreditCost("REDEEM_DUPLICATE_RATE") 拿 */
+  redeemRate: number;
+}
+
+interface ModalState {
+  cardId: string;
+  cardName: string;
+  cardImageUrl: string;
+  currentCount: number;
+}
+
+export default function TarotCardsIndexView({ redeemRate }: Props) {
   const { t } = useLanguage();
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [obtainCounts, setObtainCounts] = useState<Map<string, number>>(new Map());
+  const [modal, setModal] = useState<ModalState | null>(null);
+  const [toast, setToast] = useState<{ cardName: string; credits: number } | null>(null);
   const suitName = (s: typeof SUIT_ORDER[number]) =>
     t(SUIT_NAMES_ZH[s], SUIT_NAMES_EN[s], SUIT_NAMES_JA[s], SUIT_NAMES_KO[s]);
 
@@ -108,6 +126,8 @@ export default function TarotCardsIndexView() {
             {cards.map((card) => {
               const owned = ownedIds.has(card.id);
               const cardCount = obtainCounts.get(card.id) ?? 0;
+              const canRedeem = cardCount >= REDEEM_THRESHOLD && redeemRate > 0;
+              const cardName = t(card.nameZh, card.nameEn, card.nameJa, card.nameKo);
               return (
                 <Link
                   key={card.id}
@@ -119,13 +139,18 @@ export default function TarotCardsIndexView() {
                     background: owned
                       ? "rgba(13,13,43,0.5)"
                       : "rgba(13,13,43,0.35)",
-                    border: owned
+                    border: canRedeem
+                      ? "1px solid rgba(110,231,183,0.55)"
+                      : owned
                       ? "1px solid rgba(212,168,85,0.4)"
                       : "1px solid rgba(212,168,85,0.1)",
                     borderRadius: 10,
                     padding: 8,
                     position: "relative",
                     transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
+                    boxShadow: canRedeem
+                      ? "0 0 16px rgba(110,231,183,0.15)"
+                      : undefined,
                   }}
                 >
                   {/* 角標:抽到 1 次 → ✓;抽到 ≥2 次 → ×N(取代 ✓ 避免重複) */}
@@ -163,6 +188,46 @@ export default function TarotCardsIndexView() {
                       {cardCount >= 2 ? `×${cardCount}` : "✓"}
                     </span>
                   )}
+                  {/* 兌換 pill — 持有 ≥10 才出現 */}
+                  {canRedeem && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setModal({
+                          cardId: card.id,
+                          cardName,
+                          cardImageUrl: card.imagePath,
+                          currentCount: cardCount,
+                        });
+                      }}
+                      title={t(
+                        `用 10 張兌換 ${redeemRate} 點`,
+                        `Redeem 10 cards for ${redeemRate} credits`,
+                        `10 枚で ${redeemRate} ポイント交換`,
+                        `10장으로 ${redeemRate} 포인트 교환`
+                      )}
+                      style={{
+                        position: "absolute",
+                        bottom: 6,
+                        right: 6,
+                        background: "linear-gradient(135deg,#6ee7b7,#34d399)",
+                        color: "#0a0a1a",
+                        border: "none",
+                        borderRadius: 9999,
+                        padding: "3px 9px",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        zIndex: 3,
+                        boxShadow: "0 2px 8px rgba(110,231,183,0.4)",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ↺ {t("兌換", "Redeem", "交換", "교환")}
+                    </button>
+                  )}
                   <div
                     style={{
                       borderRadius: 6,
@@ -176,7 +241,7 @@ export default function TarotCardsIndexView() {
                   >
                     <Image
                       src={card.imagePath}
-                      alt={t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
+                      alt={cardName}
                       width={300}
                       height={467}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -190,9 +255,7 @@ export default function TarotCardsIndexView() {
                       textAlign: "center",
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>
-                      {t(card.nameZh, card.nameEn, card.nameJa, card.nameKo)}
-                    </div>
+                    <div style={{ fontWeight: 600 }}>{cardName}</div>
                   </div>
                 </Link>
               );
@@ -264,6 +327,50 @@ export default function TarotCardsIndexView() {
           </Link>
         </div>
       </footer>
+
+      {modal && (
+        <RedemptionModal
+          open={true}
+          collectionType="tarot"
+          cardId={modal.cardId}
+          cardName={modal.cardName}
+          cardImageUrl={modal.cardImageUrl}
+          currentCount={modal.currentCount}
+          rate={redeemRate}
+          onClose={() => setModal(null)}
+          onSuccess={(result: RedemptionResult) => {
+            // 更新本地 obtainCounts,讓 ×N pill 跟 redeem pill 立即反映新值
+            setObtainCounts((prev) => {
+              const next = new Map(prev);
+              next.set(modal.cardId, result.countAfter);
+              return next;
+            });
+            setToast({ cardName: modal.cardName, credits: result.creditsGranted });
+            setModal(null);
+          }}
+        />
+      )}
+
+      {/* 兌換成功 toast — 沿用 NewCardToast 的「重複卡」橘色變體 */}
+      <NewCardToast
+        show={toast !== null}
+        type="tarot"
+        isNew={false}
+        cardName={
+          toast
+            ? t(
+                `已兌換 ${toast.cardName} ×10`,
+                `Redeemed ${toast.cardName} ×10`,
+                `${toast.cardName} ×10 を交換`,
+                `${toast.cardName} ×10 교환 완료`
+              )
+            : ""
+        }
+        collectionCount={ownedIds.size}
+        total={78}
+        rewardCredits={toast?.credits ?? 0}
+        onDismiss={() => setToast(null)}
+      />
     </div>
   );
 }

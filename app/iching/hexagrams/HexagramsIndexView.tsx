@@ -6,10 +6,14 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { hexagrams, trigramNames } from "@/data/hexagrams";
 import { trigramImageKey } from "@/lib/ichingImages";
 import CollectionProgress from "@/components/CollectionProgress";
+import RedemptionModal, { type RedemptionResult } from "@/components/RedemptionModal";
+import NewCardToast from "@/components/NewCardToast";
 
 interface Props {
   /** key 是 hexagram.number 字串 ("1" .. "64"),value 是 storage 上的圖 url */
   images: Record<string, string>;
+  /** 每組(10 張)可換的點數,從 server 端 getCreditCost("REDEEM_DUPLICATE_RATE") 拿 */
+  redeemRate: number;
 }
 
 const SECTIONS = [
@@ -17,7 +21,17 @@ const SECTIONS = [
   { titleKey: "lower" as const, range: [31, 64] as const },
 ];
 
-export default function HexagramsIndexView({ images }: Props) {
+const REDEEM_THRESHOLD = 10;
+
+interface ModalState {
+  collectionType: "iching" | "iching_trigram";
+  cardId: string;
+  cardName: string;
+  cardImageUrl: string;
+  currentCount: number;
+}
+
+export default function HexagramsIndexView({ images, redeemRate }: Props) {
   const { t } = useLanguage();
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   // hexagram 重複次數:cardId('1'..'64') → 抽到次數
@@ -26,6 +40,12 @@ export default function HexagramsIndexView({ images }: Props) {
   // 抽到的途徑只有方位卦象合參(/iching/direction-hexagram)
   const [ownedTrigrams, setOwnedTrigrams] = useState<Set<string>>(new Set());
   const [trigramCounts, setTrigramCounts] = useState<Map<string, number>>(new Map());
+  const [modal, setModal] = useState<ModalState | null>(null);
+  const [toast, setToast] = useState<{
+    type: "iching" | "iching_trigram";
+    cardName: string;
+    credits: number;
+  } | null>(null);
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
@@ -188,6 +208,8 @@ export default function HexagramsIndexView({ images }: Props) {
         >
           {Object.entries(trigramNames).map(([code, tg]) => {
             const owned = ownedTrigrams.has(code);
+            const tgCount = trigramCounts.get(code) ?? 0;
+            const canRedeemTg = tgCount >= REDEEM_THRESHOLD && redeemRate > 0;
             const imgUrl = images[trigramImageKey(code)];
             const tgName = t(tg.zh, tg.en, tg.ja, tg.ko);
             const direction = t(
@@ -219,7 +241,9 @@ export default function HexagramsIndexView({ images }: Props) {
                 }
                 style={{
                   background: owned ? "rgba(13,13,43,0.5)" : "rgba(13,13,43,0.35)",
-                  border: owned
+                  border: canRedeemTg
+                    ? "1px solid rgba(110,231,183,0.55)"
+                    : owned
                     ? "1px solid rgba(212,168,85,0.15)"
                     : "1px solid rgba(212,168,85,0.08)",
                   borderRadius: 10,
@@ -231,16 +255,19 @@ export default function HexagramsIndexView({ images }: Props) {
                   opacity: owned ? 1 : 0.55,
                   transition: "opacity 0.2s",
                   position: "relative",
+                  boxShadow: canRedeemTg
+                    ? "0 0 16px rgba(110,231,183,0.15)"
+                    : undefined,
                 }}
               >
                 {/* ×N 重複收集徽章 — 抽到 ≥2 次才顯示(避免初次收集時干擾視覺) */}
-                {owned && (trigramCounts.get(code) ?? 0) >= 2 && (
+                {owned && tgCount >= 2 && (
                   <span
                     title={t(
-                      `已抽到 ${trigramCounts.get(code)} 次`,
-                      `Drawn ${trigramCounts.get(code)} times`,
-                      `${trigramCounts.get(code)} 回引いた`,
-                      `${trigramCounts.get(code)}회 뽑음`
+                      `已抽到 ${tgCount} 次`,
+                      `Drawn ${tgCount} times`,
+                      `${tgCount} 回引いた`,
+                      `${tgCount}회 뽑음`
                     )}
                     style={{
                       position: "absolute",
@@ -257,8 +284,47 @@ export default function HexagramsIndexView({ images }: Props) {
                       zIndex: 2,
                     }}
                   >
-                    ×{trigramCounts.get(code)}
+                    ×{tgCount}
                   </span>
+                )}
+                {/* 兌換 pill — 持有 ≥10 才出現 */}
+                {canRedeemTg && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModal({
+                        collectionType: "iching_trigram",
+                        cardId: code,
+                        cardName: tgName,
+                        cardImageUrl: imgUrl ?? "",
+                        currentCount: tgCount,
+                      })
+                    }
+                    title={t(
+                      `用 10 張兌換 ${redeemRate} 點`,
+                      `Redeem 10 cards for ${redeemRate} credits`,
+                      `10 枚で ${redeemRate} ポイント交換`,
+                      `10장으로 ${redeemRate} 포인트 교환`
+                    )}
+                    style={{
+                      position: "absolute",
+                      bottom: 8,
+                      right: 8,
+                      background: "linear-gradient(135deg,#6ee7b7,#34d399)",
+                      color: "#0a0a1a",
+                      border: "none",
+                      borderRadius: 9999,
+                      padding: "3px 9px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      zIndex: 3,
+                      boxShadow: "0 2px 8px rgba(110,231,183,0.4)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    ↺ {t("兌換", "Redeem", "交換", "교환")}
+                  </button>
                 )}
                 {/* 圖片框 — 仿 64 卦 9:14 直幅;未收集套灰階 */}
                 <div
@@ -458,6 +524,7 @@ export default function HexagramsIndexView({ images }: Props) {
                 );
                 const owned = ownedIds.has(String(h.number));
                 const obtainCount = hexCounts.get(String(h.number)) ?? 0;
+                const canRedeem = obtainCount >= REDEEM_THRESHOLD && redeemRate > 0;
                 return (
                   <Link
                     key={h.number}
@@ -469,13 +536,18 @@ export default function HexagramsIndexView({ images }: Props) {
                       background: owned
                         ? "rgba(13,13,43,0.5)"
                         : "rgba(13,13,43,0.35)",
-                      border: owned
+                      border: canRedeem
+                        ? "1px solid rgba(110,231,183,0.55)"
+                        : owned
                         ? "1px solid rgba(212,168,85,0.4)"
                         : "1px solid rgba(212,168,85,0.1)",
                       borderRadius: 10,
                       padding: 8,
                       position: "relative",
                       transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
+                      boxShadow: canRedeem
+                        ? "0 0 16px rgba(110,231,183,0.15)"
+                        : undefined,
                     }}
                   >
                     {/* 角標:抽到 1 次 → ✓;抽到 ≥2 次 → ×N(取代 ✓ 避免重複) */}
@@ -512,6 +584,47 @@ export default function HexagramsIndexView({ images }: Props) {
                       >
                         {obtainCount >= 2 ? `×${obtainCount}` : "✓"}
                       </span>
+                    )}
+                    {/* 兌換 pill — 持有 ≥10 才出現 */}
+                    {canRedeem && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setModal({
+                            collectionType: "iching",
+                            cardId: String(h.number),
+                            cardName: hName,
+                            cardImageUrl: url ?? "",
+                            currentCount: obtainCount,
+                          });
+                        }}
+                        title={t(
+                          `用 10 張兌換 ${redeemRate} 點`,
+                          `Redeem 10 cards for ${redeemRate} credits`,
+                          `10 枚で ${redeemRate} ポイント交換`,
+                          `10장으로 ${redeemRate} 포인트 교환`
+                        )}
+                        style={{
+                          position: "absolute",
+                          bottom: 6,
+                          right: 6,
+                          background: "linear-gradient(135deg,#6ee7b7,#34d399)",
+                          color: "#0a0a1a",
+                          border: "none",
+                          borderRadius: 9999,
+                          padding: "3px 9px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          zIndex: 3,
+                          boxShadow: "0 2px 8px rgba(110,231,183,0.4)",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        ↺ {t("兌換", "Redeem", "交換", "교환")}
+                      </button>
                     )}
                     <div
                       style={{
@@ -564,6 +677,64 @@ export default function HexagramsIndexView({ images }: Props) {
           </section>
         );
       })}
+
+      {modal && (
+        <RedemptionModal
+          open={true}
+          collectionType={modal.collectionType}
+          cardId={modal.cardId}
+          cardName={modal.cardName}
+          cardImageUrl={modal.cardImageUrl}
+          currentCount={modal.currentCount}
+          rate={redeemRate}
+          onClose={() => setModal(null)}
+          onSuccess={(result: RedemptionResult) => {
+            // 更新對應 collection 的本地 count(讓 ×N pill 立即反映)
+            if (modal.collectionType === "iching") {
+              setHexCounts((prev) => {
+                const next = new Map(prev);
+                next.set(modal.cardId, result.countAfter);
+                return next;
+              });
+            } else {
+              setTrigramCounts((prev) => {
+                const next = new Map(prev);
+                next.set(modal.cardId, result.countAfter);
+                return next;
+              });
+            }
+            setToast({
+              type: modal.collectionType,
+              cardName: modal.cardName,
+              credits: result.creditsGranted,
+            });
+            setModal(null);
+          }}
+        />
+      )}
+
+      {/* 兌換成功 toast — 沿用 NewCardToast 的「重複卡」橘色變體 */}
+      <NewCardToast
+        show={toast !== null}
+        type={toast?.type ?? "iching"}
+        isNew={false}
+        cardName={
+          toast
+            ? t(
+                `已兌換 ${toast.cardName} ×10`,
+                `Redeemed ${toast.cardName} ×10`,
+                `${toast.cardName} ×10 を交換`,
+                `${toast.cardName} ×10 교환 완료`
+              )
+            : ""
+        }
+        collectionCount={
+          toast?.type === "iching_trigram" ? ownedTrigrams.size : ownedIds.size
+        }
+        total={toast?.type === "iching_trigram" ? 8 : 64}
+        rewardCredits={toast?.credits ?? 0}
+        onDismiss={() => setToast(null)}
+      />
     </div>
   );
 }

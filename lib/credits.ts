@@ -46,6 +46,10 @@ export const CREDIT_COSTS = {
   DIRECTION_HEX: 10,
   /** 梅花易數 — 時間起卦不擲錢,但仍是完整六爻 + AI 解卦,跟 DIVINE 同價。 */
   PLUM_BLOSSOM: 5,
+  /** 重複卡兌換 — 同卡每 10 張可換的點數(在 credit_costs CMS 也有,DB 是 source of truth)。
+   *  不是「花費」,是「回收率」,但放這裡讓 getCreditCost("REDEEM_DUPLICATE_RATE") 能 fallback。
+   *  改 0 等同關閉兌換功能。 */
+  REDEEM_DUPLICATE_RATE: 10,
 } as const;
 
 export type CreditReason =
@@ -64,7 +68,9 @@ export type CreditReason =
   | "onboarding_bonus"
   | "subscription_refill"
   | "purchase_pack"
-  | "ad_reward";
+  | "ad_reward"
+  | "collection_milestone"
+  | "redeem_duplicates";
 
 export class InsufficientCreditsError extends Error {
   constructor(public required: number) {
