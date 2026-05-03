@@ -14,8 +14,11 @@
 --   - app/api/iching/direction-hexagram/route.ts → 在收 hexagram 後再記一次 trigram
 --   - app/iching/hexagrams/HexagramsIndexView.tsx → 八卦速覽用 owned set 套灰階
 --
--- 不需要動 phase20 的 schema(user_collections / collection_milestone_configs
--- 兩個表的 collection_type 都是 TEXT 沒 enum 約束,直接寫新值即可)。
+-- 注意:本檔案註解原本寫「不需要動 phase20 schema, collection_type 是 TEXT
+-- 沒 enum 約束」— 這是錯的,phase20 對 user_collections / collection_milestone_configs
+-- 的 collection_type 都加了 CHECK 限定 in ('iching','tarot'),且
+-- record_card_obtained() 裡面也有同名單檢查。phase23 上線時這幾道閘必須
+-- 手動繞過。phase28_collection_type_widen.sql 才把這個 drift 收回 schema。
 
 insert into public.collection_milestone_configs
   (id, collection_type, kind, threshold, param, reward_credits,
