@@ -43,7 +43,13 @@ interface UserDetail {
     locale: string;
     divine_type: string;
     created_at: string;
+    spent_credits: number | null;     // 該次扣多少點(對應 credit_transactions)
+    balance_after: number | null;     // 扣完當下餘額
   }>;
+  /** 卡牌收集發出的里程碑獎勵總額(reason='collection_milestone' 累加)*/
+  collectionRewardsTotal?: number;
+  /** 已發出的次數(=領過幾個里程碑) */
+  collectionRewardsCount?: number;
   grants: Array<{
     id: number;
     delta: number;
@@ -590,6 +596,8 @@ export default function AdminUserDetailPage() {
                       <th style={{ padding: "8px 14px", textAlign: "left" }}>類型</th>
                       <th style={{ padding: "8px 14px", textAlign: "left" }}>卦象</th>
                       <th style={{ padding: "8px 14px", textAlign: "left" }}>問題</th>
+                      <th style={{ padding: "8px 14px", textAlign: "right" }} title="當次扣的點數">扣點</th>
+                      <th style={{ padding: "8px 14px", textAlign: "right" }} title="扣完當下的剩餘點數">餘額</th>
                       <th style={{ padding: "8px 14px", textAlign: "left" }}>時間</th>
                     </tr>
                   </thead>
@@ -602,13 +610,32 @@ export default function AdminUserDetailPage() {
                         <td
                           style={{
                             padding: "8px 14px",
-                            maxWidth: 300,
+                            maxWidth: 240,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                           }}
                         >
                           {d.question}
+                        </td>
+                        <td
+                          style={{
+                            padding: "8px 14px",
+                            textAlign: "right",
+                            color: d.spent_credits == null ? "rgba(192,192,208,0.3)" : "#fca5a5",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {d.spent_credits == null ? "—" : `-${d.spent_credits}`}
+                        </td>
+                        <td
+                          style={{
+                            padding: "8px 14px",
+                            textAlign: "right",
+                            color: d.balance_after == null ? "rgba(192,192,208,0.3)" : "#fde68a",
+                          }}
+                        >
+                          {d.balance_after == null ? "—" : `✦ ${d.balance_after}`}
                         </td>
                         <td style={{ padding: "8px 14px", color: "rgba(192,192,208,0.5)" }}>
                           {new Date(d.created_at).toLocaleString("zh-TW", { dateStyle: "short", timeStyle: "short" })}
@@ -636,7 +663,27 @@ export default function AdminUserDetailPage() {
                   gap: 8,
                 }}
               >
-                <h2 style={{ fontSize: 14, color: "#d4a855" }}>卡牌收藏</h2>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+                  <h2 style={{ fontSize: 14, color: "#d4a855" }}>卡牌收藏</h2>
+                  {(data.collectionRewardsTotal ?? 0) > 0 && (
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: "2px 10px",
+                        borderRadius: 9999,
+                        background: "rgba(110,231,183,0.10)",
+                        border: "1px solid rgba(110,231,183,0.4)",
+                        color: "#6ee7b7",
+                      }}
+                      title="透過收集里程碑累積發出的點數獎勵"
+                    >
+                      已發獎勵 ✦ {data.collectionRewardsTotal}{" "}
+                      <span style={{ opacity: 0.6 }}>
+                        ({data.collectionRewardsCount} 次)
+                      </span>
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => setGrantCardOpen(true)}
                   style={{
