@@ -179,12 +179,12 @@ create policy "Admins can view all credit packs"
   on public.credit_packs for select
   using (public.is_current_user_admin());
 
--- 預埋目前的三個方案
+-- 預埋目前的三個方案(phase 24 漲價:TWD/USD 全 ×2 — 詳見 phase24 SQL 與 lib/pricing.ts)
 insert into public.credit_packs (id, credits, bonus_credits, price_twd, price_usd, highlighted, display_order, zh_label, en_label, play_sku_id)
 values
-  ('pack_200',  200,  0,   60,  2.00, false, 10, '200 點',          '200 credits',           'orc.credits.pack200'),
-  ('pack_500',  500,  50,  120, 4.00, true,  20, '500 點 + 贈 50',  '500 credits + 50 bonus','orc.credits.pack500'),
-  ('pack_1200', 1200, 200, 240, 8.00, false, 30, '1200 點 + 贈 200','1200 credits + 200 bonus','orc.credits.pack1200')
+  ('pack_200',  200,  0,   120, 3.99,  false, 10, '200 點',          '200 credits',           'orc.credits.pack200'),
+  ('pack_500',  500,  50,  240, 7.99,  true,  20, '500 點 + 贈 50',  '500 credits + 50 bonus','orc.credits.pack500'),
+  ('pack_1200', 1200, 200, 480, 15.99, false, 30, '1200 點 + 贈 200','1200 credits + 200 bonus','orc.credits.pack1200')
 on conflict (id) do nothing;
 
 

@@ -32,35 +32,39 @@ export interface CreditPack {
 /**
  * 點數加購包(暫訂三階,之後可加 pack_3000 之類)
  *
- * TWD 基準:
- *   pack_200   :  NT$ 60,無贈
- *   pack_500   :  NT$ 120,贈 50 (主推)
- *   pack_1200  :  NT$ 240,贈 200
+ * Phase 24 漲價(2026-05):全線 ×2,讓訂閱方案的相對性價比拉到合理區間
+ * (原本 pack_1200 NT$0.171/pt 比月訂閱 NT$0.250/pt 便宜,訂閱無動機;
+ *  漲價後 pack_1200 NT$0.343/pt,訂閱明顯划算)。
  *
- * USD 對價:
- *   pack_200   :  $1.99
- *   pack_500   :  $3.99 (主推)
- *   pack_1200  :  $7.99
+ * TWD 基準:
+ *   pack_200   :  NT$ 120,無贈        (NT$ 0.60 / pt)
+ *   pack_500   :  NT$ 240,贈 50 (主推) (NT$ 0.436 / pt 含贈)
+ *   pack_1200  :  NT$ 480,贈 200       (NT$ 0.343 / pt 含贈)
+ *
+ * USD 對價(維持 .99 結尾的 App Store 慣例):
+ *   pack_200   :  $3.99
+ *   pack_500   :  $7.99 (主推)
+ *   pack_1200  :  $15.99
  */
 export const CREDIT_PACKS: CreditPack[] = [
   {
     id: "pack_200",
     credits: 200,
     bonusCredits: 0,
-    price: { TWD: 60, USD: 1.99 },
+    price: { TWD: 120, USD: 3.99 },
   },
   {
     id: "pack_500",
     credits: 500,
     bonusCredits: 50,
-    price: { TWD: 120, USD: 3.99 },
+    price: { TWD: 240, USD: 7.99 },
     highlighted: true,
   },
   {
     id: "pack_1200",
     credits: 1200,
     bonusCredits: 200,
-    price: { TWD: 240, USD: 7.99 },
+    price: { TWD: 480, USD: 15.99 },
   },
 ];
 
