@@ -46,6 +46,9 @@ export const CREDIT_COSTS = {
   DIRECTION_HEX: 10,
   /** 梅花易數 — 時間起卦不擲錢,但仍是完整六爻 + AI 解卦,跟 DIVINE 同價。 */
   PLUM_BLOSSOM: 5,
+  /** 易經二擇一 — A / B 各起一卦(共 2 次三錢法),AI 比對兩卦給出明確推一邊的決斷。
+   *  兩段擲卦 + 雙卦比對 prompt + 強建議模式回應,token 成本接近方位卦象合參,定 10 點。 */
+  IC_TWO_OPTIONS: 10,
   /** 重複卡兌換 — 同卡每 10 張可換的點數(在 credit_costs CMS 也有,DB 是 source of truth)。
    *  不是「花費」,是「回收率」,但放這裡讓 getCreditCost("REDEEM_DUPLICATE_RATE") 能 fallback。
    *  改 0 等同關閉兌換功能。 */
@@ -71,6 +74,7 @@ export type CreditReason =
   | "spend_daily_iching"
   | "spend_direction_hex"
   | "spend_plum_blossom"
+  | "spend_ic_two_options"
   | "refund_api_error"
   | "signup_bonus"
   | "onboarding_bonus"

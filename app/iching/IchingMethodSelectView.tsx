@@ -31,7 +31,7 @@ interface MethodEntry {
   taglineJa: string;
   taglineKo: string;
   /** badge tier — 跟 /iching/methods 同色系 */
-  tier: "main" | "instant" | "advanced";
+  tier: "main" | "instant" | "advanced" | "decision";
   /** 此占法的點數 cost(從 UI_CREDIT_COSTS 取) */
   cost: number;
 }
@@ -95,6 +95,25 @@ const METHODS: MethodEntry[] = [
     tier: "advanced",
     cost: UI_CREDIT_COSTS.DIRECTION_HEX,
   },
+  {
+    id: "two-options",
+    // /iching/two-options 是獨立的決策頁,沒有 resumeFlow 機制 — 它有自己的 ask
+    // step,用戶填問題 + A/B 後會直接擲兩卦,不走主流程的「問題 / 類別」步驟。
+    href: "/iching/two-options",
+    badgeZh: "擇",
+    badgeEn: "A|B",
+    nameZh: "易經二擇一",
+    nameEn: "A or B Decision",
+    nameJa: "易経 二択占い",
+    nameKo: "주역 양자택일",
+    taglineZh: "卡在兩個選項之間時 — A / B 各起一卦，AI 比對兩卦給出明確推一邊的決斷",
+    taglineEn:
+      "Stuck between two paths? Cast a hexagram for A and another for B; AI compares both and commits to one",
+    taglineJa: "二つの選択肢の間で迷ったら — A / B それぞれに卦を立て、AI が両卦を比較して一方を明確に推奨",
+    taglineKo: "두 선택지 사이에서 망설일 때 — A / B 각각 괘를 세우면 AI 가 두 괘를 비교해 한쪽을 분명히 추천",
+    tier: "decision",
+    cost: UI_CREDIT_COSTS.IC_TWO_OPTIONS,
+  },
 ];
 
 const TIER_BADGE: Record<
@@ -124,6 +143,14 @@ const TIER_BADGE: Record<
     labelEn: "Advanced",
     labelJa: "上級",
     labelKo: "심화",
+  },
+  decision: {
+    bg: "rgba(244,114,182,0.18)",
+    color: "#f9a8d4",
+    labelZh: "決策",
+    labelEn: "Decision",
+    labelJa: "決断",
+    labelKo: "결정",
   },
 };
 
@@ -175,10 +202,10 @@ export default function IchingMethodSelectView() {
           }}
         >
           {t(
-            "不同問題適合不同占法 — 全卦六爻看深度脈絡、梅花易數用時間直接起卦、方位卦象合參用兩段式合看「在哪裡」+「怎麼走」。",
-            "Different questions call for different methods. Full hexagram for depth, plum blossom for casting from time alone, direction × hexagram for a two-stage look at 'where' and 'how'.",
-            "質問によって適切な占法は異なります。全卦六爻は深い脈絡、梅花易数は時刻から直接立卦、方位×卦象は二段で「どこ」と「どう」を見る。",
-            "질문마다 어울리는 점법이 다릅니다. 전괘 육효는 깊은 흐름, 매화역수는 시간만으로 기괘, 방위·괘상 합참은 '어디서'와 '어떻게'를 두 단계로."
+            "不同問題適合不同占法 — 全卦六爻看深度脈絡、梅花易數用時間直接起卦、方位卦象合參用兩段式看「在哪裡 + 怎麼走」、二擇一為 A / B 各起一卦比對給結論。",
+            "Different questions call for different methods. Full hexagram for depth, plum blossom for casting from time alone, direction × hexagram for a two-stage look at 'where + how', and A/B decision for casting one hexagram per option to commit to a side.",
+            "質問によって適切な占法は異なります。全卦六爻は深い脈絡、梅花易数は時刻から立卦、方位×卦象は二段で「どこ + どう」、二択占いは A / B それぞれに卦を立てて比較し一方を推奨。",
+            "질문마다 어울리는 점법이 다릅니다. 전괘 육효는 깊은 흐름, 매화역수는 시간으로 기괘, 방위·괘상 합참은 '어디서·어떻게'를 두 단계로, 양자택일은 A / B 각각 괘를 세워 비교해 한쪽을 추천."
           )}
         </p>
       </header>

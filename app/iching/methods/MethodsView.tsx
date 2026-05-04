@@ -31,8 +31,8 @@ interface Method {
   bodyEn: string;
   bodyJa?: string;
   bodyKo?: string;
-  /** 主要難度:simple / classical / instant / advanced */
-  tier: "simple" | "classical" | "instant" | "advanced";
+  /** 主要難度:simple / classical / instant / advanced / decision */
+  tier: "simple" | "classical" | "instant" | "advanced" | "decision";
   /** 若有獨立詳細介紹頁,放路徑;否則 undefined */
   detailHref?: string;
 }
@@ -83,9 +83,33 @@ const METHODS: Method[] = [
       "송대 소옹이 창안한 방법으로, '만물은 수' 사상을 핵심으로 합니다. 가장 유명한 것은 '시간 기괘': 질문 당시의 연월일시 숫자를 모듈로 8 / 모듈로 6으로 계산해 상괘·하괘·동효를 도출합니다. 임의의 세 숫자(생일·랜덤·소리 횟수 등)도 사용 가능합니다. 장점은 '도구 불필요' — 갑작스런 상황에서 즉시 점칠 수 있습니다. 단점은 공식을 외워야 한다는 점. 본 앱에는 시간 기괘 입구가 없지만, 도출된 괘 번호를 64괘 백과에서 찾아볼 수 있습니다.",
   },
   {
-    id: "instant-draw",
+    id: "two-options",
     numberZh: "3",
     numberEn: "3",
+    nameZh: "易經二擇一",
+    nameEn: "A or B Decision",
+    nameJa: "易経 二択占い",
+    nameKo: "주역 양자택일",
+    tier: "decision",
+    taglineZh: "卡在兩個選項之間時:A / B 各起一卦,AI 比對兩卦給出明確結論",
+    taglineEn:
+      "Stuck between two options? Cast one hexagram per option, then compare them for a committed verdict",
+    taglineJa: "二つの選択肢で迷ったとき:A / B それぞれに卦を立て、AI が両卦を比較して一方を明確に推奨",
+    taglineKo: "두 선택지 사이에서 망설일 때: A / B 각각 괘를 세우고 AI 가 두 괘를 비교해 한쪽을 분명히 추천",
+    bodyZh:
+      "本 app 為「決策題」設計的雙卦比對占法。一般單卦占卜碰到「該選 A 還是 B」時,AI 容易出現「兩邊都好兩邊都壞」的水球話 — 因為單卦本身只反映「事件本質」,沒有 A vs B 的相對訊息。雙卦比對的做法:把問題與兩條路徑寫清楚,A 與 B 各自獨立擲三錢法 6 次,得到兩個完整六爻卦(各有自己的本卦、變爻、之卦),AI 再比對「A 卦的吉凶 / 動爻 / 走向」與「B 卦的吉凶 / 動爻 / 走向」,基於兩卦的具體差異(例如:A 卦動爻顯動而吉、B 卦穩而平;A 內外卦相剋、B 內外卦相生)給出明確推一邊的決斷,AI 解說約 600 字。適合工作 / 感情 / 投資 / 搬遷等明確的二元抉擇。10 點 / 次。",
+    bodyEn:
+      "A two-hexagram comparative method this app provides for decision questions. When a single hexagram reading hits 'should I choose A or B', the AI tends to hedge with 'both have merit' — because one hexagram only reflects the matter's essence, not the relative balance between two paths. The two-cast approach: spell out the question and both paths, perform a full three-coin cast for A and another for B, yielding two complete hexagrams (each with its own primary, changing lines, and relating hexagram). The AI then compares 'A's auspice / changing-line motion / direction' against 'B's auspice / changing-line motion / direction', and based on the concrete differences (e.g. A has changing lines indicating fortunate motion while B is stable; A's inner-outer trigrams clash, B's harmonize) commits to a recommendation in roughly 400 words. Suited to clear binary decisions in work, relationships, investment, or relocation. 10 credits per reading.",
+    bodyJa:
+      "本アプリが決断問題のために設計した「双卦比較」の占法です。単卦占いで「A か B か」を問うと、AI は「両方とも良い」というぼかし回答に陥りがち — 単卦は「事の本質」しか映さず、A 対 B の相対関係を含まないからです。双卦比較の方法は、質問と二つの道筋を明確に書き、A と B にそれぞれ独立して三銭法を6回行い、各々完全な六爻卦(本卦・変爻・之卦)を得ます。AI は「A 卦の吉凶 / 動爻 / 流れ」と「B 卦の吉凶 / 動爻 / 流れ」を比較し、両卦の具体的な違い(例:A は変爻があり動を示し吉、B は安定;A は内外卦が相剋、B は相生)に基づいて約 500 文字で明確に一方を推奨します。仕事・恋愛・投資・転居など明確な二者択一に適します。1 回 10 ポイント。",
+    bodyKo:
+      "본 앱이 결정 문제를 위해 설계한 '양 괘 비교' 점법입니다. 단괘 점에서 'A 와 B 중 무엇을 고를까'를 물으면 AI 는 '둘 다 장단점이 있다' 식의 흐릿한 답을 내기 쉽습니다 — 단괘는 '일의 본질'만 비추고 A 대 B 의 상대 관계를 담지 않기 때문입니다. 양 괘 비교의 방식은 질문과 두 갈림길을 명확히 적고, A 와 B 각각 독립적으로 삼전법을 여섯 번 행해 각기 완전한 육효 괘(본괘·변효·지괘)를 얻습니다. AI 는 'A 괘의 길흉 / 동효 / 흐름'과 'B 괘의 길흉 / 동효 / 흐름'을 비교하고, 두 괘의 구체적 차이(예: A 는 변효가 있어 움직임을 보이고 길, B 는 안정; A 는 내외괘가 상극, B 는 상생)에 근거하여 약 500자로 한쪽을 분명히 추천합니다. 일·연애·투자·이주 등 명확한 양자택일에 적합합니다. 1 회 10 포인트.",
+    detailHref: "/iching/two-options",
+  },
+  {
+    id: "instant-draw",
+    numberZh: "4",
+    numberEn: "4",
     nameZh: "抽卦速答法",
     nameEn: "Instant Draw",
     nameJa: "即引き法",
@@ -106,8 +130,8 @@ const METHODS: Method[] = [
   },
   {
     id: "direction-hexagram",
-    numberZh: "4",
-    numberEn: "4",
+    numberZh: "5",
+    numberEn: "5",
     nameZh: "方位卦象合參",
     nameEn: "Direction × Hexagram Combined",
     nameJa: "方位×卦象 合参",
@@ -135,6 +159,7 @@ const TIER_LABELS = {
   classical: { zh: "古法", en: "Classical", ja: "古典", ko: "고전" },
   instant: { zh: "即時", en: "Instant", ja: "即時", ko: "즉시" },
   advanced: { zh: "進階", en: "Advanced", ja: "上級", ko: "심화" },
+  decision: { zh: "決策", en: "Decision", ja: "決断", ko: "결정" },
 };
 
 const TIER_COLORS = {
@@ -142,6 +167,7 @@ const TIER_COLORS = {
   classical: "rgba(212,168,85,0.18)",
   instant: "rgba(139,92,246,0.18)",
   advanced: "rgba(99,179,237,0.18)",
+  decision: "rgba(244,114,182,0.18)",
 };
 
 const TIER_TEXT_COLORS = {
@@ -149,6 +175,7 @@ const TIER_TEXT_COLORS = {
   classical: "#fde68a",
   instant: "#c4b5fd",
   advanced: "#93c5fd",
+  decision: "#f9a8d4",
 };
 
 export default function MethodsView() {
@@ -196,10 +223,10 @@ export default function MethodsView() {
         </h1>
         <p style={{ color: "#c0c0d0", fontSize: 14, marginTop: 8 }}>
           {t(
-            "從三錢全卦到方位卦象合參,四種主流方法整理",
-            "From three-coin full hexagram to direction × hexagram combined — four mainstream methods",
-            "三銭全卦から方位×卦象合参まで、4つの主要な方法",
-            "삼전 전괘부터 방위·괘상 합참까지, 네 가지 주류 방법"
+            "從三錢全卦、梅花易數、二擇一決策到方位卦象合參,五種主流方法整理",
+            "From three-coin full hexagram, plum blossom, A/B decision, to direction × hexagram combined — five mainstream methods",
+            "三銭全卦・梅花易数・二択占い・方位×卦象合参まで、5つの主要な方法",
+            "삼전 전괘·매화역수·양자택일·방위 합참까지, 다섯 가지 주류 방법"
           )}
         </p>
         <p

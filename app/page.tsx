@@ -2976,18 +2976,6 @@ export default function Home() {
                       )}
                     />
                     <FreeToolCard
-                      href="/iching/two-options"
-                      imageUrl={uiImages["freeTool.iching.two-options"]}
-                      title={t("易經二擇一", "I Ching · A or B", "易経 二択占い", "주역 양자택일")}
-                      desc={t(
-                        "明確推一邊,不水球",
-                        "Commits to a side — no fence-sitting",
-                        "片方を明確に推奨",
-                        "한쪽을 분명히 추천"
-                      )}
-                      cta={t("來決定", "Decide", "決める", "결정하기")}
-                    />
-                    <FreeToolCard
                       href="/iching/daily"
                       imageUrl={uiImages["freeTool.iching.daily"]}
                       title={t("每日一卦", "Daily Hexagram", "毎日の卦", "오늘의 괘")}

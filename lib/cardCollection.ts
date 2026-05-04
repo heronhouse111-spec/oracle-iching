@@ -43,6 +43,7 @@ export type CollectionSource =
   | "plum_blossom"
   | "direction"
   | "yes_no"
+  | "ic_two_options"
   | "admin_grant";
 
 export interface RecordCardParams {

@@ -1,22 +1,23 @@
 "use client";
 
 /**
- * /iching/two-options — 易經二擇一
+ * /iching/two-options — 易經二擇一(雙卦版)
  *
- * 為什麼存在:使用者問「該選 A 還是 B」這類二擇一題時,以往的 AI 解讀
- * 容易給「兩邊都好兩邊都壞」的水球話,缺乏明確方向。這個頁面把 A / B 兩
- * 個選項變成結構化欄位,送進 /api/divine 後啟動「強建議模式」,
- * AI 必須以卦象為據,結尾明確推一邊。
+ * 為什麼存在:使用者問「該選 A 還是 B」這類二擇一題時,以往的 AI 解讀容易給
+ * 「兩邊都好兩邊都壞」的水球話,缺乏明確方向。本頁把 A / B 兩個選項變成
+ * 結構化欄位,各自起一卦(三錢法 6 次),送進 /api/divine/two-options 後
+ * AI 會比對兩卦的吉凶 / 動爻 / 之卦走向,給出明確推一邊的決斷,600 字解說。
  *
  * 流程:
- *   ask → 填問題 + 選項 A + 選項 B
- *   throwing → 三錢法 6 次自動擲爻 + 漸進揭示
- *   result → 顯示卦象(本卦 + 變爻 + 之卦)+ AI 解讀(streaming)
+ *   ask     → 填問題 + 選項 A + 選項 B
+ *   throwA  → 為 A 擲三錢法 6 次 + 漸進揭示
+ *   throwB  → 為 B 擲三錢法 6 次 + 漸進揭示
+ *   result  → 並排顯示兩卦(本卦 + 變爻 + 之卦)+ AI 比對解讀(streaming)
  *
  * 跟 /iching/yes-no 的差別:
- *   - yes-no 是「快速一卦速答」(無變爻 / 鎖死 1 點)
- *   - two-options 是完整三錢法占卜(有變爻 / 之卦),走 DIVINE 5 點價,
- *     得到的是更深入的決策建議。
+ *   - yes-no 是「快速一卦速答」(無變爻 / 鎖死 2 點)
+ *   - two-options 是雙卦三錢法(各有變爻 / 之卦)+ 雙卦比對 AI prompt,
+ *     走 IC_TWO_OPTIONS 10 點價,得到 600 字深入決策建議。
  */
 
 import { useState, useRef, useCallback } from "react";
@@ -39,8 +40,15 @@ import {
   notifyCreditsChanged,
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
+import { UI_CREDIT_COSTS } from "@/lib/uiCreditCosts";
 
-type Step = "ask" | "throwing" | "result";
+type Step = "ask" | "throwA" | "throwB" | "result";
+
+interface CastState {
+  result: DivinationResult;
+  primary: Hexagram;
+  relating: Hexagram | null;
+}
 
 export default function IChingTwoOptionsPage() {
   const { locale, t } = useLanguage();
@@ -48,10 +56,10 @@ export default function IChingTwoOptionsPage() {
   const [question, setQuestion] = useState("");
   const [optionA, setOptionA] = useState("");
   const [optionB, setOptionB] = useState("");
-  const [divResult, setDivResult] = useState<DivinationResult | null>(null);
-  const [hex, setHex] = useState<Hexagram | null>(null);
-  const [relatingHex, setRelatingHex] = useState<Hexagram | null>(null);
-  const [revealedLines, setRevealedLines] = useState(0);
+  const [castA, setCastA] = useState<CastState | null>(null);
+  const [castB, setCastB] = useState<CastState | null>(null);
+  const [revealedLinesA, setRevealedLinesA] = useState(0);
+  const [revealedLinesB, setRevealedLinesB] = useState(0);
   const [aiText, setAiText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -80,68 +88,87 @@ export default function IChingTwoOptionsPage() {
     optionA.trim().length > 0 &&
     optionB.trim().length > 0;
 
+  // 為單一選項擲三錢法 6 次,自下而上漸進揭示
+  const performSingleCast = useCallback(
+    async (setReveal: (n: number) => void): Promise<CastState> => {
+      const result = performDivination();
+      const primary = findHexagram(result.primaryLines);
+      const relating = result.relatingLines
+        ? findHexagram(result.relatingLines) ?? null
+        : null;
+      if (!primary) {
+        throw new Error("Failed to find hexagram");
+      }
+      setReveal(0);
+      for (let i = 1; i <= 6; i++) {
+        await new Promise((r) => setTimeout(r, 130));
+        setReveal(i);
+      }
+      await new Promise((r) => setTimeout(r, 320));
+      return { result, primary, relating };
+    },
+    []
+  );
+
   const handleThrow = useCallback(async () => {
     if (!formValid) return;
-    setStep("throwing");
 
-    // 三錢法 6 次擲爻(server-side data flow 跟主流程一致 — 把擲出來的
-    // 卦交給 /api/divine 做解讀)
-    const result = performDivination();
-    const primaryHex = findHexagram(result.primaryLines) ?? null;
-    const relHex = result.relatingLines
-      ? findHexagram(result.relatingLines) ?? null
-      : null;
-    setDivResult(result);
-    setHex(primaryHex);
-    setRelatingHex(relHex);
-    setRevealedLines(0);
-
-    // 自下而上揭示六爻 — 一爻 130ms,六爻 ~780ms
-    for (let i = 1; i <= 6; i++) {
-      await new Promise((r) => setTimeout(r, 130));
-      setRevealedLines(i);
-    }
-    await new Promise((r) => setTimeout(r, 240));
-
-    setStep("result");
-    if (!primaryHex) {
-      setAiText(
-        t(
-          "卦象解析失敗,請再試一次。",
-          "Failed to interpret hexagram, please try again.",
-          "卦の解析に失敗しました。もう一度お試しください。",
-          "괘 해석에 실패했습니다. 다시 시도해 주세요."
-        )
-      );
+    // ── A 卦 ──
+    setStep("throwA");
+    setRevealedLinesA(0);
+    let aCast: CastState;
+    try {
+      aCast = await performSingleCast(setRevealedLinesA);
+      setCastA(aCast);
+    } catch {
+      setStep("ask");
       return;
     }
 
+    // ── 過場(讓使用者看到 A 完成才開始 B,有節奏感) ──
+    await new Promise((r) => setTimeout(r, 600));
+
+    // ── B 卦 ──
+    setStep("throwB");
+    setRevealedLinesB(0);
+    let bCast: CastState;
+    try {
+      bCast = await performSingleCast(setRevealedLinesB);
+      setCastB(bCast);
+    } catch {
+      setStep("ask");
+      return;
+    }
+
+    await new Promise((r) => setTimeout(r, 320));
+    setStep("result");
+
+    // ── 送 API ──
     setIsLoading(true);
     setAiText("");
-
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
 
     try {
-      const res = await fetch("/api/divine", {
+      const res = await fetch("/api/divine/two-options", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          hexagramNumber: primaryHex.number,
-          hexagramName: isZh ? primaryHex.nameZh : primaryHex.nameEn,
-          changingLines: result.changingLines,
-          relatingHexagramNumber: relHex?.number ?? null,
           question: question.trim(),
-          // 把 A/B 一起當成 question 的延伸 — API route 內部會看到
-          // twoOptionA/twoOptionB 結構化欄位後啟動強建議模式
-          // (命名跟 /api/tarot 對齊)
-          twoOptionA: optionA.trim(),
-          twoOptionB: optionB.trim(),
-          // category 給「綜合」這個語意,讓 prompt 裡的 (category) 標籤好看一點
-          category: t("二擇一決策", "two-choice decision", "二択の決定", "양자택일 결정"),
-          locale: locale === "zh" || locale === "en" ? locale : "en",
-          // 二擇一不走衍伸鏈、不走 deep mode、不傳 persona — 用預設即可
+          optionA: optionA.trim(),
+          optionB: optionB.trim(),
+          castA: {
+            hexagramNumber: aCast.primary.number,
+            changingLines: aCast.result.changingLines,
+            relatingHexagramNumber: aCast.relating?.number ?? null,
+          },
+          castB: {
+            hexagramNumber: bCast.primary.number,
+            changingLines: bCast.result.changingLines,
+            relatingHexagramNumber: bCast.relating?.number ?? null,
+          },
+          locale,
         }),
         signal: ac.signal,
       });
@@ -193,7 +220,7 @@ export default function IChingTwoOptionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [formValid, question, optionA, optionB, isZh, locale, t]);
+  }, [formValid, question, optionA, optionB, locale, performSingleCast, t]);
 
   const handleReset = () => {
     abortRef.current?.abort();
@@ -201,18 +228,20 @@ export default function IChingTwoOptionsPage() {
     setQuestion("");
     setOptionA("");
     setOptionB("");
-    setDivResult(null);
-    setHex(null);
-    setRelatingHex(null);
-    setRevealedLines(0);
+    setCastA(null);
+    setCastB(null);
+    setRevealedLinesA(0);
+    setRevealedLinesB(0);
     setAiText("");
   };
+
+  const cost = UI_CREDIT_COSTS.IC_TWO_OPTIONS;
 
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80 }}>
       <Header />
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "16px" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "16px" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <h1
             className="text-gold-gradient"
@@ -227,18 +256,18 @@ export default function IChingTwoOptionsPage() {
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
             {t(
-              "卡在兩個選項之間時,把問題與兩條路徑寫清楚,起一卦,得到明確的方向建議。",
-              "Stuck between two paths? Spell out the question and both options — draw a hexagram and get a clear, committed recommendation.",
-              "二つの選択肢の間で迷ったら、質問と両方の道筋を明確に書き、卦を立てて、はっきりとした方向性のアドバイスを得ましょう。",
-              "두 선택지 사이에서 망설일 때, 질문과 두 갈림길을 명확히 적고 괘를 세워 분명한 방향 추천을 받아 보세요."
+              "卡在兩個選項之間時,把問題與兩條路徑寫清楚,A / B 各起一卦,AI 比對兩卦給出明確推一邊的決斷。",
+              "Stuck between two paths? Spell out both options — cast a hexagram for each, and AI compares them to give a committed recommendation.",
+              "二つの選択肢の間で迷ったら、両方の道筋を明確に書いて、A / B それぞれに卦を立てましょう。AI が両卦を比較して明確に一方を推奨します。",
+              "두 선택지 사이에서 망설일 때, 양쪽 갈림길을 명확히 적고 A / B 각각 괘를 세우세요. AI 가 두 괘를 비교해 분명한 추천을 드립니다."
             )}
           </p>
           <div style={{ color: "rgba(212,168,85,0.7)", fontSize: 11, marginTop: 6 }}>
             {t(
-              "每次占卜消耗 5 點(訪客首次免費)",
-              "Each reading costs 5 credits (first one free for guests)",
-              "1回につき 5 ポイント消費(初回はゲストも無料)",
-              "1회 점에 5포인트 소모 (게스트 첫 회 무료)"
+              `每次占卜消耗 ${cost} 點(A 卦 + B 卦,雙卦比對解讀約 600 字)`,
+              `Each reading costs ${cost} credits (one cast for A + one for B, ~400-word comparison)`,
+              `1回につき ${cost} ポイント消費(A 卦 + B 卦、双卦比較で約 500 文字)`,
+              `1회 점에 ${cost} 포인트 소모 (A 괘 + B 괘, 양 괘 비교 약 500자)`
             )}
           </div>
         </div>
@@ -356,10 +385,10 @@ export default function IChingTwoOptionsPage() {
                 }}
               >
                 {t(
-                  "💡 寫法越具體,占卜越準。例如把 A 寫成「留在現在公司、把產品做完」、B 寫成「離職轉去 X 創投、做投資人關係」,而不是只寫「留下」/「離職」。",
-                  "💡 The more specific, the better. Write A as 'stay and ship the product' and B as 'leave for VC X, do investor relations' — not just 'stay' / 'leave'.",
-                  "💡 具体的に書くほど結果が深まります。A は「今の会社に残って製品を完成させる」、B は「VC X に転職して投資家対応をする」のように、ただの「残る」/「辞める」ではなく状況を書きましょう。",
-                  "💡 구체적일수록 점이 정확합니다. A 는 '회사에 남아 제품을 완성한다', B 는 'X VC 로 이직해 IR 을 담당한다' 처럼 단순히 '남기' / '떠나기' 대신 상황을 적으세요."
+                  "💡 寫法越具體,占卜越準。例如把 A 寫成「留在現在公司、把產品做完」、B 寫成「離職轉去 X 創投、做投資人關係」,而不是只寫「留下」/「離職」。本占卜會為 A 跟 B 各起一卦,共兩次擲卦。",
+                  "💡 The more specific, the better. Write A as 'stay and ship the product' and B as 'leave for VC X, do investor relations' — not just 'stay' / 'leave'. This reading casts a hexagram for A and another for B (two casts total).",
+                  "💡 具体的に書くほど結果が深まります。A は「今の会社に残って製品を完成させる」、B は「VC X に転職して投資家対応をする」のように、ただの「残る」/「辞める」ではなく状況を書きましょう。本占いは A と B にそれぞれ卦を立てます(計2回の立卦)。",
+                  "💡 구체적일수록 점이 정확합니다. A 는 '회사에 남아 제품을 완성한다', B 는 'X VC 로 이직해 IR 을 담당한다' 처럼 단순히 '남기' / '떠나기' 대신 상황을 적으세요. 본 점은 A 와 B 각각 괘를 세웁니다(총 2회 기괘)."
                 )}
               </div>
 
@@ -382,33 +411,36 @@ export default function IChingTwoOptionsPage() {
                   boxShadow: formValid ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
                 }}
               >
-                {t("✦ 起卦,看建議", "✦ Cast & Get Verdict", "✦ 卦を立てて結論を見る", "✦ 괘 세우고 결론 보기")}
+                {t(
+                  "✦ 為 A / B 各起一卦",
+                  "✦ Cast for A and B",
+                  "✦ A / B それぞれに卦を立てる",
+                  "✦ A / B 각각 괘 세우기"
+                )}
               </button>
             </motion.div>
           )}
 
-          {(step === "throwing" || step === "result") && hex && (
+          {(step === "throwA" || step === "throwB" || step === "result") && (
             <motion.div
               key="hex-area"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              style={{ textAlign: "center" }}
             >
-              {/* 兩個選項回顧:讓使用者在 result 頁仍能看到自己當初寫的 A / B */}
+              {/* 兩個選項回顧 */}
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: 10,
                   marginBottom: 18,
-                  textAlign: "left",
                 }}
               >
                 <div
                   style={{
                     background: "rgba(13,13,43,0.55)",
-                    border: "1px solid rgba(212,168,85,0.2)",
+                    border: "1px solid rgba(212,168,85,0.25)",
                     borderRadius: 10,
                     padding: 12,
                   }}
@@ -431,7 +463,7 @@ export default function IChingTwoOptionsPage() {
                 <div
                   style={{
                     background: "rgba(13,13,43,0.55)",
-                    border: "1px solid rgba(212,168,85,0.2)",
+                    border: "1px solid rgba(212,168,85,0.25)",
                     borderRadius: 10,
                     padding: 12,
                   }}
@@ -453,151 +485,58 @@ export default function IChingTwoOptionsPage() {
                 </div>
               </div>
 
+              {/* 兩個卦象並排 */}
               <div
                 style={{
-                  margin: "0 auto 16px",
-                  width: 220,
-                  padding: 24,
-                  borderRadius: 16,
-                  background: "rgba(13,13,43,0.6)",
-                  border: "1px solid rgba(212,168,85,0.4)",
-                  boxShadow: "0 8px 32px rgba(212,168,85,0.18)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 14,
+                  marginBottom: 22,
                 }}
               >
-                <HexagramLines
-                  lines={hex.lines}
-                  changingIdx={divResult?.changingLines ?? []}
-                  revealedCount={step === "result" ? 6 : revealedLines}
+                <CastPanel
+                  side="A"
+                  cast={castA}
+                  revealed={revealedLinesA}
+                  active={step === "throwA"}
+                  showFull={step === "result" || step === "throwB"}
+                  isZh={isZh}
+                  t={t}
                 />
-
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{
-                    opacity: step === "result" || revealedLines >= 6 ? 1 : 0,
-                  }}
-                  transition={{ duration: 0.4, delay: step === "result" ? 0 : 0.1 }}
-                  style={{ marginTop: 16 }}
-                >
-                  <div
-                    style={{
-                      fontSize: 44,
-                      color: "rgba(212,168,85,0.9)",
-                      lineHeight: 1,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {hex.character}
-                  </div>
-                  <div
-                    style={{
-                      color: "#e8e8f0",
-                      fontSize: 18,
-                      fontWeight: 700,
-                      fontFamily: "'Noto Serif TC', serif",
-                    }}
-                  >
-                    {isZh ? hex.nameZh : hex.nameEn.split(" ")[0]}
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginTop: 2 }}>
-                    {t(
-                      `第 ${hex.number} 卦`,
-                      `Hexagram ${hex.number}`,
-                      `第 ${hex.number} 卦`,
-                      `제 ${hex.number} 괘`
-                    )}
-                  </div>
-                </motion.div>
+                <CastPanel
+                  side="B"
+                  cast={castB}
+                  revealed={revealedLinesB}
+                  active={step === "throwB"}
+                  showFull={step === "result"}
+                  isZh={isZh}
+                  t={t}
+                />
               </div>
 
               {step === "result" && (
                 <>
-                  <UpperLowerTrigrams
-                    upperCode={hex.upperTrigram}
-                    lowerCode={hex.lowerTrigram}
-                    isZh={isZh}
-                    t={t}
-                  />
-
-                  {relatingHex && (
-                    <div
-                      style={{
-                        margin: "10px auto 16px",
-                        padding: "10px 16px",
-                        background: "rgba(212,168,85,0.08)",
-                        border: "1px dashed rgba(212,168,85,0.35)",
-                        borderRadius: 10,
-                        display: "inline-block",
-                        fontSize: 13,
-                        color: "rgba(232,232,240,0.85)",
-                      }}
-                    >
-                      {t(
-                        `之卦:第 ${relatingHex.number} 卦 ${relatingHex.nameZh}`,
-                        `Relating: Hexagram ${relatingHex.number} — ${relatingHex.nameEn.split(" ")[0]}`,
-                        `之卦:第 ${relatingHex.number} 卦 ${relatingHex.nameZh}`,
-                        `지괘: 제 ${relatingHex.number} 괘 ${relatingHex.nameZh}`
-                      )}
-                    </div>
-                  )}
-
-                  {isZh && (
-                    <div
-                      style={{
-                        background: "rgba(13,13,43,0.5)",
-                        border: "1px solid rgba(212,168,85,0.18)",
-                        borderRadius: 10,
-                        padding: 12,
-                        margin: "0 auto 14px",
-                        maxWidth: 560,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(212,168,85,0.7)",
-                          letterSpacing: 1,
-                          marginBottom: 4,
-                        }}
-                      >
-                        卦辭
-                      </div>
-                      <div
-                        style={{
-                          color: "#fde68a",
-                          fontSize: 15,
-                          fontWeight: 700,
-                          fontFamily: "'Noto Serif TC', serif",
-                          lineHeight: 1.7,
-                        }}
-                      >
-                        {hex.judgmentZh}
-                      </div>
-                    </div>
-                  )}
-
                   <div
                     style={{
                       background: "rgba(13,13,43,0.6)",
                       border: "1px solid rgba(212,168,85,0.2)",
                       borderRadius: 14,
-                      padding: 20,
+                      padding: 22,
                       margin: "0 auto 20px",
-                      maxWidth: 560,
-                      textAlign: "left",
-                      lineHeight: 1.8,
+                      lineHeight: 1.85,
                       color: "#e8e8f0",
                       fontSize: 15,
-                      minHeight: 120,
+                      minHeight: 200,
                       whiteSpace: "pre-wrap",
                     }}
                   >
                     {aiText ||
                       (isLoading
                         ? t(
-                            "占卜師正在解讀…",
-                            "Diviner is interpreting…",
-                            "占い師が解読中…",
-                            "점술가가 해석 중…"
+                            "占卜師正在比對兩卦...",
+                            "Diviner is comparing the two hexagrams…",
+                            "占い師が両卦を比較中…",
+                            "점술가가 두 괘를 비교하는 중…"
                           )
                         : "")}
                     {isLoading && <span style={{ color: "#d4a855" }}> ▌</span>}
@@ -626,36 +565,40 @@ export default function IChingTwoOptionsPage() {
                     >
                       {t("✦ 再問一個", "✦ Ask another", "✦ もう一つ問う", "✦ 다시 물어보기")}
                     </button>
-                    <Link
-                      href={`/iching/hexagrams/${hex.number}`}
-                      style={{
-                        color: "rgba(212,168,85,0.85)",
-                        fontSize: 13,
-                        textDecoration: "underline",
-                      }}
-                    >
-                      {t(
-                        `看這一卦的完整介紹 →`,
-                        `View this hexagram's full entry →`,
-                        `この卦の完全解説を見る →`,
-                        `이 괘의 전체 설명 보기 →`
-                      )}
-                    </Link>
-                    <Link
-                      href="/"
-                      style={{
-                        color: "rgba(212,168,85,0.7)",
-                        fontSize: 13,
-                        textDecoration: "underline",
-                      }}
-                    >
-                      {t(
-                        "想看更深入的解讀?試試完整占卜 →",
-                        "Want a deeper reading? Try a full divination →",
-                        "より深い解読を見たい?完全占いへ →",
-                        "더 깊은 해석을 원하시나요? 전체 점으로 →"
-                      )}
-                    </Link>
+                    {castA?.primary && (
+                      <Link
+                        href={`/iching/hexagrams/${castA.primary.number}`}
+                        style={{
+                          color: "rgba(212,168,85,0.85)",
+                          fontSize: 13,
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {t(
+                          `看 A 卦的完整介紹(第 ${castA.primary.number} 卦)→`,
+                          `View A's hexagram entry (#${castA.primary.number}) →`,
+                          `A 卦の完全解説を見る(第 ${castA.primary.number} 卦)→`,
+                          `A 괘 전체 설명 보기 (제 ${castA.primary.number} 괘) →`
+                        )}
+                      </Link>
+                    )}
+                    {castB?.primary && (
+                      <Link
+                        href={`/iching/hexagrams/${castB.primary.number}`}
+                        style={{
+                          color: "rgba(212,168,85,0.85)",
+                          fontSize: 13,
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {t(
+                          `看 B 卦的完整介紹(第 ${castB.primary.number} 卦)→`,
+                          `View B's hexagram entry (#${castB.primary.number}) →`,
+                          `B 卦の完全解説を見る(第 ${castB.primary.number} 卦)→`,
+                          `B 괘 전체 설명 보기 (제 ${castB.primary.number} 괘) →`
+                        )}
+                      </Link>
+                    )}
                   </div>
                 </>
               )}
@@ -675,7 +618,161 @@ export default function IChingTwoOptionsPage() {
 }
 
 // ──────────────────────────────────────────
-// 卦線渲染 — 漸進揭示 + 變爻標記
+// 單側卦面板 — 標題(A/B) + 卦線漸進揭示 + 卦名 + 上下卦
+// ──────────────────────────────────────────
+function CastPanel({
+  side,
+  cast,
+  revealed,
+  active,
+  showFull,
+  isZh,
+  t,
+}: {
+  side: "A" | "B";
+  cast: CastState | null;
+  revealed: number;
+  active: boolean;
+  showFull: boolean;
+  isZh: boolean;
+  t: (zh: string, en: string, ja?: string, ko?: string) => string;
+}) {
+  const labelZh = side === "A" ? "為 A 起卦" : "為 B 起卦";
+  const labelEn = side === "A" ? "Cast for A" : "Cast for B";
+  const labelJa = side === "A" ? "A の卦" : "B の卦";
+  const labelKo = side === "A" ? "A 괘" : "B 괘";
+
+  return (
+    <div
+      style={{
+        background: "rgba(13,13,43,0.55)",
+        border: active
+          ? "1px solid rgba(212,168,85,0.6)"
+          : "1px solid rgba(212,168,85,0.25)",
+        borderRadius: 14,
+        padding: 16,
+        textAlign: "center",
+        boxShadow: active ? "0 0 24px rgba(212,168,85,0.18)" : undefined,
+        transition: "border-color 0.3s, box-shadow 0.3s",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          letterSpacing: 2,
+          color: active ? "#fde68a" : "rgba(212,168,85,0.7)",
+          marginBottom: 10,
+          fontWeight: 700,
+        }}
+      >
+        {t(labelZh, labelEn, labelJa, labelKo)}
+        {active && (
+          <span style={{ marginLeft: 6, opacity: 0.85 }}>
+            {t("擲卦中…", "Casting…", "擲卦中…", "괘 던지는 중…")}
+          </span>
+        )}
+      </div>
+
+      <div
+        style={{
+          margin: "0 auto",
+          width: "100%",
+          maxWidth: 180,
+          padding: "12px 8px",
+        }}
+      >
+        {cast ? (
+          <HexagramLines
+            lines={cast.primary.lines}
+            changingIdx={cast.result.changingLines}
+            revealedCount={showFull ? 6 : revealed}
+          />
+        ) : (
+          <div
+            style={{
+              height: 120,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "rgba(192,192,208,0.4)",
+              fontSize: 12,
+            }}
+          >
+            {t("等待中", "Waiting", "待機中", "대기 중")}
+          </div>
+        )}
+      </div>
+
+      {cast && (revealed >= 6 || showFull) && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          style={{ marginTop: 8 }}
+        >
+          <div style={{ fontSize: 32, color: "rgba(212,168,85,0.9)", lineHeight: 1, marginBottom: 4 }}>
+            {cast.primary.character}
+          </div>
+          <div
+            style={{
+              color: "#e8e8f0",
+              fontSize: 16,
+              fontWeight: 700,
+              fontFamily: "'Noto Serif TC', serif",
+            }}
+          >
+            {isZh ? cast.primary.nameZh : cast.primary.nameEn.split(" ")[0]}
+          </div>
+          <div style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, marginTop: 2 }}>
+            {t(
+              `第 ${cast.primary.number} 卦`,
+              `Hexagram ${cast.primary.number}`,
+              `第 ${cast.primary.number} 卦`,
+              `제 ${cast.primary.number} 괘`
+            )}
+          </div>
+
+          {showFull && (
+            <>
+              <div style={{ marginTop: 10 }}>
+                <UpperLowerTrigrams
+                  upperCode={cast.primary.upperTrigram}
+                  lowerCode={cast.primary.lowerTrigram}
+                  isZh={isZh}
+                  t={t}
+                />
+              </div>
+              {cast.relating && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: "6px 10px",
+                    background: "rgba(212,168,85,0.08)",
+                    border: "1px dashed rgba(212,168,85,0.35)",
+                    borderRadius: 8,
+                    fontSize: 11,
+                    color: "rgba(232,232,240,0.85)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t(
+                    `之卦 · 第 ${cast.relating.number} 卦 ${cast.relating.nameZh}`,
+                    `Relating: #${cast.relating.number} ${cast.relating.nameEn.split(" ")[0]}`,
+                    `之卦 · 第 ${cast.relating.number} 卦 ${cast.relating.nameZh}`,
+                    `지괘 · 제 ${cast.relating.number} 괘 ${cast.relating.nameZh}`
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────
+// 卦線渲染 — 漸進揭示 + 變爻標記(雙卦版尺寸縮小一些)
 // ──────────────────────────────────────────
 function HexagramLines({
   lines,
@@ -686,10 +783,10 @@ function HexagramLines({
   changingIdx: number[];
   revealedCount: number;
 }) {
-  const w = 130;
-  const h = 11;
-  const gap = 12;
-  const gapInner = 14;
+  const w = 110;
+  const h = 9;
+  const gap = 9;
+  const gapInner = 12;
   // lines[0] 是最下爻,渲染要倒過來;揭示順序仍從下到上
   const display = lines.map((line, i) => ({ line, originalIdx: i })).reverse();
   return (
@@ -725,7 +822,7 @@ function HexagramLines({
                     ? "linear-gradient(90deg, #f87171, #fbbf24, #f87171)"
                     : "#d4a855",
                   boxShadow: isChanging
-                    ? "0 0 12px rgba(248,113,113,0.55)"
+                    ? "0 0 10px rgba(248,113,113,0.55)"
                     : undefined,
                 }}
               />
@@ -740,7 +837,7 @@ function HexagramLines({
                       ? "linear-gradient(90deg, #f87171, #fbbf24)"
                       : "#d4a855",
                     boxShadow: isChanging
-                      ? "0 0 12px rgba(248,113,113,0.55)"
+                      ? "0 0 10px rgba(248,113,113,0.55)"
                       : undefined,
                   }}
                 />
@@ -753,7 +850,7 @@ function HexagramLines({
                       ? "linear-gradient(90deg, #fbbf24, #f87171)"
                       : "#d4a855",
                     boxShadow: isChanging
-                      ? "0 0 12px rgba(248,113,113,0.55)"
+                      ? "0 0 10px rgba(248,113,113,0.55)"
                       : undefined,
                   }}
                 />
@@ -763,9 +860,9 @@ function HexagramLines({
               <span
                 style={{
                   position: "absolute",
-                  right: -22,
-                  top: -4,
-                  fontSize: 14,
+                  right: -18,
+                  top: -3,
+                  fontSize: 12,
                   color: "#f87171",
                 }}
               >
@@ -801,28 +898,17 @@ function UpperLowerTrigrams({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 14,
-        margin: "4px 0 8px",
+        gap: 8,
+        fontSize: 11,
+        color: "rgba(192,192,208,0.75)",
         flexWrap: "wrap",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 20, color: "#d4a855", lineHeight: 1 }}>
-          {upper.symbol}
-        </span>
-        <span style={{ fontSize: 12, color: "rgba(192,192,208,0.7)" }}>
-          {t(`上 ${upperName}`, `Upper ${upperName}`, `上 ${upperName}`, `상 ${upperName}`)}
-        </span>
-      </div>
+      <span style={{ fontSize: 16, color: "#d4a855" }}>{upper.symbol}</span>
+      <span>{t(`上 ${upperName}`, `Upper ${upperName}`, `上 ${upperName}`, `상 ${upperName}`)}</span>
       <span style={{ color: "rgba(212,168,85,0.4)" }}>／</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 20, color: "#d4a855", lineHeight: 1 }}>
-          {lower.symbol}
-        </span>
-        <span style={{ fontSize: 12, color: "rgba(192,192,208,0.7)" }}>
-          {t(`下 ${lowerName}`, `Lower ${lowerName}`, `下 ${lowerName}`, `하 ${lowerName}`)}
-        </span>
-      </div>
+      <span style={{ fontSize: 16, color: "#d4a855" }}>{lower.symbol}</span>
+      <span>{t(`下 ${lowerName}`, `Lower ${lowerName}`, `下 ${lowerName}`, `하 ${lowerName}`)}</span>
     </div>
   );
 }

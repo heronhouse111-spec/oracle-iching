@@ -30,6 +30,7 @@ export const UI_CREDIT_COSTS = {
   DEEP_INSIGHT_SURCHARGE: 3,
   DIRECTION_HEX: 10,   // 方位卦象合參
   PLUM_BLOSSOM: 5,
+  IC_TWO_OPTIONS: 10,  // 易經二擇一 — A/B 各起一卦,雙卦比對
 } as const;
 
 /** 由牌陣張數推出 cost(同 /api/tarot 的 tarotCostFor 邏輯) */
