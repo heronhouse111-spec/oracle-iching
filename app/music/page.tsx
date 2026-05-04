@@ -448,6 +448,8 @@ export default function MusicLeaderboardPage() {
                         onPlay={() => playTrack(tr)}
                         onCollect={() => handleCollect(tr.id)}
                         isCollecting={collectingId === tr.id}
+                        isCollected={collectedIds.has(tr.id)}
+                        isOwnTrack={!!currentUserId && tr.creator_id === currentUserId}
                         locale={locale}
                         t={t}
                       />
@@ -513,10 +515,14 @@ function TrackRow(props: {
   onPlay: () => void;
   onCollect?: () => void;
   isCollecting?: boolean;
+  /** 用戶已花 20pt 收藏這首 — 顯示「已收藏」徽章,不顯示購買按鈕 */
+  isCollected?: boolean;
+  /** 這首是用戶自己創作的 — 顯示「我的」徽章,不顯示購買按鈕 */
+  isOwnTrack?: boolean;
   locale: "zh" | "en" | "ja" | "ko";
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }) {
-  const { trackId, rank, title, categoryId, creatorName, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, t } = props;
+  const { trackId, rank, title, categoryId, creatorName, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, isCollected, isOwnTrack, t } = props;
   const [showReport, setShowReport] = useState(false);
   return (
     <div
@@ -600,6 +606,62 @@ function TrackRow(props: {
         >
           FREE
         </span>
+      ) : isOwnTrack ? (
+        <span
+          style={{
+            fontSize: 10,
+            padding: "3px 8px",
+            borderRadius: 9999,
+            background: "rgba(139,92,246,0.15)",
+            color: "#c4b5fd",
+            border: "1px solid rgba(139,92,246,0.4)",
+            flexShrink: 0,
+          }}
+          title={t("你創作的", "Your track", "あなたの曲", "내 곡")}
+        >
+          {t("我的", "Mine", "自分", "내 곡")}
+        </span>
+      ) : isCollected ? (
+        <>
+          <span
+            style={{
+              fontSize: 10,
+              padding: "3px 8px",
+              borderRadius: 9999,
+              background: "rgba(40,200,120,0.15)",
+              color: "#28c878",
+              border: "1px solid rgba(40,200,120,0.4)",
+              flexShrink: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 3,
+            }}
+            title={t("已收藏 · 完整收聽", "Collected · Full track unlocked", "収集済み", "수집됨")}
+          >
+            ✓ {t("已收藏", "Collected", "収集済", "수집됨")}
+          </span>
+          <button
+            onClick={() => setShowReport(true)}
+            aria-label={t("檢舉", "Report", "通報", "신고")}
+            title={t("檢舉這首歌", "Report this track", "この曲を通報", "신고")}
+            style={{
+              width: 24,
+              height: 24,
+              flexShrink: 0,
+              borderRadius: 9999,
+              background: "transparent",
+              border: "1px solid rgba(192,192,208,0.2)",
+              color: "rgba(192,192,208,0.5)",
+              fontSize: 14,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              padding: 0,
+              lineHeight: 1,
+            }}
+          >
+            ⋯
+          </button>
+        </>
       ) : onCollect ? (
         <>
           <button
