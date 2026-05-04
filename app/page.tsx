@@ -3361,9 +3361,9 @@ export default function Home() {
                   onChange={handlePersonaDepthChange}
                   system={divineType === "iching" ? "iching" : "tarot"}
                   onUpgrade={() => {
-                    if (typeof window !== "undefined") {
-                      window.location.assign("/account/upgrade");
-                    }
+                    // router.push 而非 window.location.assign — 避免 hard reload
+                    // 把 MusicPlayerProvider 重 mount 中斷音樂(使用者反映的 bug)
+                    router.push("/account/upgrade");
                   }}
                 />
 

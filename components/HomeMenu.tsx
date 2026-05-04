@@ -192,15 +192,16 @@ export default function HomeMenu() {
     };
   }, [open]);
 
-  // 已在某個 route。若 user 點同一個 route,Next router.push 不會 remount,
-  // 占卜過程的 state 會留著 → 看起來像沒反應。對首頁特別重要,所以 hard reload 它。
+  // 一律走 Next client-side router.push,即使是同一個 route 也不要 hard reload。
+  // 原因:hard reload 會 remount 整個 React tree 把 MusicPlayerProvider 的 audio
+  // element 跟 queue/queueIndex/currentTime state 全部炸掉,使用者反映「換頁
+  // 音樂就重播」就是這個。換成 router.push:
+  //   - 不同 route → Next 正常切頁,layout 內的 MusicPlayerProvider 不會 unmount,音樂持續
+  //   - 同一 route → Next no-op(不會 remount),音樂持續;代價是占卜中途按 logo 不會
+  //     重置 state,但這比音樂被切斷重要。要重置 state 使用者可以手動 refresh(F5)。
   const navigate = (href: string) => {
     setOpen(false);
     setExpandedKey(null);
-    if (pathname === href) {
-      window.location.assign(href);
-      return;
-    }
     router.push(href);
   };
 
