@@ -51,6 +51,8 @@ import { saveDivination } from "@/lib/saveDivination";
 import { hexagramImageKey, type IchingImagesMap } from "@/lib/ichingImages";
 
 const RESUME_STATE_KEY = "iching_resume_state";
+// 跟首頁那邊讀的 key shape 對齊 — 不要拼錯
+const METHOD_RESULT_KEY = "iching_method_result_state";
 
 type Step = "ask" | "throwA" | "throwB" | "result";
 
@@ -183,118 +185,42 @@ export default function TwoOptionsView({ images }: { images: IchingImagesMap }) 
       return;
     }
 
-    await new Promise((r) => setTimeout(r, 320));
-    setStep("result");
+    await new Promise((r) => setTimeout(r, 600));
 
-    // ── 送 API ──
-    setIsLoading(true);
-    setAiText("");
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
+    // ── 跳到首頁 result step,沿用主流程的統一結果頁(解說 + 繼續請教 + 衍伸占卜)──
+    // 對齊 plum-blossom / direction-hexagram 的 hand-off pattern:
+    //   把 castA + castB + question + category + A/B 標籤塞進 sessionStorage
+    //   ("iching_method_result_state"),首頁的 resumeFlow=method-result effect 會
+    //   讀出來、setState 落到 result step,並由 fetchAIReading 走 method='two-options'
+    //   分支送到 /api/divine/two-options 拿 streaming 回應、寫進歷史、共用 chat / 衍伸。
     try {
-      const res = await fetch("/api/divine/two-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: question.trim(),
-          optionA: optionA.trim(),
-          optionB: optionB.trim(),
-          castA: {
-            hexagramNumber: aCast.primary.number,
-            changingLines: aCast.result.changingLines,
-            relatingHexagramNumber: aCast.relating?.number ?? null,
-          },
-          castB: {
-            hexagramNumber: bCast.primary.number,
-            changingLines: bCast.result.changingLines,
-            relatingHexagramNumber: bCast.relating?.number ?? null,
-          },
-          locale,
-        }),
-        signal: ac.signal,
-      });
-
-      if (res.status === 401) {
-        setIsLoading(false);
-        setLoginOpen(true);
-        return;
-      }
-      const creditsErr = await parseInsufficientCredits(res);
-      if (creditsErr) {
-        setIsLoading(false);
-        setCreditsModal({ open: true, required: creditsErr.required });
-        return;
-      }
-      if (!res.ok) {
-        setIsLoading(false);
-        setAiText(
-          t(
-            "AI 服務暫時無法回應,請稍後再試。",
-            "AI service is temporarily unavailable, please try again later.",
-            "AI サービスが一時的に応答できません。後ほどお試しください。",
-            "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요."
-          )
-        );
-        return;
-      }
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
-        setAiText((prev) => prev + chunk);
-      }
-      notifyCreditsChanged();
-
-      // ── 存進占卜紀錄(method='two-options' + castB columns)──
-      // 雲端有設 Supabase + 已登入 → 寫 divinations 表;否則 fallback localStorage。
-      // 兩卦各記:A 卦走主欄位,B 卦走 cast_b_* 額外欄位(SQL migration 提供)。
-      try {
-        await saveDivination({
-          divineType: "iching",
-          method: "two-options",
-          question: question.trim(),
-          category,
-          hexagramNumber: aCast.primary.number,
-          primaryLines: aCast.result.primaryLines,
-          changingLines: aCast.result.changingLines,
-          relatingHexagramNumber: aCast.relating?.number ?? null,
-          twoOptionA: optionA.trim(),
-          twoOptionB: optionB.trim(),
-          castB: {
-            hexagramNumber: bCast.primary.number,
-            primaryLines: bCast.result.primaryLines,
-            changingLines: bCast.result.changingLines,
-            relatingHexagramNumber: bCast.relating?.number ?? null,
-          },
-          aiReading: fullText,
-          locale,
-        });
-      } catch (e) {
-        console.error("[two-options] saveDivination failed:", e);
-      }
+      const payload = {
+        method: "two-options" as const,
+        question: question.trim(),
+        category,
+        hexagramNumber: aCast.primary.number,
+        primaryLines: aCast.result.primaryLines,
+        changingLines: aCast.result.changingLines,
+        relatingNumber: aCast.relating?.number ?? null,
+        relatingLines: aCast.result.relatingLines ?? null,
+        castB: {
+          hexagramNumber: bCast.primary.number,
+          primaryLines: bCast.result.primaryLines,
+          changingLines: bCast.result.changingLines,
+          relatingNumber: bCast.relating?.number ?? null,
+          relatingLines: bCast.result.relatingLines ?? null,
+        },
+        optionA: optionA.trim(),
+        optionB: optionB.trim(),
+      };
+      sessionStorage.setItem(METHOD_RESULT_KEY, JSON.stringify(payload));
+      sessionStorage.removeItem(RESUME_STATE_KEY);
+      router.replace("/?resumeFlow=method-result");
     } catch (e) {
-      if ((e as Error).name !== "AbortError") {
-        console.error(e);
-        setAiText(
-          t(
-            "發生錯誤,請再試一次。",
-            "Something went wrong, please retry.",
-            "エラーが発生しました。再度お試しください。",
-            "오류가 발생했습니다. 다시 시도해 주세요."
-          )
-        );
-      }
-    } finally {
-      setIsLoading(false);
+      console.error("[two-options] hand-off to home result step failed:", e);
+      setStep("ask");
     }
-  }, [formValid, question, optionA, optionB, locale, performSingleCast, t]);
+  }, [formValid, question, category, optionA, optionB, performSingleCast, router]);
 
   const handleReset = () => {
     abortRef.current?.abort();
@@ -756,7 +682,9 @@ function CastPanel({
           padding: "12px 8px",
         }}
       >
-        {cast ? (
+        {/* 動畫期間(revealed < 6)+ 沒卦圖檔可顯示時 → 用陰陽爻線。
+            一旦六爻揭完(revealed >= 6 || showFull),改用卦象圖,不再重複顯示陰陽爻。 */}
+        {cast && (revealed >= 6 || showFull) && heroImg ? null : cast ? (
           <HexagramLines
             lines={cast.primary.lines}
             changingIdx={cast.result.changingLines}

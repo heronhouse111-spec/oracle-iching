@@ -303,12 +303,18 @@ export default function Home() {
   // 易經占法分流 — 'main' = 三錢全卦法(預設,擲銅錢動畫);
   //              'plum-blossom' = 梅花易數(時間起卦,工具頁完成後 redirect 帶結果);
   //              'direction-hexagram' = 方位卦象合參(羅盤+擲爻 + 帶 directionTrigram)。
+  //              'two-options' = 易經二擇一(A/B 各一卦,/iching/two-options 完成後 redirect 帶 castA + castB)。
   // 影響:result step 派 AI 給哪一支 API、要不要顯示方位卡、DB 寫入時 method 欄填什麼。
   const [divineMethod, setDivineMethod] = useState<
-    "main" | "plum-blossom" | "direction-hexagram"
+    "main" | "plum-blossom" | "direction-hexagram" | "two-options"
   >("main");
   // 方位卦象合參才有值,其他兩種 null。寫進 sessionStorage 帶過來的 trigram code(3-bit)
   const [directionTrigram, setDirectionTrigram] = useState<string | null>(null);
+  // 二擇一才有值 — B 卦的卦象 + 擲卦結果 + 之卦(A 卦走主欄位 hexagram / divinationResult /
+  // relatingHexagram,跟其他占法共用)。其他占法 null。
+  const [hexagramB, setHexagramB] = useState<Hexagram | null>(null);
+  const [relatingHexagramB, setRelatingHexagramB] = useState<Hexagram | null>(null);
+  const [divinationResultB, setDivinationResultB] = useState<DivinationResult | null>(null);
 
   // ── 占卜師人格 + 解讀深度 ────────────────────────────
   // localStorage 記住上次選擇 — 預設 lunar-sister + quick(免費版)。
@@ -552,7 +558,7 @@ export default function Home() {
 
     let payload:
       | {
-          method?: "plum-blossom" | "direction-hexagram";
+          method?: "plum-blossom" | "direction-hexagram" | "two-options";
           question?: string;
           category?: string;
           directionTrigram?: string | null;
@@ -562,6 +568,16 @@ export default function Home() {
           relatingNumber?: number | null;
           relatingLines?: number[] | null;
           castEpochMs?: number;
+          // 二擇一才有 — B 卦資料 + A/B 標籤
+          castB?: {
+            hexagramNumber: number;
+            primaryLines: number[];
+            changingLines: number[];
+            relatingNumber: number | null;
+            relatingLines: number[] | null;
+          } | null;
+          optionA?: string | null;
+          optionB?: string | null;
         }
       | null = null;
     try {
@@ -615,6 +631,30 @@ export default function Home() {
       changingLines: payload.changingLines ?? [],
       relatingLines: payload.relatingLines ?? null,
     });
+
+    // 二擇一:還原 B 卦 + A/B 選項標籤
+    if (payload.method === "two-options" && payload.castB) {
+      const hexBInit = getHexagramByNumber(payload.castB.hexagramNumber) ?? null;
+      const relHexBInit =
+        typeof payload.castB.relatingNumber === "number"
+          ? getHexagramByNumber(payload.castB.relatingNumber) ?? null
+          : null;
+      setHexagramB(hexBInit);
+      setRelatingHexagramB(relHexBInit);
+      setDivinationResultB({
+        throws: [],
+        primaryLines: payload.castB.primaryLines,
+        changingLines: payload.castB.changingLines ?? [],
+        relatingLines: payload.castB.relatingLines ?? null,
+      });
+      setTwoOptionA(payload.optionA ?? "");
+      setTwoOptionB(payload.optionB ?? "");
+    } else {
+      setHexagramB(null);
+      setRelatingHexagramB(null);
+      setDivinationResultB(null);
+    }
+
     setDrawnCards([]);
     setAiReading("");
     setStep("result");
@@ -1674,12 +1714,16 @@ export default function Home() {
       //   而衍伸對話的目的是把先前對話接起來,放回主 API 才能銜接連貫。
       const useMethodApi =
         !isFollowUpMode &&
-        (divineMethod === "plum-blossom" || divineMethod === "direction-hexagram");
+        (divineMethod === "plum-blossom" ||
+          divineMethod === "direction-hexagram" ||
+          divineMethod === "two-options");
 
       const apiUrl = useMethodApi
         ? divineMethod === "plum-blossom"
           ? "/api/iching/plum-blossom"
-          : "/api/iching/direction-hexagram"
+          : divineMethod === "direction-hexagram"
+            ? "/api/iching/direction-hexagram"
+            : "/api/divine/two-options"
         : "/api/divine";
 
       const apiBody: Record<string, unknown> = useMethodApi
@@ -1693,15 +1737,37 @@ export default function Home() {
               locale,
               personaId,
             }
-          : {
-              question: userQuestion,
-              category: selectedCategory,
-              directionTrigram,
-              primaryLines: result.primaryLines,
-              changingLines: result.changingLines,
-              locale,
-              personaId,
-            }
+          : divineMethod === "direction-hexagram"
+            ? {
+                question: userQuestion,
+                category: selectedCategory,
+                directionTrigram,
+                primaryLines: result.primaryLines,
+                changingLines: result.changingLines,
+                locale,
+                personaId,
+              }
+            : {
+                // two-options:把 castA(來自 result/hex)+ castB(來自 hexagramB/divinationResultB
+                // state,resumeFlow handler 已從 sessionStorage 還原)+ A/B 標籤一併送過去
+                question: userQuestion,
+                optionA: twoOptionA,
+                optionB: twoOptionB,
+                castA: {
+                  hexagramNumber: hex.number,
+                  changingLines: result.changingLines,
+                  relatingHexagramNumber: relHex?.number ?? null,
+                },
+                castB: hexagramB && divinationResultB
+                  ? {
+                      hexagramNumber: hexagramB.number,
+                      changingLines: divinationResultB.changingLines,
+                      relatingHexagramNumber: relatingHexagramB?.number ?? null,
+                    }
+                  : null,
+                locale,
+                personaId,
+              }
         : {
             hexagramNumber: hex.number,
             hexagramName: t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo),
@@ -1860,6 +1926,18 @@ export default function Home() {
             directionTrigram:
               divineMethod === "direction-hexagram" ? directionTrigram : null,
             personaId,
+            // 二擇一才填:A/B 選項標籤 + B 卦資料
+            twoOptionA: divineMethod === "two-options" ? twoOptionA : null,
+            twoOptionB: divineMethod === "two-options" ? twoOptionB : null,
+            castB:
+              divineMethod === "two-options" && hexagramB && divinationResultB
+                ? {
+                    hexagramNumber: hexagramB.number,
+                    primaryLines: divinationResultB.primaryLines,
+                    changingLines: divinationResultB.changingLines,
+                    relatingHexagramNumber: relatingHexagramB?.number ?? null,
+                  }
+                : null,
           });
           if (saved?.id) setDivinationId(saved.id);
         }
@@ -4418,9 +4496,15 @@ export default function Home() {
                       background:
                         divineMethod === "direction-hexagram"
                           ? "rgba(99,179,237,0.18)"
-                          : "rgba(139,92,246,0.18)",
+                          : divineMethod === "two-options"
+                            ? "rgba(244,114,182,0.18)"
+                            : "rgba(139,92,246,0.18)",
                       color:
-                        divineMethod === "direction-hexagram" ? "#93c5fd" : "#c4b5fd",
+                        divineMethod === "direction-hexagram"
+                          ? "#93c5fd"
+                          : divineMethod === "two-options"
+                            ? "#f9a8d4"
+                            : "#c4b5fd",
                       fontSize: 11,
                       padding: "3px 12px",
                       borderRadius: 100,
@@ -4435,12 +4519,14 @@ export default function Home() {
                           "方位 × 卦象 合参",
                           "방위 × 괘상 합참"
                         )
-                      : t(
-                          "梅花易數 · 時間起卦",
-                          "Plum Blossom · Time Casting",
-                          "梅花易数 · 時間起卦",
-                          "매화역수 · 시간 기괘"
-                        )}
+                      : divineMethod === "two-options"
+                        ? t("易經二擇一", "I Ching · A or B", "易経 二択", "주역 양자택일")
+                        : t(
+                            "梅花易數 · 時間起卦",
+                            "Plum Blossom · Time Casting",
+                            "梅花易数 · 時間起卦",
+                            "매화역수 · 시간 기괘"
+                          )}
                   </span>
                 </div>
               )}
@@ -4448,20 +4534,149 @@ export default function Home() {
               {/* Hexagram card */}
               <div className="mystic-card" style={{ padding: 32, textAlign: "center", marginTop: 16 }}>
                 <h2 className="text-gold-gradient" style={{ fontSize: 24, fontFamily: "'Noto Serif TC', serif" }}>
-                  {t(
-                    `第${hexagram.number}卦 ${hexagram.nameZh}`,
-                    `Hexagram ${hexagram.number}: ${hexagram.nameEn}`,
-                    `第${hexagram.number}卦 ${hexagram.nameJa ?? hexagram.nameZh}`,
-                    `제 ${hexagram.number}괘 ${hexagram.nameKo ?? hexagram.nameEn.split(" ")[0]}`
-                  )}
+                  {divineMethod === "two-options" && hexagramB
+                    ? t(
+                        `${hexagram.nameZh} × ${hexagramB.nameZh}`,
+                        `${hexagram.nameEn.split(" ")[0]} × ${hexagramB.nameEn.split(" ")[0]}`,
+                        `${hexagram.nameJa ?? hexagram.nameZh} × ${hexagramB.nameJa ?? hexagramB.nameZh}`,
+                        `${hexagram.nameKo ?? hexagram.nameEn.split(" ")[0]} × ${hexagramB.nameKo ?? hexagramB.nameEn.split(" ")[0]}`
+                      )
+                    : t(
+                        `第${hexagram.number}卦 ${hexagram.nameZh}`,
+                        `Hexagram ${hexagram.number}: ${hexagram.nameEn}`,
+                        `第${hexagram.number}卦 ${hexagram.nameJa ?? hexagram.nameZh}`,
+                        `제 ${hexagram.number}괘 ${hexagram.nameKo ?? hexagram.nameEn.split(" ")[0]}`
+                      )}
                 </h2>
 
                 {/* 本卦 / 之卦 圖鑑區 — 9:14 直幅卦圖(來自 admin 上傳的 iching_images),
                     沒上傳時 fallback 為空框,跟 /iching/hexagrams 詳細頁一致。
                     依使用者要求,不在這裡再渲染陰陽爻線(HexagramDisplay) — 只用圖。
                     nowrap + 各 frame flex:1 1 0 maxWidth:130 → 桌機保持 130px,
-                    窄螢幕(手機)會等比例縮小,本卦/之卦永遠並排不換行。 */}
-                {(() => {
+                    窄螢幕(手機)會等比例縮小,本卦/之卦永遠並排不換行。
+                    method='two-options' 走完全不同的版面 — 並排 A/B 兩卦 + A/B 標籤,
+                    沒有「之卦」概念(兩卦獨立,不是一卦變另一卦)。 */}
+                {divineMethod === "two-options" && hexagramB ? (
+                  // ── 二擇一:並排兩卦 + A/B 標籤,沒有「之卦」 ──
+                  (() => {
+                    const imgA = ichingImages[hexagramImageKey(hexagram.number)];
+                    const imgB = ichingImages[hexagramImageKey(hexagramB.number)];
+                    const frameStyle = {
+                      width: "100%",
+                      aspectRatio: "9 / 14",
+                      borderRadius: 10,
+                      overflow: "hidden" as const,
+                      border: "1px solid rgba(212,168,85,0.4)",
+                      background:
+                        "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+                      boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
+                      marginBottom: 12,
+                    };
+                    const Side = ({
+                      label,
+                      tag,
+                      hex: sideHex,
+                      img,
+                    }: {
+                      label: { zh: string; en: string; ja: string; ko: string };
+                      tag: string;
+                      hex: Hexagram;
+                      img: string | undefined;
+                    }) => (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          flex: "1 1 0",
+                          minWidth: 0,
+                          maxWidth: 150,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            letterSpacing: 1.5,
+                            color: "#d4a855",
+                            fontWeight: 700,
+                            marginBottom: 6,
+                          }}
+                        >
+                          {t(label.zh, label.en, label.ja, label.ko)}
+                        </div>
+                        {tag && (
+                          <div
+                            style={{
+                              color: "#e8e8f0",
+                              fontSize: 12,
+                              lineHeight: 1.5,
+                              marginBottom: 8,
+                              minHeight: 18,
+                            }}
+                          >
+                            {tag}
+                          </div>
+                        )}
+                        <div style={frameStyle}>
+                          {img && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={img}
+                              alt={sideHex.nameZh}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "contain",
+                                display: "block",
+                              }}
+                            />
+                          )}
+                        </div>
+                        <p
+                          style={{
+                            color: "rgba(212,168,85,0.85)",
+                            fontSize: 12,
+                            margin: 0,
+                            fontFamily: "'Noto Serif TC', serif",
+                          }}
+                        >
+                          {t(
+                            `第 ${sideHex.number} 卦 ${sideHex.nameZh}`,
+                            `#${sideHex.number} ${sideHex.nameEn.split(" ")[0]}`,
+                            `第 ${sideHex.number} 卦 ${sideHex.nameZh}`,
+                            `제 ${sideHex.number} 괘 ${sideHex.nameZh}`
+                          )}
+                        </p>
+                      </div>
+                    );
+                    return (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "flex-start",
+                          gap: 16,
+                          marginTop: 24,
+                          flexWrap: "nowrap",
+                          maxWidth: 380,
+                          marginLeft: "auto",
+                          marginRight: "auto",
+                        }}
+                      >
+                        <Side
+                          label={{ zh: "選項 A", en: "OPTION A", ja: "選択 A", ko: "선택 A" }}
+                          tag={twoOptionA}
+                          hex={hexagram}
+                          img={imgA}
+                        />
+                        <Side
+                          label={{ zh: "選項 B", en: "OPTION B", ja: "選択 B", ko: "선택 B" }}
+                          tag={twoOptionB}
+                          hex={hexagramB}
+                          img={imgB}
+                        />
+                      </div>
+                    );
+                  })()
+                ) : (() => {
                   const primaryImg = ichingImages[hexagramImageKey(hexagram.number)];
                   const relatingImg = relatingHexagram
                     ? ichingImages[hexagramImageKey(relatingHexagram.number)]
@@ -4589,41 +4804,48 @@ export default function Home() {
 
               </div>
 
-              {/* 卦辭 Judgment Section — 古漢語跨語系統一顯示原文 + 對應語系現代訳 */}
-              <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
-                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  {t("卦辭", "Judgment", "卦辞", "괘사")}
-                </h3>
-                <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
-                  {hexagram.judgmentZh}
-                </p>
-                <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
-                  {t(
-                    hexagram.judgmentVernacularZh,
-                    hexagram.judgmentEn,
-                    hexagram.judgmentJa,
-                    hexagram.judgmentKo
-                  )}
-                </p>
-              </div>
+              {/* 卦辭/象辭 — 二擇一兩卦並存,單卦的卦辭/象辭區塊不適用,跳過。
+                  AI 解讀已會根據兩卦各自的卦辭/象辭做比對,使用者要看原文可進
+                  「看這一卦的完整介紹」連結到 /iching/hexagrams/[number]。 */}
+              {divineMethod !== "two-options" && (
+                <>
+                  {/* 卦辭 Judgment Section — 古漢語跨語系統一顯示原文 + 對應語系現代訳 */}
+                  <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
+                    <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                      {t("卦辭", "Judgment", "卦辞", "괘사")}
+                    </h3>
+                    <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
+                      {hexagram.judgmentZh}
+                    </p>
+                    <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                      {t(
+                        hexagram.judgmentVernacularZh,
+                        hexagram.judgmentEn,
+                        hexagram.judgmentJa,
+                        hexagram.judgmentKo
+                      )}
+                    </p>
+                  </div>
 
-              {/* 象辭 Image Section */}
-              <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
-                <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
-                  {t("象辭", "Image", "象辞", "상사")}
-                </h3>
-                <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
-                  {hexagram.imageZh}
-                </p>
-                <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
-                  {t(
-                    hexagram.imageVernacularZh,
-                    hexagram.imageEn,
-                    hexagram.imageJa,
-                    hexagram.imageKo
-                  )}
-                </p>
-              </div>
+                  {/* 象辭 Image Section */}
+                  <div className="mystic-card" style={{ padding: 24, marginTop: 16 }}>
+                    <h3 style={{ fontSize: 16, fontFamily: "'Noto Serif TC', serif", color: "#d4a855", marginBottom: 12 }}>
+                      {t("象辭", "Image", "象辞", "상사")}
+                    </h3>
+                    <p style={{ color: "#e8e8f0", fontSize: 15, fontWeight: 700, fontFamily: "'Noto Serif TC', serif", lineHeight: 1.8, marginBottom: 8 }}>
+                      {hexagram.imageZh}
+                    </p>
+                    <p style={{ color: "rgba(192,192,208,0.8)", fontSize: 14, lineHeight: 1.8 }}>
+                      {t(
+                        hexagram.imageVernacularZh,
+                        hexagram.imageEn,
+                        hexagram.imageJa,
+                        hexagram.imageKo
+                      )}
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* AI Analysis - clearly marked */}
               <div className="mystic-card" style={{ padding: 24, marginTop: 16, borderLeft: "3px solid #d4a855" }}>
