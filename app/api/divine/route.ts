@@ -12,6 +12,10 @@ import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { recordCardObtained } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
+import {
+  detectTwoChoiceQuestion,
+  buildDecisionModePrompt,
+} from "@/lib/twoChoice";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,6 +42,11 @@ export async function POST(request: NextRequest) {
       // 新增:占卜師人格 + Quick/Deep 模式(向後相容,沒帶就走預設)
       personaId,
       depth,
+      // 二擇一決策題的結構化標籤(/iching/two-options 入口會帶,
+      // 一般主流程不帶 — 這時改靠 question 文字偵測)。
+      // 命名跟 /api/tarot 對齊(twoOptionA / twoOptionB)。
+      twoOptionA,
+      twoOptionB,
     }: {
       hexagramNumber: number;
       hexagramName: string;
@@ -50,6 +59,8 @@ export async function POST(request: NextRequest) {
       chatHistory?: { role: "user" | "assistant"; content: string }[] | null;
       personaId?: string;
       depth?: "quick" | "deep";
+      twoOptionA?: string | null;
+      twoOptionB?: string | null;
     } = body;
 
     const hexagram = getHexagramByNumber(hexagramNumber);
@@ -151,7 +162,24 @@ export async function POST(request: NextRequest) {
         ? `You are a wise I Ching consultant. This is a FOLLOW-UP reading on the same matter — you've already read a prior hexagram for this querent and chatted with them about it. They're now asking a deeper question on the same topic and drew a new hexagram. Weave "prior hexagram + earlier conversation + new hexagram" into a coherent continuation, explicitly referencing the prior context ("Building on what we discussed...", "Compared to the earlier hexagram..."). ${wordTargetEn}. Hexagram texts are already shown. Warm, flowing paragraphs, no bullets.`
         : `You are a wise I Ching consultant. The hexagram texts and translations are already shown by the system. Provide a personalized analysis and advice based on the querent's specific question and the hexagram. ${effectiveDepth === "deep" ? "Deep Insight mode — analyse the inner/outer trigram structure, the meaning of changing lines, the relating hexagram's continuation, and concrete actionable next steps." : ""}${wordTargetEn}. Flowing paragraphs, no bullets. Warm and practical.`);
 
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+    // 二擇一偵測 — 結構化欄位優先,沒填就用文字 pattern。
+    // 命中後在 system prompt 末段附上「強建議模式」指示,把回答方向從
+    // 兩面討好拉成必須給明確結論。
+    const hasOptionLabels = Boolean(
+      twoOptionA && twoOptionA.trim() && twoOptionB && twoOptionB.trim()
+    );
+    const isTwoChoice =
+      hasOptionLabels || detectTwoChoiceQuestion(question);
+
+    const systemPromptBase = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+    const systemPrompt = isTwoChoice
+      ? systemPromptBase +
+        buildDecisionModePrompt({
+          optionA: hasOptionLabels ? twoOptionA?.trim() : null,
+          optionB: hasOptionLabels ? twoOptionB?.trim() : null,
+          locale,
+        })
+      : systemPromptBase;
 
     // 把對話紀錄壓成文字塊放進 user message
     const chatExcerpt = (chatHistory ?? [])
@@ -174,9 +202,18 @@ export async function POST(request: NextRequest) {
       ? (isFollowUp ? `新問題(${category}):${question}` : `問題(${category}):${question}`)
       : (isFollowUp ? `New question (${category}): ${question}` : `Question (${category}): ${question}`);
 
+    // 結構化二擇一欄位 — 跟 newQuestionLine 一起放進 user message,
+    // 讓 AI 在 system prompt 強建議模式下能直接引用 A / B 標籤。
+    const optionsLine =
+      isTwoChoice && hasOptionLabels
+        ? (isZh
+          ? `\n選項 A:${twoOptionA}\n選項 B:${twoOptionB}\n`
+          : `\nOption A: ${twoOptionA}\nOption B: ${twoOptionB}\n`)
+        : "";
+
     const userMessage = isZh
-      ? `${contextBlock}${newQuestionLine}\n\n本卦:第${hexagramNumber}卦 ${hexagramName}\n卦辭:${hexagram?.judgmentZh}\n象辭:${hexagram?.imageZh}\n${changingLines.length > 0 ? `變爻:第${changingLines.map((l: number) => l + 1).join("、")}爻` : "無變爻"}${relatingHex ? `\n之卦:第${relatingHex.number}卦 ${relatingHex.nameZh}` : ""}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與新卦象,給出連貫的延伸解說,${wordTargetZh}。` : `請直接給出針對我問題的分析與建議,${wordTargetZh}。`}`
-      : `${contextBlock}${newQuestionLine}\n\nHexagram ${hexagramNumber}: ${hexagramName}\nJudgment: ${hexagram?.judgmentEn}\nImage: ${hexagram?.imageEn}\n${changingLines.length > 0 ? `Changing lines: ${changingLines.map((l: number) => l + 1).join(", ")}` : "No changing lines"}${relatingHex ? `\nRelating: ${relatingHex.number} - ${relatingHex.nameEn}` : ""}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading for my new question and new hexagram. ${wordTargetEn}.` : `Give me personalized advice for my question, ${wordTargetEn}.`}`;
+      ? `${contextBlock}${newQuestionLine}${optionsLine}\n\n本卦:第${hexagramNumber}卦 ${hexagramName}\n卦辭:${hexagram?.judgmentZh}\n象辭:${hexagram?.imageZh}\n${changingLines.length > 0 ? `變爻:第${changingLines.map((l: number) => l + 1).join("、")}爻` : "無變爻"}${relatingHex ? `\n之卦:第${relatingHex.number}卦 ${relatingHex.nameZh}` : ""}\n\n${isFollowUp ? `請承接前面的脈絡,針對我這次的新問題與新卦象,給出連貫的延伸解說,${wordTargetZh}。` : `請直接給出針對我問題的分析與建議,${wordTargetZh}。`}`
+      : `${contextBlock}${newQuestionLine}${optionsLine}\n\nHexagram ${hexagramNumber}: ${hexagramName}\nJudgment: ${hexagram?.judgmentEn}\nImage: ${hexagram?.imageEn}\n${changingLines.length > 0 ? `Changing lines: ${changingLines.map((l: number) => l + 1).join(", ")}` : "No changing lines"}${relatingHex ? `\nRelating: ${relatingHex.number} - ${relatingHex.nameEn}` : ""}\n\n${isFollowUp ? `Continue from the prior context; weave a coherent follow-up reading for my new question and new hexagram. ${wordTargetEn}.` : `Give me personalized advice for my question, ${wordTargetEn}.`}`;
 
     // DeepSeek API is OpenAI-compatible
     const response = await fetch("https://api.deepseek.com/chat/completions", {

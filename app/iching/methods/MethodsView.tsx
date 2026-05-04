@@ -397,6 +397,20 @@ export default function MethodsView() {
             {t("Yes/No 速答", "Yes/No Quick", "Yes/No 速答", "Yes/No 속답")}
           </Link>
           <Link
+            href="/iching/two-options"
+            style={{
+              padding: "10px 24px",
+              background: "transparent",
+              color: "#d4a855",
+              border: "1px solid #d4a855",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            {t("二擇一", "A or B", "二択", "양자택일")}
+          </Link>
+          <Link
             href="/iching/daily"
             style={{
               padding: "10px 24px",

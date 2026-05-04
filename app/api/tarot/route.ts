@@ -13,6 +13,10 @@ import {
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
+import {
+  detectTwoChoiceQuestion,
+  buildDecisionModePrompt,
+} from "@/lib/twoChoice";
 
 // 客戶端送來的「抽牌結果」— position 改為任意 string,給多牌陣用
 interface DrawnCardRequest {
@@ -82,7 +86,9 @@ export async function POST(request: NextRequest) {
       spreadId,
       personaId,
       depth,
-      // 二選一牌陣才有 — 使用者填寫的兩個具體選項
+      // 二擇一牌陣才有 — 使用者填寫的兩個具體選項。
+      // 這兩個欄位也會跟 question 文字偵測一起餵進「強建議模式」,
+      // 讓 AI 在二選一場景必須結尾推一邊,不再水球。
       twoOptionA,
       twoOptionB,
     }: {
@@ -275,7 +281,28 @@ export async function POST(request: NextRequest) {
       : `You are a skilled tarot reader. The querent drew the "${spreadNameEn}" (${spread.cardCount} cards) for a specific question. Card meanings (upright/reversed) and each position's significance are provided by the system — do NOT simply repeat them. Weave the entire spread into a coherent narrative about the querent's actual question and give practical, concrete advice. ${effectiveDepth === "deep" ? "Deep Insight mode — cross-reference relationships between cards (which echo each other, which holds back), reveal latent patterns, and give specific actionable next steps." : ""}Warm tone, ${wordTargetEn}, flowing paragraphs (no bullets).${twoOptionsHintEn}`;
 
     const baseSystemPrompt = isZh ? baseSystemZh : baseSystemEn;
-    const systemPrompt = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+
+    // 二擇一強建議模式 — 三種觸發:
+    //   1. two-options 牌陣本身(spread.id)
+    //   2. 任一牌陣只要使用者帶了結構化 twoOptionA / twoOptionB
+    //   3. 任一牌陣的自由文字 question 命中「A 還是 B」之類的 pattern
+    // 命中後在 system prompt 末段附上強建議指示,讓 AI 結尾必須推一邊。
+    // (主要差別跟前面的 twoOptionsHint 區隔:Hint 只是告訴 AI 哪個位置
+    //  對應哪個選項;decision-mode 才強迫 AI 不准水球話。)
+    const isTwoChoice =
+      hasTwoOptions ||
+      spread.id === "two-options" ||
+      detectTwoChoiceQuestion(question);
+
+    const systemPromptBase = appendPersonaPrompt(baseSystemPrompt, persona, locale);
+    const systemPrompt = isTwoChoice
+      ? systemPromptBase +
+        buildDecisionModePrompt({
+          optionA: hasTwoOptions ? optA : null,
+          optionB: hasTwoOptions ? optB : null,
+          locale,
+        })
+      : systemPromptBase;
 
     const chatExcerpt = (chatHistory ?? [])
       .slice(-6)
