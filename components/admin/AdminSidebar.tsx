@@ -45,6 +45,7 @@ const GROUPS: NavGroup[] = [
     title: "用戶與商務",
     items: [
       { href: "/admin/users", icon: "👥", label: "使用者" },
+      { href: "/admin/music", icon: "🎵", label: "音樂後台" },
       { href: "/admin/pricing", icon: "💰", label: "方案 / 金額" },
       { href: "/admin/promo-codes", icon: "🎟️", label: "促銷碼" },
       { href: "/admin/credit-costs", icon: "✦", label: "占卜成本" },
