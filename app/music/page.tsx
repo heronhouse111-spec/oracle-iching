@@ -93,15 +93,45 @@ export default function MusicLeaderboardPage() {
     refresh();
   }, [refresh]);
 
-  const playTrack = (track: { id: string; title: string; title_translations?: Record<string, string> | null; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_display_name?: string | null }) => {
-    player.play({
+  // 把 DB row 轉成 PlayerTrack。queue 用這個批次轉換,prev/next 才能跨歌跳。
+  const toPlayerTrack = useCallback(
+    (track: {
+      id: string;
+      title: string;
+      title_translations?: Record<string, string> | null;
+      storage_path: string;
+      category_id: MusicCategoryId;
+      duration_seconds: number;
+      creator_display_name?: string | null;
+    }) => ({
       id: track.id,
       title: pickTitle(track, locale),
       audioUrl: buildAudioUrl(supabaseUrl, track.storage_path),
       categoryEmoji: categoryEmoji(track.category_id),
       creatorDisplayName: track.creator_display_name ?? null,
       durationSeconds: track.duration_seconds,
-    });
+    }),
+    [locale, supabaseUrl],
+  );
+
+  // 當前可見的 queue:免費 2 首 + (依 activeCategory 過濾的)排行榜歌
+  const buildQueue = useCallback(() => {
+    const freePart = free.map(toPlayerTrack);
+    const cats = activeCategory === "all"
+      ? CATEGORY_META.map((c) => c.id)
+      : [activeCategory];
+    const rankedPart: ReturnType<typeof toPlayerTrack>[] = [];
+    for (const cat of cats) {
+      const tracks = byCategory[cat] ?? [];
+      for (const tr of tracks) rankedPart.push(toPlayerTrack(tr));
+    }
+    return [...freePart, ...rankedPart];
+  }, [free, byCategory, activeCategory, toPlayerTrack]);
+
+  const playTrack = (track: { id: string; title: string; title_translations?: Record<string, string> | null; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_display_name?: string | null }) => {
+    const pt = toPlayerTrack(track);
+    const q = buildQueue();
+    player.play(pt, q);
   };
 
   const handleCollect = async (musicId: string) => {

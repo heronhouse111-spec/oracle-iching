@@ -111,25 +111,46 @@ export default function MyMusicPage() {
   };
 
   const handlePlayCreated = (track: CreatedTrack) => {
-    player.play({
+    const pt = {
       id: track.id,
       title: pickTitle(track, locale),
       audioUrl: buildAudioUrl(supabaseUrl, track.storage_path),
       categoryEmoji: categoryEmoji(track.category_id),
       durationSeconds: track.duration_seconds,
-    });
+    };
+    // queue = 整個「我創作的」清單,prev/next 在這裡面跳
+    const q = created.map((tr) => ({
+      id: tr.id,
+      title: pickTitle(tr, locale),
+      audioUrl: buildAudioUrl(supabaseUrl, tr.storage_path),
+      categoryEmoji: categoryEmoji(tr.category_id),
+      durationSeconds: tr.duration_seconds,
+    }));
+    player.play(pt, q);
   };
 
   const handlePlayCollected = (item: CollectedTrack) => {
     const m = item.generated_music;
-    player.play({
+    const pt = {
       id: m.id,
       title: pickTitle(m, locale),
       audioUrl: buildAudioUrl(supabaseUrl, m.storage_path),
       categoryEmoji: categoryEmoji(m.category_id),
       creatorDisplayName: m.creator_display_name,
       durationSeconds: m.duration_seconds,
+    };
+    const q = collected.map((it) => {
+      const mm = it.generated_music;
+      return {
+        id: mm.id,
+        title: pickTitle(mm, locale),
+        audioUrl: buildAudioUrl(supabaseUrl, mm.storage_path),
+        categoryEmoji: categoryEmoji(mm.category_id),
+        creatorDisplayName: mm.creator_display_name,
+        durationSeconds: mm.duration_seconds,
+      };
     });
+    player.play(pt, q);
   };
 
   if (needLogin) {
