@@ -80,8 +80,16 @@ export async function POST(request: NextRequest) {
     if (msg.includes("MUSIC_REMOVED")) {
       return jsonError(409, "MUSIC_REMOVED", "這首音樂已下架");
     }
-    if (msg.includes("MUSIC_REJECTED") || msg.includes("MUSIC_MODERATION_PENDING")) {
-      return jsonError(409, "MUSIC_MODERATION_FAILED", "moderation 未通過,無法公開");
+    if (msg.includes("MUSIC_REJECTED")) {
+      return jsonError(409, "MUSIC_REJECTED", "這首音樂已被審核拒絕,無法公開");
+    }
+    if (msg.includes("MUSIC_MODERATION_PENDING")) {
+      // 理論上不該發生(generate API 已 moderation),萬一卡住給可操作建議
+      return jsonError(
+        409,
+        "MUSIC_MODERATION_PENDING",
+        "音樂審核狀態異常,請聯絡客服或重新生成一首",
+      );
     }
     console.error("[music/publish]", error);
     return jsonError(500, "PUBLISH_FAILED", "公開失敗");
