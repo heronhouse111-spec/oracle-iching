@@ -38,6 +38,7 @@ interface FreeTrack {
   category_id: MusicCategoryId;
   storage_path: string;
   duration_seconds: number;
+  creator_id: string | null;
   creator_display_name: string | null;
 }
 
@@ -48,12 +49,15 @@ interface RankedTrack {
   category_id: MusicCategoryId;
   storage_path: string;
   duration_seconds: number;
+  creator_id: string | null;
   creator_display_name: string | null;
   is_seed: boolean;
   collect_count: number;
   rank_in_category: number;
   payout_tier: "top10" | "top50" | "top100" | "long_tail";
 }
+
+const PREVIEW_LIMIT_SECONDS = 15;
 
 export default function MusicLeaderboardPage() {
   const { locale, t } = useLanguage();
@@ -63,9 +67,12 @@ export default function MusicLeaderboardPage() {
   const [byCategory, setByCategory] = useState<Record<string, RankedTrack[]>>({});
   const [supabaseUrl, setSupabaseUrl] = useState("");
   const [rankingDate, setRankingDate] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [collectedIds, setCollectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<MusicCategoryId | "all">("all");
   const [collectingId, setCollectingId] = useState<string | null>(null);
+  const [previewToast, setPreviewToast] = useState<string | null>(null);
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [creditsModal, setCreditsModal] = useState<{ open: boolean; required: number }>({
@@ -82,6 +89,8 @@ export default function MusicLeaderboardPage() {
       setByCategory(data.byCategory ?? {});
       setSupabaseUrl(data.supabaseUrl ?? "");
       setRankingDate(data.rankingDate ?? null);
+      setCurrentUserId(data.currentUserId ?? null);
+      setCollectedIds(new Set(data.userCollectedIds ?? []));
     } catch (e) {
       console.error("[leaderboard]", e);
     } finally {
@@ -93,6 +102,38 @@ export default function MusicLeaderboardPage() {
     refresh();
   }, [refresh]);
 
+  // 監聽 player 「試聽結束」事件,跳出 toast 提示「收藏才能聽完整版」
+  useEffect(() => {
+    const onPreviewEnded = () => {
+      setPreviewToast(
+        t(
+          "試聽結束 · 收藏 20 點即可完整收聽 + 解鎖循環",
+          "Preview ended · Collect for 20 credits to unlock full track + loop",
+          "試聴終了 · 20 ポイント収集で完全版 + ループ解禁",
+          "체험 종료 · 20포인트 수집으로 전체 + 반복 해제",
+        ),
+      );
+      setTimeout(() => setPreviewToast(null), 4000);
+    };
+    window.addEventListener("music:preview_ended", onPreviewEnded);
+    return () => window.removeEventListener("music:preview_ended", onPreviewEnded);
+  }, [t]);
+
+  // 計算「這首歌是不是要試聽限制」。
+  // 規則:免費歌不限 / 自己創作的不限 / 已收藏的不限 / 其他都限 15 秒。
+  const computePreviewLimit = useCallback(
+    (track: { id: string; creator_id?: string | null; is_free?: boolean }): number | undefined => {
+      // free 歌:不限 — free 區塊的歌沒帶 is_free 欄位,但只要在 free[] 陣列就視為 free。
+      // 這裡額外判斷:如果 track.id 在 free 陣列裡,跳過限制。
+      const isInFree = free.some((f) => f.id === track.id);
+      if (isInFree || track.is_free) return undefined;
+      if (currentUserId && track.creator_id === currentUserId) return undefined;
+      if (collectedIds.has(track.id)) return undefined;
+      return PREVIEW_LIMIT_SECONDS;
+    },
+    [free, currentUserId, collectedIds],
+  );
+
   // 把 DB row 轉成 PlayerTrack。queue 用這個批次轉換,prev/next 才能跨歌跳。
   const toPlayerTrack = useCallback(
     (track: {
@@ -102,7 +143,9 @@ export default function MusicLeaderboardPage() {
       storage_path: string;
       category_id: MusicCategoryId;
       duration_seconds: number;
+      creator_id?: string | null;
       creator_display_name?: string | null;
+      is_free?: boolean;
     }) => ({
       id: track.id,
       title: pickTitle(track, locale),
@@ -110,8 +153,9 @@ export default function MusicLeaderboardPage() {
       categoryEmoji: categoryEmoji(track.category_id),
       creatorDisplayName: track.creator_display_name ?? null,
       durationSeconds: track.duration_seconds,
+      previewLimitSeconds: computePreviewLimit(track),
     }),
-    [locale, supabaseUrl],
+    [locale, supabaseUrl, computePreviewLimit],
   );
 
   // 當前可見的 queue:免費 2 首 + (依 activeCategory 過濾的)排行榜歌
@@ -128,7 +172,7 @@ export default function MusicLeaderboardPage() {
     return [...freePart, ...rankedPart];
   }, [free, byCategory, activeCategory, toPlayerTrack]);
 
-  const playTrack = (track: { id: string; title: string; title_translations?: Record<string, string> | null; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_display_name?: string | null }) => {
+  const playTrack = (track: { id: string; title: string; title_translations?: Record<string, string> | null; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_id?: string | null; creator_display_name?: string | null; is_free?: boolean }) => {
     const pt = toPlayerTrack(track);
     const q = buildQueue();
     player.play(pt, q);
@@ -158,12 +202,18 @@ export default function MusicLeaderboardPage() {
       }
       const data = await res.json();
       notifyCreditsChanged();
+      // 收藏成功:更新本地集合,讓 preview limit 立即解除
+      setCollectedIds((prev) => {
+        const next = new Set(prev);
+        next.add(musicId);
+        return next;
+      });
       alert(
         t(
-          `已收藏!花了 ${data.cost} 點,創作者收到 ${data.creator_payout} 點(${data.creator_tier})`,
-          `Collected! Spent ${data.cost} pt, creator earned ${data.creator_payout} pt (${data.creator_tier})`,
-          `収集しました!${data.cost} ポイント支払い、創作者に ${data.creator_payout} ポイント`,
-          `수집됨! ${data.cost} 포인트 사용, 창작자에게 ${data.creator_payout} 포인트`,
+          `已收藏!花了 ${data.cost} 點。現在可以完整收聽 + 開啟循環撥放`,
+          `Collected for ${data.cost} pt. Full track + loop unlocked.`,
+          `${data.cost} ポイントで収集!完全版 + ループ解禁`,
+          `${data.cost}포인트로 수집! 전체 + 반복 해제됨`,
         ),
       );
     } finally {
@@ -179,6 +229,30 @@ export default function MusicLeaderboardPage() {
   return (
     <main className="bg-stars" style={{ minHeight: "100vh", paddingTop: 80, paddingBottom: 120 }}>
       <Header />
+
+      {/* 試聽結束提示 toast(浮在頂部) */}
+      {previewToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: 80,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 90,
+            background: "linear-gradient(135deg, rgba(212,168,85,0.95), rgba(240,215,140,0.95))",
+            color: "#0a0a1a",
+            padding: "10px 18px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontWeight: 600,
+            boxShadow: "0 8px 24px rgba(212,168,85,0.4)",
+            maxWidth: "calc(100vw - 32px)",
+            textAlign: "center",
+          }}
+        >
+          {previewToast}
+        </div>
+      )}
 
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "16px" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
@@ -504,11 +578,6 @@ function TrackRow(props: {
         </div>
         <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11 }}>
           {creatorName}
-          {isSeed && (
-            <span style={{ marginLeft: 6, color: "rgba(212,168,85,0.7)" }}>
-              · {t("平台種子", "Seed", "シード", "시드")}
-            </span>
-          )}
           {typeof collectCount === "number" && collectCount > 0 && (
             <span style={{ marginLeft: 6 }}>
               · {t(`${collectCount} 收藏`, `${collectCount} collects`, `${collectCount} 収集`, `${collectCount} 수집`)}

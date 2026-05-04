@@ -43,6 +43,10 @@ export interface PlayerTrack {
   creatorDisplayName?: string | null;
   /** 秒數 — 用來判斷「是否聽完」的閾值 */
   durationSeconds?: number;
+  /** 試聽限制秒數 — 未收藏 / 未付費的歌設這個。
+   *  播到 N 秒就強制 pause 並 emit 'music:preview_ended' 事件,
+   *  且強制忽略 loopMode("循環撥放功能 disabled")。 */
+  previewLimitSeconds?: number;
 }
 
 export type LoopMode = "off" | "one" | "all";
@@ -113,7 +117,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       audio.src = track.audioUrl;
       audio.volume = volume;
       // loop="one" 時讓 audio 自循環;"all"/"off" 由 onEnded 處理
-      audio.loop = loopMode === "one";
+      // 試聽模式(previewLimitSeconds)強制忽略 loop —「循環撥放功能 disabled」
+      audio.loop = loopMode === "one" && !track.previewLimitSeconds;
       audio.currentTime = 0;
       audio.play().catch((err) => {
         console.warn("[player] play failed:", err);
@@ -301,6 +306,22 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const onTimeUpdate = () => {
       // 同步 currentTime 給 UI 進度條(每 ~250ms 觸發一次)
       setCurrentTime(audio.currentTime);
+
+      // 試聽限制 — 到 N 秒就強制 pause 並 emit 事件給 UI 顯示「收藏才能聽完整版」
+      // 同時 reset 到 0,下次按 ▶ 從頭再聽一次 preview(避免卡 15.001s 的死循環)
+      if (currentTrack?.previewLimitSeconds && audio.currentTime >= currentTrack.previewLimitSeconds) {
+        audio.pause();
+        audio.currentTime = 0;
+        setCurrentTime(0);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("music:preview_ended", {
+              detail: { trackId: currentTrack.id, limitSeconds: currentTrack.previewLimitSeconds },
+            }),
+          );
+        }
+        return;
+      }
 
       if (completedRef.current) return;
       if (!currentTrack?.durationSeconds) return;
