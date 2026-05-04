@@ -2816,10 +2816,10 @@ export default function Home() {
                     </div>
                     <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
                       {t(
-                        "3 種主流占卜可選",
-                        "3 mainstream methods",
-                        "3 種類の主要占法",
-                        "3가지 주요 점법"
+                        "4 種主流占卜可選",
+                        "4 mainstream methods",
+                        "4 種類の主要占法",
+                        "4가지 주요 점법"
                       )}
                     </div>
                   </div>

@@ -20,12 +20,23 @@ export interface SaveIchingDivinationParams {
   relatingHexagramNumber: number | null;
   aiReading: string;
   locale: string;
-  /** 易經占法分流 — 預設 'main'(三錢全卦)。phase16 加的欄位。 */
-  method?: "main" | "plum-blossom" | "direction-hexagram";
+  /** 易經占法分流 — 預設 'main'(三錢全卦)。phase16/17/31 加的欄位。 */
+  method?: "main" | "plum-blossom" | "direction-hexagram" | "two-options";
   /** 方位卦象合參才有值;3-bit binary trigram code(後天八卦其一)。其他占法為 null。 */
   directionTrigram?: string | null;
   /** 占卜時選的 AI 占卜師 id(lib/personas.ts)。phase18 加的欄位,讓分享頁/分享圖顯示正確的占卜師名字。 */
   personaId?: string | null;
+  /** 二擇一才有 — 主流程過來填的選項標籤。phase15 已加的兩欄(原本給 tarot two-options
+   *  spread 用),這裡讓易經 two-options 也共用同欄。 */
+  twoOptionA?: string | null;
+  twoOptionB?: string | null;
+  /** 二擇一才有 — B 選項的卦資料(A 走主欄位)。phase31 新增的 cast_b_* 欄位。 */
+  castB?: {
+    hexagramNumber: number;
+    primaryLines: number[];
+    changingLines: number[];
+    relatingHexagramNumber: number | null;
+  } | null;
 }
 
 export interface SavedTarotCard {
@@ -88,9 +99,18 @@ export async function saveDivination(params: SaveDivinationParams) {
           relating_hexagram_number: params.relatingHexagramNumber,
           tarot_cards: null,
           tarot_spread_id: null,
-          // phase16/17 加入的占法分流欄位 — 預設 'main',plum-blossom / direction-hexagram 才覆寫
+          // phase16/17/31 加入的占法分流欄位 — 預設 'main',
+          // plum-blossom / direction-hexagram / two-options 才覆寫
           method: params.method ?? "main",
           direction_trigram: params.directionTrigram ?? null,
+          // 二擇一(phase31)— A 卦走主欄位,B 卦走 cast_b_* 欄位
+          two_option_a: params.twoOptionA ?? null,
+          two_option_b: params.twoOptionB ?? null,
+          cast_b_hexagram_number: params.castB?.hexagramNumber ?? null,
+          cast_b_primary_lines: params.castB?.primaryLines ?? null,
+          cast_b_changing_lines: params.castB?.changingLines ?? null,
+          cast_b_relating_hexagram_number:
+            params.castB?.relatingHexagramNumber ?? null,
         };
 
   if (isSupabaseConfigured) {

@@ -61,10 +61,19 @@ interface Record {
   hexagram_number: number | null;
   primary_lines: number[] | null;
   changing_lines: number[] | null;
+  /** phase16/17/31 加的占法分流欄位;舊資料為 null → fallback 'main' */
+  method?: "main" | "plum-blossom" | "direction-hexagram" | "two-options" | null;
+  // 二擇一(phase31)— A 卦走主欄位,B 卦走 cast_b_* 欄位;A/B 選項標籤共用 phase15 的 two_option_a/b
+  cast_b_hexagram_number?: number | null;
+  cast_b_primary_lines?: number[] | null;
+  cast_b_changing_lines?: number[] | null;
   // tarot-only
   tarot_cards: TarotCardSlot[] | null;
   /** Phase 12 加的塔羅牌陣 id;舊資料 backfill 'three-card' */
   tarot_spread_id?: string | null;
+  /** phase15 — 二選一(tarot 牌陣 / 易經 method='two-options' 共用)的選項標籤 */
+  two_option_a?: string | null;
+  two_option_b?: string | null;
   // 訂閱者在展開時可看到的延伸鏈 + 聊天紀錄(localStorage 紀錄不會有)
   follow_ups?: FollowUpItem[] | null;
   chat_messages?: ChatMessageItem[] | null;
@@ -153,7 +162,7 @@ export default function HistoryPage() {
           supabase
             .from("divinations")
             .select(
-              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages"
+              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, method, cast_b_hexagram_number, cast_b_primary_lines, cast_b_changing_lines, two_option_a, two_option_b, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages"
             )
             .eq("user_id", user.id)
             .gte("created_at", sinceIso)
@@ -444,6 +453,8 @@ export default function HistoryPage() {
               const spreadLabelName = recordSpread
                 ? t(recordSpread.nameZh, recordSpread.nameEn, recordSpread.nameJa, recordSpread.nameKo)
                 : "";
+              const isIchingTwoOptions =
+                divineType === "iching" && record.method === "two-options";
               const tarotLabel =
                 divineType === "tarot" && recordSpread
                   ? t(
@@ -452,9 +463,11 @@ export default function HistoryPage() {
                       `タロット · ${spreadLabelName}`,
                       `타로 · ${spreadLabelName}`
                     )
-                  : hex
-                    ? t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)
-                    : "";
+                  : isIchingTwoOptions
+                    ? t("易經 · 二擇一", "I Ching · A or B", "易経 · 二択", "주역 · 양자택일")
+                    : hex
+                      ? t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)
+                      : "";
 
               return (
                 <motion.div key={record.id} layout className="mystic-card" style={{ overflow: "hidden" }}>
@@ -486,7 +499,69 @@ export default function HistoryPage() {
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                       style={{ borderTop: "1px solid rgba(212,168,85,0.1)", padding: 16, position: "relative", overflow: "hidden" }}>
                       <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, position: "relative", zIndex: 1 }}>
-                        {divineType === "iching" && record.primary_lines ? (
+                        {divineType === "iching" && record.method === "two-options" && record.primary_lines && record.cast_b_primary_lines ? (
+                          // 二擇一:並排顯示兩卦 + A/B 標籤
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, width: "100%", maxWidth: 360 }}>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ fontSize: 11, color: "#d4a855", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>
+                                {t("選項 A", "OPTION A", "選択 A", "선택 A")}
+                              </div>
+                              {record.two_option_a && (
+                                <div style={{ fontSize: 12, color: "#e8e8f0", marginBottom: 8, lineHeight: 1.5 }}>
+                                  {record.two_option_a}
+                                </div>
+                              )}
+                              <HexagramDisplay
+                                lines={record.primary_lines}
+                                changingLines={record.changing_lines ?? []}
+                                size="sm"
+                                animate={false}
+                              />
+                              {record.hexagram_number != null && (() => {
+                                const hexA = getHexagramByNumber(record.hexagram_number);
+                                return hexA ? (
+                                  <div style={{ marginTop: 6, fontSize: 12, color: "rgba(212,168,85,0.85)", fontFamily: "'Noto Serif TC', serif" }}>
+                                    {t(
+                                      `第 ${hexA.number} 卦 ${hexA.nameZh}`,
+                                      `#${hexA.number} ${hexA.nameEn.split(" ")[0]}`,
+                                      `第 ${hexA.number} 卦 ${hexA.nameZh}`,
+                                      `제 ${hexA.number} 괘 ${hexA.nameZh}`
+                                    )}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                              <div style={{ fontSize: 11, color: "#d4a855", marginBottom: 6, fontWeight: 700, letterSpacing: 1 }}>
+                                {t("選項 B", "OPTION B", "選択 B", "선택 B")}
+                              </div>
+                              {record.two_option_b && (
+                                <div style={{ fontSize: 12, color: "#e8e8f0", marginBottom: 8, lineHeight: 1.5 }}>
+                                  {record.two_option_b}
+                                </div>
+                              )}
+                              <HexagramDisplay
+                                lines={record.cast_b_primary_lines}
+                                changingLines={record.cast_b_changing_lines ?? []}
+                                size="sm"
+                                animate={false}
+                              />
+                              {record.cast_b_hexagram_number != null && (() => {
+                                const hexB = getHexagramByNumber(record.cast_b_hexagram_number);
+                                return hexB ? (
+                                  <div style={{ marginTop: 6, fontSize: 12, color: "rgba(212,168,85,0.85)", fontFamily: "'Noto Serif TC', serif" }}>
+                                    {t(
+                                      `第 ${hexB.number} 卦 ${hexB.nameZh}`,
+                                      `#${hexB.number} ${hexB.nameEn.split(" ")[0]}`,
+                                      `第 ${hexB.number} 卦 ${hexB.nameZh}`,
+                                      `제 ${hexB.number} 괘 ${hexB.nameZh}`
+                                    )}
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+                        ) : divineType === "iching" && record.primary_lines ? (
                           <HexagramDisplay
                             lines={record.primary_lines}
                             changingLines={record.changing_lines ?? []}

@@ -97,9 +97,10 @@ const METHODS: MethodEntry[] = [
   },
   {
     id: "two-options",
-    // /iching/two-options 是獨立的決策頁,沒有 resumeFlow 機制 — 它有自己的 ask
-    // step,用戶填問題 + A/B 後會直接擲兩卦,不走主流程的「問題 / 類別」步驟。
-    href: "/iching/two-options",
+    // resumeFlow=cast → 進入 two-options 卜卦頁,該頁從 sessionStorage 讀
+    // 主流程帶過來的 question + category(只填 A / B + 擲兩卦),完成後存歷史。
+    // 直接打 URL 沒帶 param 進來會被 redirect 到 /iching。
+    href: "/iching/two-options?resumeFlow=cast",
     badgeZh: "擇",
     badgeEn: "A|B",
     nameZh: "易經二擇一",
