@@ -53,6 +53,10 @@ interface MusicPlayerContextType {
   isPlaying: boolean;
   volume: number;
   loopMode: LoopMode;
+  /** 目前播放秒數 — 0 if no track or not loaded */
+  currentTime: number;
+  /** 整首長度(秒)— 0 if metadata not yet loaded */
+  duration: number;
   /** 播放一首。可選 queue 傳入「上下文清單」,prev/next 會在 queue 裡跳。
    *  不傳 queue 時,queue = [track](單曲模式,prev/next 等於原地)。 */
   play: (track: PlayerTrack, queue?: PlayerTrack[]) => void;
@@ -62,6 +66,8 @@ interface MusicPlayerContextType {
   prev: () => void;
   setVolume: (v: number) => void;
   cycleLoopMode: () => void;
+  /** 拖進度條時呼叫;clamp 到 [0, duration] */
+  seekTo: (seconds: number) => void;
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextType | null>(null);
@@ -83,6 +89,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(0.7);
   const [loopMode, setLoopMode] = useState<LoopMode>("one");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const completedRef = useRef(false);
 
   const currentTrack: PlayerTrack | null =
@@ -204,6 +212,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const seekTo = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const clamped = Math.max(0, Math.min(audio.duration || 0, seconds));
+    audio.currentTime = clamped;
+    setCurrentTime(clamped);
+  }, []);
+
   // audio element 的事件同步到 React state
   useEffect(() => {
     const audio = audioRef.current;
@@ -222,6 +238,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       }
     };
     const onTimeUpdate = () => {
+      // 同步 currentTime 給 UI 進度條(每 ~250ms 觸發一次)
+      setCurrentTime(audio.currentTime);
+
       if (completedRef.current) return;
       if (!currentTrack?.durationSeconds) return;
       const threshold = currentTrack.durationSeconds * 0.8;
@@ -234,16 +253,28 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     };
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+    };
+    const onEmptied = () => {
+      // 切歌時 audio.src reset → currentTime 重來、duration 待重新 load
+      setCurrentTime(0);
+      setDuration(0);
+    };
 
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("emptied", onEmptied);
     return () => {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("emptied", onEmptied);
     };
   }, [currentTrack, loopMode, next]);
 
@@ -255,6 +286,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       isPlaying,
       volume,
       loopMode,
+      currentTime,
+      duration,
       play,
       pause,
       stop,
@@ -262,8 +295,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       prev,
       setVolume,
       cycleLoopMode,
+      seekTo,
     }),
-    [currentTrack, queue, queueIndex, isPlaying, volume, loopMode, play, pause, stop, next, prev, setVolume, cycleLoopMode],
+    [currentTrack, queue, queueIndex, isPlaying, volume, loopMode, currentTime, duration, play, pause, stop, next, prev, setVolume, cycleLoopMode, seekTo],
   );
 
   return (
