@@ -43,6 +43,12 @@ export default function AccountPage() {
     text: string;
   } | null>(null);
 
+  // 暱稱編輯
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+
   const handleCancelSubscription = async () => {
     if (!confirm(
       t(
@@ -133,6 +139,43 @@ export default function AccountPage() {
       setIsLoading(false);
     });
   }, []);
+
+  const handleSaveNickname = async () => {
+    const value = nicknameInput.trim();
+    if (value.length < 1 || value.length > 30) {
+      setNicknameError(t("暱稱請填 1–30 字", "1–30 chars please", "1～30 文字でお願いします", "1–30자로 입력하세요"));
+      return;
+    }
+    setSavingNickname(true);
+    setNicknameError("");
+    try {
+      const res = await fetch("/api/account/nickname", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 422) {
+        setNicknameError(data.message || t("不符合社群規範", "Doesn't meet guidelines", "ガイドライン違反", "가이드라인 위반"));
+        return;
+      }
+      if (!res.ok) {
+        setNicknameError(data.message || t("更新失敗", "Update failed", "更新失敗", "업데이트 실패"));
+        return;
+      }
+      // 同步更新本地 summary,不用 reload
+      setSummary((prev) =>
+        prev ? { ...prev, display_name: data.nickname as string } : prev,
+      );
+      setEditingNickname(false);
+    } catch (e) {
+      setNicknameError(
+        e instanceof Error ? e.message : t("網路錯誤", "Network error", "ネットワーク", "네트워크"),
+      );
+    } finally {
+      setSavingNickname(false);
+    }
+  };
 
   const handleLogout = async () => {
     const { createClient } = await import("@/lib/supabase/client");
@@ -367,29 +410,168 @@ export default function AccountPage() {
               {(user.email?.charAt(0) || "U").toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  color: "#d4a855",
-                  fontFamily: "'Noto Serif TC', serif",
-                  fontSize: 18,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {displayName}
-              </div>
-              <div
-                style={{
-                  color: "rgba(192,192,208,0.6)",
-                  fontSize: 13,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {user.email}
-              </div>
+              {!editingNickname ? (
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#d4a855",
+                        fontFamily: "'Noto Serif TC', serif",
+                        fontSize: 18,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      {displayName}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setNicknameInput(summary?.display_name ?? "");
+                        setNicknameError("");
+                        setEditingNickname(true);
+                      }}
+                      aria-label={t("編輯暱稱", "Edit nickname", "ニックネーム編集", "닉네임 편집")}
+                      title={t("編輯暱稱", "Edit nickname", "ニックネーム編集", "닉네임 편집")}
+                      style={{
+                        flexShrink: 0,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        background: "transparent",
+                        border: "1px solid rgba(212,168,85,0.3)",
+                        color: "#d4a855",
+                        fontSize: 12,
+                        cursor: "pointer",
+                        padding: 0,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ✎
+                    </button>
+                  </div>
+                  <div
+                    style={{
+                      color: "rgba(192,192,208,0.6)",
+                      fontSize: 13,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      marginTop: 2,
+                    }}
+                  >
+                    {user.email}
+                  </div>
+                  <div
+                    style={{
+                      color: "rgba(192,192,208,0.45)",
+                      fontSize: 11,
+                      marginTop: 6,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {t(
+                      "你創作的音樂會用這個暱稱顯示在排行榜",
+                      "Your nickname appears on tracks you create on the leaderboard",
+                      "作成した音楽はこのニックネームで表示されます",
+                      "만든 음악은 이 닉네임으로 랭킹에 표시됩니다",
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={nicknameInput}
+                    onChange={(e) => setNicknameInput(e.target.value.slice(0, 30))}
+                    placeholder={t("輸入暱稱", "Enter nickname", "ニックネーム入力", "닉네임 입력")}
+                    maxLength={30}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      fontSize: 16,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(212,168,85,0.4)",
+                      borderRadius: 8,
+                      color: "#fff",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      marginBottom: 6,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "rgba(192,192,208,0.45)",
+                      textAlign: "right",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {nicknameInput.length} / 30
+                  </div>
+                  {nicknameError && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "#ff8e7a",
+                        marginBottom: 8,
+                      }}
+                    >
+                      {nicknameError}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={handleSaveNickname}
+                      disabled={savingNickname}
+                      style={{
+                        padding: "8px 14px",
+                        background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+                        color: "#0a0a1a",
+                        border: "none",
+                        borderRadius: 8,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: savingNickname ? "wait" : "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {savingNickname
+                        ? t("儲存中…", "Saving…", "保存中…", "저장 중…")
+                        : t("儲存", "Save", "保存", "저장")}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingNickname(false);
+                        setNicknameError("");
+                      }}
+                      disabled={savingNickname}
+                      style={{
+                        padding: "8px 14px",
+                        background: "transparent",
+                        color: "rgba(192,192,208,0.7)",
+                        border: "1px solid rgba(192,192,208,0.3)",
+                        borderRadius: 8,
+                        fontSize: 13,
+                        cursor: savingNickname ? "not-allowed" : "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t("取消", "Cancel", "キャンセル", "취소")}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
