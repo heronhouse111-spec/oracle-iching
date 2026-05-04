@@ -288,10 +288,10 @@ export default function MusicGeneratePage() {
           </h1>
           <p style={{ color: "#c0c0d0", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
             {t(
-              "用描述詞創作專屬於你的 60 秒 ambient 背景音樂",
-              "Create your own 60-second ambient music from a description",
-              "説明文から 60 秒のあなただけのアンビエント背景音楽を作成",
-              "설명으로 60초의 나만의 앰비언트 배경음악 생성",
+              "用描述詞創作專屬於你的 3 分鐘 ambient 背景音樂",
+              "Create your own 3-minute ambient music from a description",
+              "説明文から 3 分のあなただけのアンビエント背景音楽を作成",
+              "설명으로 3분의 나만의 앰비언트 배경음악 생성",
             )}
           </p>
           <div style={{ marginTop: 10 }}>
@@ -506,10 +506,10 @@ export default function MusicGeneratePage() {
 
               <p style={{ color: "rgba(192,192,208,0.5)", fontSize: 11, textAlign: "center", marginTop: 10 }}>
                 {t(
-                  "生成失敗會自動退點 · 約需 10–15 秒",
-                  "Auto-refund on failure · Takes 10–15s",
-                  "失敗時は自動返却 · 約 10〜15 秒",
-                  "실패시 자동 환불 · 약 10〜15초",
+                  "生成失敗會自動退點 · 約需 20–30 秒",
+                  "Auto-refund on failure · Takes 20–30s",
+                  "失敗時は自動返却 · 約 20〜30 秒",
+                  "실패시 자동 환불 · 약 20〜30초",
                 )}
               </p>
             </motion.div>
@@ -535,10 +535,10 @@ export default function MusicGeneratePage() {
               </div>
               <div style={{ color: "#c0c0d0", fontSize: 13 }}>
                 {t(
-                  "Stable Audio 正在為你譜曲(10–15 秒)",
-                  "Stable Audio is composing (10–15s)",
-                  "Stable Audio が作曲中(10〜15 秒)",
-                  "Stable Audio 작곡 중(10〜15초)",
+                  "Stable Audio 正在為你譜曲(20–30 秒)",
+                  "Stable Audio is composing (20–30s)",
+                  "Stable Audio が作曲中(20〜30 秒)",
+                  "Stable Audio 작곡 중(20〜30초)",
                 )}
               </div>
             </motion.div>

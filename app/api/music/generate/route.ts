@@ -10,7 +10,7 @@ import {
 } from "@/lib/credits";
 import { moderateMusicText, moderationMessage } from "@/lib/music/moderation";
 
-// Stable Audio 60 秒生成大約 8–15 秒,再加上傳 Storage,留 60s buffer
+// Stable Audio 180 秒生成大約 14–20 秒,加上傳 Storage 留 60s buffer 充裕
 export const maxDuration = 60;
 // 不要 cache(每次都是新生成)
 export const dynamic = "force-dynamic";
@@ -18,6 +18,10 @@ export const dynamic = "force-dynamic";
 const STABILITY_URL =
   "https://api.stability.ai/v2beta/audio/stable-audio-2/text-to-audio";
 const BUCKET = "app-music";
+
+// 統一 180 秒(3 分鐘)— Stable Audio API 不論長短都收 9 credits / $0.09,
+// 所以給用戶 180s 不增加成本,但循環感大幅降低、體感品質遠優於 60s。
+const TRACK_DURATION_SECONDS = 180;
 const VALID_CATEGORIES = [
   "meditation",
   "mystery",
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = new FormData();
     formData.set("prompt", prompt);
-    formData.set("duration", "60");
+    formData.set("duration", String(TRACK_DURATION_SECONDS));
     formData.set("output_format", "mp3");
     formData.set("model", "stable-audio-2");
 
@@ -173,7 +177,7 @@ export async function POST(request: NextRequest) {
     p_prompt_locale: locale,
     p_category_id: category,
     p_storage_path: storagePath,
-    p_duration_seconds: 60,
+    p_duration_seconds: TRACK_DURATION_SECONDS,
     p_provider: "stable_audio",
     p_provider_track_id: null,
     p_is_seed: false,
@@ -201,7 +205,7 @@ export async function POST(request: NextRequest) {
       musicId,
       title: title || prompt.slice(0, 30),
       category,
-      durationSeconds: 60,
+      durationSeconds: TRACK_DURATION_SECONDS,
       audioUrl: publicUrl,
       cost,
     }),
