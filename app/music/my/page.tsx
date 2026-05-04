@@ -296,6 +296,26 @@ function TabButton({
   );
 }
 
+function SummaryStat({ label, value, gold }: { label: string; value: string; gold?: boolean }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div
+        style={{
+          color: gold ? "#d4a855" : "#fff",
+          fontSize: 16,
+          fontWeight: 700,
+          fontFamily: "'Noto Serif TC', serif",
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11, marginTop: 1 }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function CreatedList({
   tracks,
   supabaseUrl,
@@ -329,8 +349,39 @@ function CreatedList({
       </div>
     );
   }
+  // 累計統計給創作者看自己的成績(Phase C — creator earnings summary)
+  const totalEarnings = tracks.reduce((s, t) => s + (t.creator_earnings_total ?? 0), 0);
+  const totalCollects = tracks.reduce((s, t) => s + (t.collect_count ?? 0), 0);
+  const publicCount = tracks.filter((t) => t.visibility === "public").length;
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      {/* 統計摘要 */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 8,
+          padding: "12px 8px",
+          background: "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(240,215,140,0.04))",
+          border: "1px solid rgba(212,168,85,0.25)",
+          borderRadius: 12,
+          marginBottom: 4,
+        }}
+      >
+        <SummaryStat
+          label={t("公開作品", "Public", "公開", "공개")}
+          value={`${publicCount} / ${tracks.length}`}
+        />
+        <SummaryStat
+          label={t("總收藏", "Collects", "総収集", "총 수집")}
+          value={String(totalCollects)}
+        />
+        <SummaryStat
+          label={t("累計收益", "Earnings", "累計収益", "누적 수익")}
+          value={`+${totalEarnings} pt`}
+          gold
+        />
+      </div>
       {tracks.map((track) => (
         <CreatedRow
           key={track.id}

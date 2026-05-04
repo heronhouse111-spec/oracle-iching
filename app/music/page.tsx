@@ -330,6 +330,7 @@ export default function MusicLeaderboardPage() {
                   categoryId={tr.category_id}
                   durationSeconds={tr.duration_seconds}
                   creatorName={tr.creator_display_name ?? t("平台官方", "Official", "公式", "공식")}
+                  creatorId={tr.creator_id ?? null}
                   isPlaying={player.currentTrack?.id === tr.id && player.isPlaying}
                   onPlay={() =>
                     playTrack({ ...tr })
@@ -442,6 +443,7 @@ export default function MusicLeaderboardPage() {
                         categoryId={tr.category_id}
                         durationSeconds={tr.duration_seconds}
                         creatorName={tr.creator_display_name ?? t("匿名", "Anonymous", "匿名", "익명")}
+                        creatorId={tr.creator_id ?? null}
                         isSeed={tr.is_seed}
                         collectCount={tr.collect_count}
                         isPlaying={player.currentTrack?.id === tr.id && player.isPlaying}
@@ -508,6 +510,8 @@ function TrackRow(props: {
   categoryId: MusicCategoryId;
   durationSeconds: number;
   creatorName: string;
+  /** 真實創作者的 user UUID — null 表示種子歌假名(不可點擊) */
+  creatorId?: string | null;
   isSeed?: boolean;
   collectCount?: number;
   isPlaying: boolean;
@@ -522,7 +526,7 @@ function TrackRow(props: {
   locale: "zh" | "en" | "ja" | "ko";
   t: (zh: string, en: string, ja?: string, ko?: string) => string;
 }) {
-  const { trackId, rank, title, categoryId, creatorName, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, isCollected, isOwnTrack, t } = props;
+  const { trackId, rank, title, categoryId, creatorName, creatorId, isSeed, collectCount, isPlaying, isFree, onPlay, onCollect, isCollecting, isCollected, isOwnTrack, t } = props;
   const [showReport, setShowReport] = useState(false);
   return (
     <div
@@ -583,7 +587,20 @@ function TrackRow(props: {
           {categoryEmoji(categoryId)} {title}
         </div>
         <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11 }}>
-          {creatorName}
+          {creatorId ? (
+            <Link
+              href={`/music/creator/${creatorId}`}
+              style={{
+                color: "rgba(212,168,85,0.9)",
+                textDecoration: "none",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {creatorName}
+            </Link>
+          ) : (
+            creatorName
+          )}
           {typeof collectCount === "number" && collectCount > 0 && (
             <span style={{ marginLeft: 6 }}>
               · {t(`${collectCount} 收藏`, `${collectCount} collects`, `${collectCount} 収集`, `${collectCount} 수집`)}
