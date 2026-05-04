@@ -228,6 +228,28 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setCurrentTime(clamped);
   }, []);
 
+  // ── 抓 free tracks 的 raw 結果(含 title_translations)────────
+  // 拆成兩段:
+  //   1. mount-only fetch + audio init(deps=[],只跑一次)
+  //   2. locale 改變時 re-map 標題(不重 fetch、不動 audio.src,只更新顯示)
+  //
+  // 為什麼:之前把 locale 放進 fetch effect 的 deps,LanguageContext mount 後
+  // 從 'zh' detect 切到 en/ja/ko 時會觸發 cleanup → cancelled=true 擋掉
+  // in-flight 的 fetch.then,導致 queue 從未 setState、audio.src 永遠空、
+  // bar 卡在「Loading…」。改成 mount-only 後不會被 locale 變動干擾。
+  const rawTracksRef = useRef<
+    | {
+        id: string;
+        title: string;
+        title_translations?: Record<string, string> | null;
+        category_id: string;
+        audio_url: string;
+        duration_seconds: number;
+        creator_display_name: string | null;
+      }[]
+    | null
+  >(null);
+
   // ── Auto-init:開機載入「靜心冥想(精選長曲)」當預設 BGM ────────
   // 瀏覽器多半會擋 autoplay(沒用戶手勢);但 PWA standalone / TWA 通常可
   // 過。失敗就靜靜 swallow,bar 顯示為「已就緒、暫停中」,用戶按 ▶ 即可。
@@ -235,19 +257,20 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (initRef.current) return;
     initRef.current = true;
 
-    let cancelled = false;
     fetch("/api/music/free-tracks")
       .then((res) => res.json())
       .then((data: { tracks?: { id: string; title: string; title_translations?: Record<string, string> | null; category_id: string; audio_url: string; duration_seconds: number; creator_display_name: string | null }[] }) => {
-        if (cancelled) return;
         const tracks = data.tracks ?? [];
         if (tracks.length === 0) return;
+        rawTracksRef.current = tracks;
 
+        // 用「當下的 locale」 — 在 fetch resolve 時讀 ref,避開 closure stale 問題
+        const currentLocale = localeRef.current;
         const playerTracks: PlayerTrack[] = tracks.map((t) => {
           const tr = t.title_translations;
           const localizedTitle =
-            tr && typeof tr === "object" && typeof tr[locale] === "string"
-              ? tr[locale]
+            tr && typeof tr === "object" && typeof tr[currentLocale] === "string"
+              ? tr[currentLocale]
               : t.title;
           return {
             id: t.id,
@@ -280,10 +303,32 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       .catch((err) => {
         console.warn("[player] free-tracks fetch failed:", err);
       });
+    // mount-only — 不要把 locale 放進 deps,locale 變動由下面那個 effect 處理
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
+  // locale 永遠映射到 ref,給 fetch resolve 時拿「當下值」避開 stale closure
+  const localeRef = useRef(locale);
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
+
+  // locale 改變 → 用既有 raw tracks 重 map 顯示標題,不動 audio.src / 不重 fetch
+  useEffect(() => {
+    const tracks = rawTracksRef.current;
+    if (!tracks || tracks.length === 0) return;
+    setQueue((prevQueue) =>
+      prevQueue.map((pt) => {
+        const raw = tracks.find((r) => r.id === pt.id);
+        if (!raw) return pt;
+        const tr = raw.title_translations;
+        const localizedTitle =
+          tr && typeof tr === "object" && typeof tr[locale] === "string"
+            ? tr[locale]
+            : raw.title;
+        return { ...pt, title: localizedTitle };
+      }),
+    );
   }, [locale]);
 
   // audio element 的事件同步到 React state
