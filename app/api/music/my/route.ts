@@ -25,14 +25,14 @@ export async function GET() {
     supabase
       .from("generated_music")
       .select(
-        "id, title, category_id, storage_path, duration_seconds, visibility, collect_count, creator_earnings_total, created_at, published_at",
+        "id, title, title_translations, category_id, storage_path, duration_seconds, visibility, collect_count, creator_earnings_total, created_at, published_at",
       )
       .eq("creator_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("music_collections")
       .select(
-        "music_id, collected_at, points_paid, generated_music(id, title, category_id, storage_path, duration_seconds, creator_display_name)",
+        "music_id, collected_at, points_paid, generated_music(id, title, title_translations, category_id, storage_path, duration_seconds, creator_display_name)",
       )
       .eq("user_id", user.id)
       .order("collected_at", { ascending: false }),

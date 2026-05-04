@@ -28,11 +28,13 @@ import {
   categoryEmoji,
   categoryLabel,
   buildAudioUrl,
+  pickTitle,
 } from "@/lib/music/types";
 
 interface FreeTrack {
   id: string;
   title: string;
+  title_translations: Record<string, string> | null;
   category_id: MusicCategoryId;
   storage_path: string;
   duration_seconds: number;
@@ -42,6 +44,7 @@ interface FreeTrack {
 interface RankedTrack {
   id: string;
   title: string;
+  title_translations: Record<string, string> | null;
   category_id: MusicCategoryId;
   storage_path: string;
   duration_seconds: number;
@@ -90,10 +93,10 @@ export default function MusicLeaderboardPage() {
     refresh();
   }, [refresh]);
 
-  const playTrack = (track: { id: string; title: string; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_display_name?: string | null }) => {
+  const playTrack = (track: { id: string; title: string; title_translations?: Record<string, string> | null; storage_path: string; category_id: MusicCategoryId; duration_seconds: number; creator_display_name?: string | null }) => {
     player.play({
       id: track.id,
-      title: track.title,
+      title: pickTitle(track, locale),
       audioUrl: buildAudioUrl(supabaseUrl, track.storage_path),
       categoryEmoji: categoryEmoji(track.category_id),
       creatorDisplayName: track.creator_display_name ?? null,
@@ -219,7 +222,7 @@ export default function MusicLeaderboardPage() {
                 <TrackRow
                   key={tr.id}
                   trackId={tr.id}
-                  title={tr.title}
+                  title={pickTitle(tr, locale)}
                   categoryId={tr.category_id}
                   durationSeconds={tr.duration_seconds}
                   creatorName={tr.creator_display_name ?? t("平台官方", "Official", "公式", "공식")}
@@ -331,7 +334,7 @@ export default function MusicLeaderboardPage() {
                         key={tr.id}
                         trackId={tr.id}
                         rank={tr.rank_in_category}
-                        title={tr.title}
+                        title={pickTitle(tr, locale)}
                         categoryId={tr.category_id}
                         durationSeconds={tr.duration_seconds}
                         creatorName={tr.creator_display_name ?? t("匿名", "Anonymous", "匿名", "익명")}

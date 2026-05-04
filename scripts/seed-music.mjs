@@ -94,213 +94,97 @@ const STABILITY_URL =
 // ────────────────────────────────────────────
 // Track manifest
 // ────────────────────────────────────────────
-// 每個 category 5 首。Prompt 用英文(Stable Audio 對英文最敏感),
-// title 用中文(直接顯示於排行榜)。
+// 每個 category 5 首。Title 統一英文(用戶看到的就是英文,語系切換不會變),
+// Prompt 也英文(Stable Audio 對英文最敏感)。
+//
+// Phase 28 改:用戶生成現在固定 180s,seed 也跟著做 180s(同 API 成本拿到 3x 時長)。
 const SEED_TRACKS = [
-  // ── meditation 冥想 ────────────────────────
-  {
-    category: "meditation",
-    title: "靜謐冥想 01",
-    prompt:
-      "Slow ambient meditation with soft pads, deep low drone, distant chimes, 60bpm, peaceful and breath-aligning, no melody, instrumental",
-  },
-  {
-    category: "meditation",
-    title: "藏鈴頌 01",
-    prompt:
-      "Tibetan singing bowls, gentle wind, sustained pads, very slow, sacred meditation atmosphere, instrumental",
-  },
-  {
-    category: "meditation",
-    title: "晨光冥想 01",
-    prompt:
-      "Soft piano with deep reverb, slow contemplative ambient, no percussion, peaceful morning meditation",
-  },
-  {
-    category: "meditation",
-    title: "森林靜心 01",
-    prompt:
-      "Forest meditation ambient with leaves rustling softly, distant flute notes, low drone, calming and grounding",
-  },
-  {
-    category: "meditation",
-    title: "水晶頌缽 01",
-    prompt:
-      "Crystal singing bowls, ethereal sustained pads, tinkling bells, deep stillness, meditative drone",
-  },
+  // ── meditation ────────────────────────
+  { category: "meditation", title: "Misty Forest Dawn",
+    prompt: "Slow ambient meditation with soft pads, deep low drone, distant chimes, 60bpm, peaceful and breath-aligning, no melody, instrumental" },
+  { category: "meditation", title: "Tibetan Bowl Mantra",
+    prompt: "Tibetan singing bowls, gentle wind, sustained pads, very slow, sacred meditation atmosphere, instrumental" },
+  { category: "meditation", title: "Morning Light Meditation",
+    prompt: "Soft piano with deep reverb, slow contemplative ambient, no percussion, peaceful morning meditation" },
+  { category: "meditation", title: "Forest Heart Stillness",
+    prompt: "Forest meditation ambient with leaves rustling softly, distant flute notes, low drone, calming and grounding" },
+  { category: "meditation", title: "Crystal Bowl Serenity",
+    prompt: "Crystal singing bowls, ethereal sustained pads, tinkling bells, deep stillness, meditative drone" },
 
-  // ── mystery 神秘 ─────────────────────────
-  {
-    category: "mystery",
-    title: "神諭低語 01",
-    prompt:
-      "Mysterious oracle ambient, low cinematic drone, sparse bell strikes, suspenseful, instrumental",
-  },
-  {
-    category: "mystery",
-    title: "占卜時刻 01",
-    prompt:
-      "Dark mystical atmosphere with subtle string drones, sparse percussion, divination ritual feel, no vocals",
-  },
-  {
-    category: "mystery",
-    title: "古寺殿堂 01",
-    prompt:
-      "Ancient temple ambient, deep gong, cavernous reverb, mystical and sacred atmosphere",
-  },
-  {
-    category: "mystery",
-    title: "霧林夜行 01",
-    prompt:
-      "Foggy mystic forest at night, eerie sustained drones, whispering wind, soft distant chimes",
-  },
-  {
-    category: "mystery",
-    title: "玻璃水晶 01",
-    prompt:
-      "Ethereal mystery soundscape, glassy synth pads, distant ritual percussion, otherworldly",
-  },
+  // ── mystery ─────────────────────────
+  { category: "mystery", title: "Oracle Whisper",
+    prompt: "Mysterious oracle ambient, low cinematic drone, sparse bell strikes, suspenseful, instrumental" },
+  { category: "mystery", title: "Divination Hour",
+    prompt: "Dark mystical atmosphere with subtle string drones, sparse percussion, divination ritual feel, no vocals" },
+  { category: "mystery", title: "Ancient Temple Hall",
+    prompt: "Ancient temple ambient, deep gong, cavernous reverb, mystical and sacred atmosphere" },
+  { category: "mystery", title: "Foggy Forest Night",
+    prompt: "Foggy mystic forest at night, eerie sustained drones, whispering wind, soft distant chimes" },
+  { category: "mystery", title: "Glass Crystal Echoes",
+    prompt: "Ethereal mystery soundscape, glassy synth pads, distant ritual percussion, otherworldly" },
 
-  // ── nature 自然 ──────────────────────────
-  {
-    category: "nature",
-    title: "山林溪流 01",
-    prompt:
-      "Forest stream ambient, water flowing gently, distant birds, soft wind through leaves, peaceful nature",
-  },
-  {
-    category: "nature",
-    title: "綿綿細雨 01",
-    prompt:
-      "Light rain on leaves with soft distant thunder rumble, peaceful forest atmosphere, no music",
-  },
-  {
-    category: "nature",
-    title: "晨曦山霧 01",
-    prompt:
-      "Mountain morning ambient, distant bird calls, soft mountain wind, water trickling, fresh atmosphere",
-  },
-  {
-    category: "nature",
-    title: "海浪低吟 01",
-    prompt:
-      "Ocean waves gentle and continuous, distant seagulls, calming seaside nature ambient",
-  },
-  {
-    category: "nature",
-    title: "竹林風鈴 01",
-    prompt:
-      "Bamboo forest with wind chimes, leaves rustling, peaceful zen garden atmosphere, sparse",
-  },
+  // ── nature ──────────────────────────
+  { category: "nature", title: "Forest Stream",
+    prompt: "Forest stream ambient, water flowing gently, distant birds, soft wind through leaves, peaceful nature" },
+  { category: "nature", title: "Gentle Rainfall",
+    prompt: "Light rain on leaves with soft distant thunder rumble, peaceful forest atmosphere, no music" },
+  { category: "nature", title: "Mountain Mist",
+    prompt: "Mountain morning ambient, distant bird calls, soft mountain wind, water trickling, fresh atmosphere" },
+  { category: "nature", title: "Ocean Murmur",
+    prompt: "Ocean waves gentle and continuous, distant seagulls, calming seaside nature ambient" },
+  { category: "nature", title: "Bamboo Wind Chimes",
+    prompt: "Bamboo forest with wind chimes, leaves rustling, peaceful zen garden atmosphere, sparse" },
 
-  // ── oriental 東方 ────────────────────────
-  {
-    category: "oriental",
-    title: "古箏小品 01",
-    prompt:
-      "Traditional Chinese guzheng ambient, soft koto strings, bamboo flute drone, peaceful zen, instrumental",
-  },
-  {
-    category: "oriental",
-    title: "尺八禪音 01",
-    prompt:
-      "Japanese shakuhachi flute with subtle string drone, contemplative oriental ambient, slow",
-  },
-  {
-    category: "oriental",
-    title: "宮廷雅韻 01",
-    prompt:
-      "Ancient Chinese court music ambient, erhu drone, gentle pipa plucking, royal peaceful atmosphere",
-  },
-  {
-    category: "oriental",
-    title: "禪庭清音 01",
-    prompt:
-      "Zen garden ambient with shamisen, soft taiko drum heartbeat, oriental meditation",
-  },
-  {
-    category: "oriental",
-    title: "藏寺梵唱 01",
-    prompt:
-      "Tibetan Buddhist temple, deep chant drone, dungchen horn, spiritual oriental atmosphere, instrumental no lyrics",
-  },
+  // ── oriental ────────────────────────
+  { category: "oriental", title: "Guzheng Reverie",
+    prompt: "Traditional Chinese guzheng ambient, soft koto strings, bamboo flute drone, peaceful zen, instrumental" },
+  { category: "oriental", title: "Shakuhachi Stillness",
+    prompt: "Japanese shakuhachi flute with subtle string drone, contemplative oriental ambient, slow" },
+  { category: "oriental", title: "Imperial Court Echo",
+    prompt: "Ancient Chinese court music ambient, erhu drone, gentle pipa plucking, royal peaceful atmosphere" },
+  { category: "oriental", title: "Zen Garden Breath",
+    prompt: "Zen garden ambient with shamisen, soft taiko drum heartbeat, oriental meditation" },
+  { category: "oriental", title: "Tibetan Temple Chant",
+    prompt: "Tibetan Buddhist temple, deep chant drone, dungchen horn, spiritual oriental atmosphere, instrumental no lyrics" },
 
-  // ── focus 專注 ────────────────────────────
-  {
-    category: "focus",
-    title: "雨中讀書 01",
-    prompt:
-      "Lofi study beats with gentle rain, soft piano melody, mellow and unobtrusive concentration ambient",
-  },
-  {
-    category: "focus",
-    title: "極簡專注 01",
-    prompt:
-      "Minimalist ambient for focus, slow synthesizer pads, no percussion, deep concentration atmosphere",
-  },
-  {
-    category: "focus",
-    title: "咖啡廳爵士 01",
-    prompt:
-      "Coffee shop ambient with soft jazz piano in background, gentle and unobtrusive, mellow",
-  },
-  {
-    category: "focus",
-    title: "圖書館靜謐 01",
-    prompt:
-      "Library study ambient, very soft texture, peaceful and quiet, deep focus, almost silent",
-  },
-  {
-    category: "focus",
-    title: "深度工作 01",
-    prompt:
-      "Soft electronic beats for deep work, repetitive and hypnotic, productivity ambient, instrumental",
-  },
+  // ── focus ────────────────────────────
+  { category: "focus", title: "Reading in Rain",
+    prompt: "Lofi study beats with gentle rain, soft piano melody, mellow and unobtrusive concentration ambient" },
+  { category: "focus", title: "Minimal Focus",
+    prompt: "Minimalist ambient for focus, slow synthesizer pads, no percussion, deep concentration atmosphere" },
+  { category: "focus", title: "Coffee Shop Jazz",
+    prompt: "Coffee shop ambient with soft jazz piano in background, gentle and unobtrusive, mellow" },
+  { category: "focus", title: "Library Silence",
+    prompt: "Library study ambient, very soft texture, peaceful and quiet, deep focus, almost silent" },
+  { category: "focus", title: "Deep Work Beats",
+    prompt: "Soft electronic beats for deep work, repetitive and hypnotic, productivity ambient, instrumental" },
 
-  // ── dream 夢境 ────────────────────────────
-  {
-    category: "dream",
-    title: "雲端漫遊 01",
-    prompt:
-      "Dreamy ambient soundscape with reverbed pads, distant ethereal tones, floating sensation, instrumental",
-  },
-  {
-    category: "dream",
-    title: "星空夜寐 01",
-    prompt:
-      "Cosmic dream ambient, slow synthesizer, twinkling celestial sounds, deep space sleep",
-  },
-  {
-    category: "dream",
-    title: "音樂盒搖籃 01",
-    prompt:
-      "Lullaby ambient with soft music box melody, twinkling chimes, peaceful sleep atmosphere",
-  },
-  {
-    category: "dream",
-    title: "夢境鋼琴 01",
-    prompt:
-      "Dreamlike piano with heavy reverb, slow and floating, surreal sleep ambient",
-  },
-  {
-    category: "dream",
-    title: "清明夢境 01",
-    prompt:
-      "Lucid dream ambient, evolving synth pads, distant chimes, cloud-floating feel",
-  },
+  // ── dream ────────────────────────────
+  { category: "dream", title: "Cloud Drift",
+    prompt: "Dreamy ambient soundscape with reverbed pads, distant ethereal tones, floating sensation, instrumental" },
+  { category: "dream", title: "Cosmic Lullaby",
+    prompt: "Cosmic dream ambient, slow synthesizer, twinkling celestial sounds, deep space sleep" },
+  { category: "dream", title: "Music Box Cradle",
+    prompt: "Lullaby ambient with soft music box melody, twinkling chimes, peaceful sleep atmosphere" },
+  { category: "dream", title: "Dream Piano",
+    prompt: "Dreamlike piano with heavy reverb, slow and floating, surreal sleep ambient" },
+  { category: "dream", title: "Lucid Dreaming",
+    prompt: "Lucid dream ambient, evolving synth pads, distant chimes, cloud-floating feel" },
 ];
 
+// 永久免費的 2 首長曲(180s)— title 改英文,跟 phase28 SQL 的 backfill 對齊
+// 多語翻譯由 SQL 那邊存進 title_translations,UI 切語言會自動變。
 const FREE_TRACKS = [
   {
     category: "meditation",
-    title: "靜心冥想(精選長曲)",
+    title: "Heart Meditation",
     prompt:
       "Extended deep meditation ambient with Tibetan singing bowls, sustained low drone, distant soft chimes, gentle wind, very peaceful and breath-aligning meditative journey, instrumental no melody",
     duration: 180,
   },
   {
     category: "oriental",
-    title: "東方禪境(精選長曲)",
+    title: "Eastern Zen Garden",
     prompt:
       "Extended zen garden ambient with bamboo flute, gentle koto plucking, water trickling, traditional Asian peaceful atmosphere, contemplative oriental meditation, instrumental",
     duration: 180,
@@ -417,7 +301,8 @@ function cachePathFor(track) {
 
 async function processTrack(track, kind, index, total) {
   const isFree = kind === "free";
-  const duration = track.duration ?? 60;
+  // Phase 28:預設 180s,跟用戶生成 + 免費長曲統一(API 同價)
+  const duration = track.duration ?? 180;
   const tag = `[${index + 1}/${total}]`;
   console.log(
     `${tag} ${kind.toUpperCase().padEnd(4)} | ${track.category.padEnd(10)} | ${track.title}`,
@@ -488,7 +373,7 @@ async function main() {
   console.log(" Phase 27 — 種子歌預生成");
   console.log("════════════════════════════════════════");
   console.log(` 模式      : ${APPLY ? "APPLY" : "DRY-RUN(加 --apply 才會真做)"}`);
-  console.log(` 種子歌    : ${seedCount} 首 × 60s`);
+  console.log(` 種子歌    : ${seedCount} 首 × 180s`);
   console.log(` 免費歌    : ${freeCount} 首 × 180s`);
   console.log(` 合計      : ${total} 首`);
   console.log(` 預估成本  : ~$${usd.toFixed(2)} USD`);

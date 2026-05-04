@@ -22,6 +22,7 @@ import {
   categoryEmoji,
   categoryLabel,
   buildAudioUrl,
+  pickTitle,
 } from "@/lib/music/types";
 
 type Tab = "created" | "collected";
@@ -29,6 +30,7 @@ type Tab = "created" | "collected";
 interface CreatedTrack {
   id: string;
   title: string;
+  title_translations: Record<string, string> | null;
   category_id: MusicCategoryId;
   storage_path: string;
   duration_seconds: number;
@@ -46,6 +48,7 @@ interface CollectedTrack {
   generated_music: {
     id: string;
     title: string;
+    title_translations: Record<string, string> | null;
     category_id: MusicCategoryId;
     storage_path: string;
     duration_seconds: number;
@@ -110,7 +113,7 @@ export default function MyMusicPage() {
   const handlePlayCreated = (track: CreatedTrack) => {
     player.play({
       id: track.id,
-      title: track.title,
+      title: pickTitle(track, locale),
       audioUrl: buildAudioUrl(supabaseUrl, track.storage_path),
       categoryEmoji: categoryEmoji(track.category_id),
       durationSeconds: track.duration_seconds,
@@ -121,7 +124,7 @@ export default function MyMusicPage() {
     const m = item.generated_music;
     player.play({
       id: m.id,
-      title: m.title,
+      title: pickTitle(m, locale),
       audioUrl: buildAudioUrl(supabaseUrl, m.storage_path),
       categoryEmoji: categoryEmoji(m.category_id),
       creatorDisplayName: m.creator_display_name,
@@ -350,6 +353,7 @@ function CreatedRow({
   const isRemoved =
     track.visibility === "removed_by_user" || track.visibility === "removed_by_moderation";
   const audioUrl = buildAudioUrl(supabaseUrl, track.storage_path);
+  const displayTitle = pickTitle(track, locale);
   return (
     <div
       style={{
@@ -379,7 +383,7 @@ function CreatedRow({
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: "#fff", fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
-            {categoryEmoji(track.category_id)} {track.title}
+            {categoryEmoji(track.category_id)} {displayTitle}
           </div>
           <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11 }}>
             {categoryLabel(track.category_id, locale)} · {track.duration_seconds}s
@@ -444,7 +448,7 @@ function CreatedRow({
           </button>
           <a
             href={audioUrl}
-            download={`${track.title}.mp3`}
+            download={`${displayTitle}.mp3`}
             style={{
               padding: "8px 14px",
               background: "transparent",
@@ -465,7 +469,7 @@ function CreatedRow({
         <div style={{ marginTop: 10 }}>
           <a
             href={audioUrl}
-            download={`${track.title}.mp3`}
+            download={`${displayTitle}.mp3`}
             style={{
               padding: "8px 14px",
               background: "transparent",
@@ -553,7 +557,7 @@ function CollectedList({
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
-                {categoryEmoji(m.category_id)} {m.title}
+                {categoryEmoji(m.category_id)} {pickTitle(m, locale)}
               </div>
               <div style={{ color: "rgba(192,192,208,0.6)", fontSize: 11 }}>
                 {m.creator_display_name ?? t("匿名", "Anonymous", "匿名", "익명")} ·{" "}

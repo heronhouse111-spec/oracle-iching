@@ -77,3 +77,19 @@ export function categoryEmoji(id: MusicCategoryId): string {
 export function buildAudioUrl(supabaseUrl: string, storagePath: string): string {
   return `${supabaseUrl}/storage/v1/object/public/app-music/${storagePath}`;
 }
+
+/**
+ * 多語系標題選擇 — Phase 28
+ *   平台種子 / 免費歌的 title_translations 會填 4 語,優先取對應 locale。
+ *   用戶生成的歌不填(只有原 title),自動 fallback。
+ */
+export function pickTitle(
+  track: { title: string; title_translations?: Record<string, string> | null },
+  locale: "zh" | "en" | "ja" | "ko",
+): string {
+  const tr = track.title_translations;
+  if (tr && typeof tr === "object" && typeof tr[locale] === "string" && tr[locale].length > 0) {
+    return tr[locale];
+  }
+  return track.title;
+}

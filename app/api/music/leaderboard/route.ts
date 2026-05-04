@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest) {
   const freeRes = await supabase
     .from("generated_music")
     .select(
-      "id, title, category_id, storage_path, duration_seconds, creator_display_name",
+      "id, title, title_translations, category_id, storage_path, duration_seconds, creator_display_name",
     )
     .eq("is_free", true)
     .eq("visibility", "public")
@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest) {
   const rankRes = await supabase
     .from("music_rankings_daily")
     .select(
-      "music_id, category_id, rank_in_category, payout_tier, generated_music(id, title, category_id, storage_path, duration_seconds, creator_display_name, is_seed, collect_count)",
+      "music_id, category_id, rank_in_category, payout_tier, generated_music(id, title, title_translations, category_id, storage_path, duration_seconds, creator_display_name, is_seed, collect_count)",
     )
     .eq("date", today)
     .lte("rank_in_category", 10)
@@ -57,7 +57,7 @@ export async function GET(_request: NextRequest) {
     const fallbackRes = await supabase
       .from("generated_music")
       .select(
-        "id, title, category_id, storage_path, duration_seconds, creator_display_name, is_seed, collect_count",
+        "id, title, title_translations, category_id, storage_path, duration_seconds, creator_display_name, is_seed, collect_count",
       )
       .eq("visibility", "public")
       .eq("moderation_status", "approved")
