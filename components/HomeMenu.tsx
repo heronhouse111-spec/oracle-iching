@@ -277,10 +277,16 @@ export default function HomeMenu() {
             minWidth: 200,
             background: "rgba(13,13,43,0.95)",
             backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
             border: "1px solid rgba(212,168,85,0.3)",
             borderRadius: 10,
             boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
-            zIndex: 60,
+            // 110 > music bar 100 — 確保下拉覆蓋在底部播放器上方
+            zIndex: 110,
+            // 限制高度避免被底部 bar 擋住,選單太長時內部捲動
+            // 64 (header) + 6 (top gap) + 80 (player + safe-area buffer) = 150
+            maxHeight: "calc(100vh - 150px)",
+            overflowY: "auto",
           }}
         >
           {GROUPS.map((group, gi) => (
