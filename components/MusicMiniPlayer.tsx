@@ -72,8 +72,9 @@ export default function MusicMiniPlayer() {
     [duration, seekTo],
   );
 
-  if (!currentTrack) return null;
-
+  // 用戶要求:任何頁面都要看得到 bar,無論是否有 currentTrack。
+  // 沒 track 時 bar 顯示 placeholder,引導去 /music。
+  const hasTrack = !!currentTrack;
   const progress = duration > 0 ? currentTime / duration : 0;
   const hasQueue = queue.length > 1;
   const loopIcon = loopMode === "one" ? "🔂" : loopMode === "all" ? "🔁" : "↻";
@@ -155,31 +156,6 @@ export default function MusicMiniPlayer() {
             >
               {Math.round(volume * 100)}
             </span>
-
-            {/* 關閉整個 player */}
-            <button
-              onClick={() => {
-                stop();
-                setDrawerOpen(false);
-              }}
-              aria-label={t("關閉播放器", "Close player", "プレーヤーを閉じる", "플레이어 닫기")}
-              title={t("關閉播放器", "Close player", "プレーヤーを閉じる", "플레이어 닫기")}
-              style={{
-                width: 36,
-                height: 36,
-                flexShrink: 0,
-                borderRadius: "50%",
-                background: "transparent",
-                border: "1px solid rgba(192,192,208,0.3)",
-                color: "rgba(192,192,208,0.7)",
-                fontSize: 14,
-                cursor: "pointer",
-                padding: 0,
-                lineHeight: 1,
-              }}
-            >
-              ✕
-            </button>
           </div>
         </div>
       )}
@@ -265,7 +241,7 @@ export default function MusicMiniPlayer() {
                 animation: isPlaying ? "music-spin 8s linear infinite" : "none",
               }}
             >
-              {currentTrack.categoryEmoji ?? "🎵"}
+              {currentTrack?.categoryEmoji ?? "🎵"}
             </span>
           </div>
 
@@ -282,7 +258,7 @@ export default function MusicMiniPlayer() {
                 lineHeight: 1.3,
               }}
             >
-              {currentTrack.title}
+              {currentTrack?.title ?? t("載入中…", "Loading…", "読み込み中…", "로딩 중…")}
             </div>
             <div
               style={{
@@ -295,13 +271,15 @@ export default function MusicMiniPlayer() {
                 marginTop: 2,
               }}
             >
-              {currentTrack.creatorDisplayName ?? t("匿名", "Anonymous", "匿名", "익명")}
+              {hasTrack
+                ? currentTrack?.creatorDisplayName ?? t("平台官方", "Official", "公式", "공식")
+                : t("準備中", "Preparing", "準備中", "준비 중")}
               {hasQueue && (
                 <span style={{ marginLeft: 6, opacity: 0.7 }}>
                   · {queueIndex + 1}/{queue.length}
                 </span>
               )}
-              {duration > 0 && (
+              {hasTrack && duration > 0 && (
                 <span style={{ marginLeft: 6, opacity: 0.55 }}>
                   · {fmtTime(currentTime)} / {fmtTime(duration)}
                 </span>
@@ -334,22 +312,25 @@ export default function MusicMiniPlayer() {
           {/* 播放 / 暫停(主按鈕,稍大) */}
           <button
             onClick={handleTogglePlay}
+            disabled={!hasTrack}
             aria-label={isPlaying ? t("暫停", "Pause", "一時停止", "일시정지") : t("播放", "Play", "再生", "재생")}
             style={{
               width: 40,
               height: 40,
               flexShrink: 0,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+              background: hasTrack
+                ? "linear-gradient(135deg, #d4a855, #f0d78c)"
+                : "rgba(212,168,85,0.2)",
               border: "none",
-              color: "#0a0a1a",
+              color: hasTrack ? "#0a0a1a" : "rgba(192,192,208,0.4)",
               fontSize: 14,
-              cursor: "pointer",
+              cursor: hasTrack ? "pointer" : "not-allowed",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: 0,
-              boxShadow: "0 2px 8px rgba(212,168,85,0.4)",
+              boxShadow: hasTrack ? "0 2px 8px rgba(212,168,85,0.4)" : "none",
             }}
           >
             {isPlaying ? "⏸" : "▶"}

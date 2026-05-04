@@ -56,11 +56,15 @@ body {
    * 狀態列 / notch / 圓角會疊在頁面上,若不處理 safe-area 會裁掉頂部和兩側。
    * 這裡把非 fixed 內容整體推進 safe-area 範圍。fixed header 不受此影響,
    * 要在 Header 元件內另外處理 paddingTop: env(safe-area-inset-top)。
-   * 刻意不加 padding-bottom —— Footer 目前不是 fixed,不會跟 home indicator 撞。
+   *
+   * Phase 28:底部音樂播放器(64px)永遠常駐,內容要留 bottom padding
+   * 才不會被覆蓋。72px = 64 bar + 8 buffer。再加 safe-area-inset-bottom
+   * (iOS home indicator)。
    */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
 /* Starfield background */

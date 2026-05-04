@@ -31,6 +31,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export interface PlayerTrack {
   id: string;
@@ -84,14 +85,16 @@ const LOOP_CYCLE: LoopMode[] = ["one", "all", "off"];
 
 export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { locale } = useLanguage();
   const [queue, setQueue] = useState<PlayerTrack[]>([]);
   const [queueIndex, setQueueIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolumeState] = useState(0.7);
+  const [volume, setVolumeState] = useState(0.5); // 預設一半音量(用戶要求)
   const [loopMode, setLoopMode] = useState<LoopMode>("one");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const completedRef = useRef(false);
+  const initRef = useRef(false); // 確保 auto-init 只跑一次
 
   const currentTrack: PlayerTrack | null =
     queueIndex >= 0 && queueIndex < queue.length ? queue[queueIndex] : null;
@@ -219,6 +222,64 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     audio.currentTime = clamped;
     setCurrentTime(clamped);
   }, []);
+
+  // ── Auto-init:開機載入「靜心冥想(精選長曲)」當預設 BGM ────────
+  // 瀏覽器多半會擋 autoplay(沒用戶手勢);但 PWA standalone / TWA 通常可
+  // 過。失敗就靜靜 swallow,bar 顯示為「已就緒、暫停中」,用戶按 ▶ 即可。
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    let cancelled = false;
+    fetch("/api/music/free-tracks")
+      .then((res) => res.json())
+      .then((data: { tracks?: { id: string; title: string; title_translations?: Record<string, string> | null; category_id: string; audio_url: string; duration_seconds: number; creator_display_name: string | null }[] }) => {
+        if (cancelled) return;
+        const tracks = data.tracks ?? [];
+        if (tracks.length === 0) return;
+
+        const playerTracks: PlayerTrack[] = tracks.map((t) => {
+          const tr = t.title_translations;
+          const localizedTitle =
+            tr && typeof tr === "object" && typeof tr[locale] === "string"
+              ? tr[locale]
+              : t.title;
+          return {
+            id: t.id,
+            title: localizedTitle,
+            audioUrl: t.audio_url,
+            categoryEmoji: t.category_id === "meditation" ? "🧘" : t.category_id === "oriental" ? "🏮" : "🎵",
+            creatorDisplayName: null, // bar 會 fallback 顯示「平台官方」
+            durationSeconds: t.duration_seconds,
+          };
+        });
+
+        const meditationIdx = Math.max(
+          0,
+          playerTracks.findIndex((_, i) => tracks[i].category_id === "meditation"),
+        );
+
+        setQueue(playerTracks);
+        setQueueIndex(meditationIdx);
+
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.src = playerTracks[meditationIdx].audioUrl;
+        audio.volume = 0.5;
+        audio.loop = true;
+        // 嘗試 autoplay — 多半被擋,但 PWA / TWA 環境會通過
+        audio.play().catch(() => {
+          // 靜默失敗,等用戶按 ▶
+        });
+      })
+      .catch((err) => {
+        console.warn("[player] free-tracks fetch failed:", err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
 
   // audio element 的事件同步到 React state
   useEffect(() => {
