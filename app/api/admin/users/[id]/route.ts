@@ -30,10 +30,23 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
 
   const supabase = await createClient();
 
-  // 平行抓 6 個資料源
+  // 平行抓 9 個資料源
   // - spendTxs:該 user 所有 spend_* 流水(用來對應 divinations 顯示扣點 + 餘額)
   // - rewardTxs:該 user 所有 collection_milestone 流水(用來算「卡牌已發獎勵」總額)
-  const [profileResult, userResult, divinationsResult, grantsResult, spendTxsResult, rewardTxsResult] =
+  // - musicCreated:該 user 創作的音樂(含累計收藏 / 收益)
+  // - musicCollected:該 user 收藏的他人音樂(JOIN generated_music)
+  // - musicEarningTxs:該 user 從別人收藏自己音樂得到的點數(creator_earning_collect)
+  const [
+    profileResult,
+    userResult,
+    divinationsResult,
+    grantsResult,
+    spendTxsResult,
+    rewardTxsResult,
+    musicCreatedResult,
+    musicCollectedResult,
+    musicEarningTxsResult,
+  ] =
     await Promise.all([
       supabase
         .from("admin_users_view")
@@ -79,6 +92,30 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
         .select("delta, created_at")
         .eq("user_id", id)
         .eq("reason", "collection_milestone"),
+      // 該 user 創作的音樂
+      supabase
+        .from("generated_music")
+        .select(
+          "id, title, category_id, visibility, moderation_status, collect_count, creator_earnings_total, duration_seconds, storage_path, created_at, published_at",
+        )
+        .eq("creator_id", id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      // 該 user 收藏的他人音樂(JOIN generated_music 拿 title / 分類)
+      supabase
+        .from("music_collections")
+        .select(
+          "music_id, points_paid, creator_payout, creator_tier, was_subscriber, collected_at, generated_music(title, category_id, creator_display_name, duration_seconds)",
+        )
+        .eq("user_id", id)
+        .order("collected_at", { ascending: false })
+        .limit(50),
+      // 該 user 從「別人收藏我的歌」拿到的點數獎勵
+      supabase
+        .from("credit_transactions")
+        .select("delta, created_at")
+        .eq("user_id", id)
+        .eq("reason", "creator_earning_collect"),
     ]);
 
   if (!profileResult.data) {
@@ -160,6 +197,23 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
   );
   const collectionRewardsCount = rewardTxsResult.data?.length ?? 0;
 
+  // ── 音樂相關 ──
+  const musicCreated = musicCreatedResult.data ?? [];
+  const musicCollected = musicCollectedResult.data ?? [];
+  const musicEarningTxs = musicEarningTxsResult.data ?? [];
+  const musicTotalEarningsFromCollects = musicEarningTxs.reduce(
+    (sum, t) => sum + (t.delta ?? 0),
+    0,
+  );
+  const musicCreatedCount = musicCreated.length;
+  const musicCreatedPublicCount = musicCreated.filter(
+    (t) => t.visibility === "public",
+  ).length;
+  const musicTotalCollectsOnOwnTracks = musicCreated.reduce(
+    (sum, t) => sum + (t.collect_count ?? 0),
+    0,
+  );
+
   return NextResponse.json({
     profile: {
       ...profileResult.data,
@@ -171,5 +225,17 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     grants: grantsResult.data ?? [],
     collectionRewardsTotal,
     collectionRewardsCount,
+    music: {
+      created: musicCreated,
+      collected: musicCollected,
+      stats: {
+        createdCount: musicCreatedCount,
+        createdPublicCount: musicCreatedPublicCount,
+        collectedCount: musicCollected.length,
+        totalCollectsOnOwnTracks: musicTotalCollectsOnOwnTracks,
+        totalEarningsFromOthers: musicTotalEarningsFromCollects,
+        earningTxCount: musicEarningTxs.length,
+      },
+    },
   });
 }

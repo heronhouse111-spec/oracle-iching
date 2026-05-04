@@ -59,6 +59,44 @@ interface UserDetail {
     related_order_mtn: string | null;
     created_at: string;
   }>;
+  /** 音樂創作 / 收藏 / 收益(Phase D) */
+  music?: {
+    created: Array<{
+      id: string;
+      title: string;
+      category_id: string;
+      visibility: string;
+      moderation_status: string;
+      collect_count: number;
+      creator_earnings_total: number;
+      duration_seconds: number;
+      storage_path: string;
+      created_at: string;
+      published_at: string | null;
+    }>;
+    collected: Array<{
+      music_id: string;
+      points_paid: number;
+      creator_payout: number;
+      creator_tier: string;
+      was_subscriber: boolean;
+      collected_at: string;
+      generated_music: {
+        title: string;
+        category_id: string;
+        creator_display_name: string | null;
+        duration_seconds: number;
+      } | null;
+    }>;
+    stats: {
+      createdCount: number;
+      createdPublicCount: number;
+      collectedCount: number;
+      totalCollectsOnOwnTracks: number;
+      totalEarningsFromOthers: number;
+      earningTxCount: number;
+    };
+  };
 }
 
 interface CollectionData {
@@ -776,6 +814,203 @@ export default function AdminUserDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* ─── 音樂後台:創作 / 收藏 / 收益(Phase D)─── */}
+            {data.music && (
+              <div
+                className="mystic-card"
+                style={{ padding: 0, overflow: "hidden", marginBottom: 16 }}
+              >
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderBottom: "1px solid rgba(192,192,208,0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  <h2 style={{ fontSize: 14, color: "#d4a855", margin: 0 }}>
+                    🎵 音樂活動
+                  </h2>
+                  <div style={{ display: "flex", gap: 14, fontSize: 12 }}>
+                    <span style={{ color: "rgba(192,192,208,0.6)" }}>
+                      創作 <strong style={{ color: "#fff" }}>{data.music.stats.createdCount}</strong>
+                      <span style={{ color: "rgba(192,192,208,0.4)" }}>
+                        {" "}
+                        ({data.music.stats.createdPublicCount} 公開)
+                      </span>
+                    </span>
+                    <span style={{ color: "rgba(192,192,208,0.6)" }}>
+                      收藏 <strong style={{ color: "#fff" }}>{data.music.stats.collectedCount}</strong>
+                    </span>
+                    <span style={{ color: "rgba(192,192,208,0.6)" }}>
+                      作品被收藏 <strong style={{ color: "#fff" }}>{data.music.stats.totalCollectsOnOwnTracks}</strong> 次
+                    </span>
+                    <span style={{ color: "#d4a855", fontWeight: 700 }}>
+                      ✦ +{data.music.stats.totalEarningsFromOthers} pt
+                      <span style={{ color: "rgba(212,168,85,0.6)", fontWeight: 400 }}>
+                        {" "}
+                        ({data.music.stats.earningTxCount} 筆)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 創作的歌 */}
+                <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(192,192,208,0.06)" }}>
+                  <h3 style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", margin: "0 0 8px" }}>
+                    創作的歌 ({data.music.created.length})
+                  </h3>
+                  {data.music.created.length === 0 ? (
+                    <div style={{ color: "rgba(192,192,208,0.4)", fontSize: 12 }}>
+                      尚無創作
+                    </div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ color: "rgba(192,192,208,0.5)" }}>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>歌名</th>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>分類</th>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>狀態</th>
+                          <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 500 }}>收藏</th>
+                          <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 500 }}>賺</th>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>時間</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.music.created.map((track) => {
+                          const visBadge =
+                            track.visibility === "public"
+                              ? { label: "公開", color: "#6ee7b7" }
+                              : track.visibility === "private"
+                                ? { label: "私人", color: "rgba(192,192,208,0.5)" }
+                                : track.visibility === "removed_by_moderation"
+                                  ? { label: "違規下架", color: "#fca5a5" }
+                                  : { label: "已下架", color: "rgba(192,192,208,0.4)" };
+                          return (
+                            <tr
+                              key={track.id}
+                              style={{ borderTop: "1px solid rgba(192,192,208,0.04)" }}
+                            >
+                              <td style={{ padding: "6px", color: "#fff" }}>{track.title}</td>
+                              <td style={{ padding: "6px", color: "rgba(192,192,208,0.7)" }}>
+                                {track.category_id}
+                              </td>
+                              <td style={{ padding: "6px", color: visBadge.color }}>
+                                {visBadge.label}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "6px",
+                                  textAlign: "right",
+                                  color: track.collect_count > 0 ? "#fff" : "rgba(192,192,208,0.4)",
+                                }}
+                              >
+                                {track.collect_count}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "6px",
+                                  textAlign: "right",
+                                  color:
+                                    track.creator_earnings_total > 0
+                                      ? "#d4a855"
+                                      : "rgba(192,192,208,0.4)",
+                                  fontWeight: track.creator_earnings_total > 0 ? 700 : 400,
+                                }}
+                              >
+                                {track.creator_earnings_total > 0
+                                  ? `+${track.creator_earnings_total}`
+                                  : "—"}
+                              </td>
+                              <td style={{ padding: "6px", color: "rgba(192,192,208,0.5)" }}>
+                                {new Date(track.created_at).toLocaleDateString("zh-TW")}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* 收藏的歌 */}
+                <div style={{ padding: "12px 16px" }}>
+                  <h3 style={{ fontSize: 12, color: "rgba(212,168,85,0.7)", margin: "0 0 8px" }}>
+                    收藏的歌 ({data.music.collected.length})
+                  </h3>
+                  {data.music.collected.length === 0 ? (
+                    <div style={{ color: "rgba(192,192,208,0.4)", fontSize: 12 }}>
+                      尚無收藏
+                    </div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ color: "rgba(192,192,208,0.5)" }}>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>歌名</th>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>原創作者</th>
+                          <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 500 }}>付出</th>
+                          <th style={{ padding: "4px 6px", textAlign: "right", fontWeight: 500 }}>對方賺</th>
+                          <th style={{ padding: "4px 6px", textAlign: "left", fontWeight: 500 }}>時間</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.music.collected.map((c) => (
+                          <tr
+                            key={c.music_id}
+                            style={{ borderTop: "1px solid rgba(192,192,208,0.04)" }}
+                          >
+                            <td style={{ padding: "6px", color: "#fff" }}>
+                              {c.generated_music?.title ?? "(已刪除)"}
+                            </td>
+                            <td style={{ padding: "6px", color: "rgba(192,192,208,0.7)" }}>
+                              {c.generated_music?.creator_display_name ?? "—"}
+                            </td>
+                            <td
+                              style={{
+                                padding: "6px",
+                                textAlign: "right",
+                                color: "#fca5a5",
+                              }}
+                            >
+                              -{c.points_paid}
+                              {c.was_subscriber && (
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    color: "rgba(192,192,208,0.5)",
+                                    marginLeft: 4,
+                                  }}
+                                >
+                                  (8折)
+                                </span>
+                              )}
+                            </td>
+                            <td
+                              style={{
+                                padding: "6px",
+                                textAlign: "right",
+                                color: c.creator_payout > 0 ? "#d4a855" : "rgba(192,192,208,0.4)",
+                              }}
+                            >
+                              {c.creator_payout > 0
+                                ? `+${c.creator_payout} (${c.creator_tier})`
+                                : "—"}
+                            </td>
+                            <td style={{ padding: "6px", color: "rgba(192,192,208,0.5)" }}>
+                              {new Date(c.collected_at).toLocaleDateString("zh-TW")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ─── Credit grants log ─── */}
             <div
