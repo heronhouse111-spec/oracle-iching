@@ -284,9 +284,16 @@ export default function HomeMenu() {
             // 110 > music bar 100 — 確保下拉覆蓋在底部播放器上方
             zIndex: 110,
             // 限制高度避免被底部 bar 擋住,選單太長時內部捲動
-            // 64 (header) + 6 (top gap) + 80 (player + safe-area buffer) = 150
-            maxHeight: "calc(100vh - 150px)",
+            //   上方 70 = header 56(content) + 6(gap) + 8(buffer)
+            //   下方 75 = player bar 64 + progress 3 + buffer 8
+            //   safe-area-inset-top/bottom 必須額外加 — 不然 iPhone notch + home
+            //   indicator 下，maxHeight 多算了 ~57px,選單底部會壓到 player 上
+            //   把「我的音樂 / 部落格」蓋掉。
+            maxHeight:
+              "calc(100dvh - 70px - 75px - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
             overflowY: "auto",
+            // overscroll-behavior 避免 iOS 上選單捲到頂/底時帶到外層頁面
+            overscrollBehavior: "contain",
           }}
         >
           {GROUPS.map((group, gi) => (
