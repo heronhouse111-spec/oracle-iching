@@ -250,13 +250,105 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     | null
   >(null);
 
+  // ── 跨頁持久化 player state(sessionStorage)──
+  // 為什麼:理論上 MusicPlayerProvider 在 root layout,client-side 換頁不應該
+  // remount。但使用者在 PWA / TWA / 不同瀏覽器組合下還是反映「換頁音樂重播」,
+  // 為防萬一(Next 16 layout 傳 children 的時序、SW 介入、history.assign 殘餘
+  // 等),把 queue / queueIndex / currentTime / isPlaying 即時寫進 sessionStorage,
+  // 下次 mount 時優先 hydrate 既有狀態,音樂從上次斷點恢復(不從頭播)。
+  //
+  // 寫入由獨立 effect 在 audio timeupdate 等事件後 sync;讀取在 init effect 開頭。
+  const PERSIST_KEY = "tarogram_player_state_v1";
+  type PersistedState = {
+    trackId: string | null;
+    audioUrl: string | null;
+    currentTime: number;
+    isPlaying: boolean;
+    volume: number;
+    loopMode: LoopMode;
+    queue: PlayerTrack[];
+    queueIndex: number;
+    rawTracks:
+      | {
+          id: string;
+          title: string;
+          title_translations?: Record<string, string> | null;
+          category_id: string;
+          audio_url: string;
+          duration_seconds: number;
+          creator_display_name: string | null;
+        }[]
+      | null;
+  };
+  const hydratedFromStorageRef = useRef(false);
+
   // ── Auto-init:開機載入「靜心冥想(精選長曲)」當預設 BGM ────────
   // 瀏覽器多半會擋 autoplay(沒用戶手勢);但 PWA standalone / TWA 通常可
   // 過。失敗就靜靜 swallow,bar 顯示為「已就緒、暫停中」,用戶按 ▶ 即可。
+  //
+  // mount 時優先 hydrate sessionStorage 的上次狀態(若有)— 換頁 / refresh 後
+  // audio.src + currentTime 從斷點恢復,不從頭播。沒 sessionStorage 才走預設
+  // 「載入靜心冥想當開機 BGM」流程。
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
+    // ── Step 1: try sessionStorage hydrate ──
+    let hydrated = false;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem(PERSIST_KEY);
+        if (raw) {
+          const persisted = JSON.parse(raw) as PersistedState;
+          if (
+            persisted &&
+            Array.isArray(persisted.queue) &&
+            persisted.queue.length > 0 &&
+            typeof persisted.queueIndex === "number" &&
+            persisted.audioUrl
+          ) {
+            setQueue(persisted.queue);
+            setQueueIndex(persisted.queueIndex);
+            setVolumeState(typeof persisted.volume === "number" ? persisted.volume : 0.5);
+            setLoopMode(persisted.loopMode ?? "one");
+            if (persisted.rawTracks) {
+              rawTracksRef.current = persisted.rawTracks;
+            }
+            const audio = audioRef.current;
+            if (audio) {
+              audio.src = persisted.audioUrl;
+              audio.volume = typeof persisted.volume === "number" ? persisted.volume : 0.5;
+              audio.loop =
+                (persisted.loopMode ?? "one") === "one" &&
+                !persisted.queue[persisted.queueIndex]?.previewLimitSeconds;
+              const seekTo = Math.max(0, persisted.currentTime || 0);
+              // 等 metadata 載入再 seek;否則 currentTime 賦值會被 ignore
+              const onMeta = () => {
+                try {
+                  audio.currentTime = seekTo;
+                  setCurrentTime(seekTo);
+                } catch { /* ignore */ }
+                audio.removeEventListener("loadedmetadata", onMeta);
+                if (persisted.isPlaying) {
+                  audio.play().catch(() => {
+                    // autoplay 被擋 — 等用戶按 ▶
+                  });
+                }
+              };
+              audio.addEventListener("loadedmetadata", onMeta);
+            }
+            hydrated = true;
+            hydratedFromStorageRef.current = true;
+          }
+        }
+      } catch {
+        /* corrupt persisted state — 忽略,走預設 BGM 流程 */
+      }
+    }
+
+    // ── Step 2: fetch free-tracks 來 refresh queue(不論有沒 hydrate)──
+    // hydrate 成功 → 只更新 rawTracksRef + 重新 localize queue title,不動 audio.src
+    // hydrate 失敗 → 載入靜心冥想當預設 BGM(原行為)
     fetch("/api/music/free-tracks")
       .then((res) => res.json())
       .then((data: { tracks?: { id: string; title: string; title_translations?: Record<string, string> | null; category_id: string; audio_url: string; duration_seconds: number; creator_display_name: string | null }[] }) => {
@@ -286,6 +378,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
           0,
           playerTracks.findIndex((_, i) => tracks[i].category_id === "meditation"),
         );
+
+        // 已從 sessionStorage 恢復播放狀態 → 只 refresh queue 顯示(title 可能因 locale
+        // 改了),不重置 audio.src / 不 autoplay,避免打斷使用者既有播放。
+        if (hydrated) {
+          // queue 用 hydrate 來的就好;rawTracksRef 用最新值讓之後 locale 改變能 re-map
+          return;
+        }
 
         setQueue(playerTracks);
         setQueueIndex(meditationIdx);
@@ -330,6 +429,56 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       }),
     );
   }, [locale]);
+
+  // ── 持久化 player 狀態到 sessionStorage(throttle 1 次/秒) ──
+  // 防 Provider 在 layout boundary 邊緣案例被 remount 時,音樂從頭播。
+  // 寫入時機:每次 currentTime 更新都觸發,但用 ref 上次寫入時間做節流。
+  const lastPersistRef = useRef(0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const writePersist = () => {
+      try {
+        const audio = audioRef.current;
+        const snapshot: PersistedState = {
+          trackId: currentTrack?.id ?? null,
+          audioUrl: audio?.src && !audio.src.startsWith("blob:") ? audio.src : null,
+          currentTime: audio?.currentTime ?? 0,
+          isPlaying,
+          volume,
+          loopMode,
+          queue,
+          queueIndex,
+          rawTracks: rawTracksRef.current,
+        };
+        sessionStorage.setItem(PERSIST_KEY, JSON.stringify(snapshot));
+      } catch {
+        /* sessionStorage 滿或 disabled — 忽略 */
+      }
+    };
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTick = () => {
+      const now = Date.now();
+      if (now - lastPersistRef.current < 1000) return; // 節流 1 秒
+      lastPersistRef.current = now;
+      writePersist();
+    };
+    // 多種事件都 trigger 持久化 — pause / play / loadedmetadata / 進度
+    audio.addEventListener("timeupdate", onTick);
+    audio.addEventListener("play", writePersist);
+    audio.addEventListener("pause", writePersist);
+    audio.addEventListener("loadedmetadata", writePersist);
+    // queue / index / volume / loop 改變的 deps 也要寫一次
+    writePersist();
+    return () => {
+      audio.removeEventListener("timeupdate", onTick);
+      audio.removeEventListener("play", writePersist);
+      audio.removeEventListener("pause", writePersist);
+      audio.removeEventListener("loadedmetadata", writePersist);
+    };
+    // currentTrack/isPlaying/volume/loopMode/queue/queueIndex 變動時都重新綁(closure 抓最新值)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack, isPlaying, volume, loopMode, queue, queueIndex]);
 
   // audio element 的事件同步到 React state
   useEffect(() => {
