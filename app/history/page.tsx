@@ -13,11 +13,15 @@ import LoginOptionsModal from "@/components/LoginOptionsModal";
 const LINE_LOGIN_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
-import { getHexagramByNumber } from "@/data/hexagrams";
+import { getHexagramByNumber, trigramNames } from "@/data/hexagrams";
 import { getCardById } from "@/data/tarot";
 import { getSpread, DEFAULT_SPREAD_ID } from "@/data/spreads";
 import { questionCategories } from "@/lib/divination";
-import { hexagramImageKey, type IchingImagesMap } from "@/lib/ichingImages";
+import {
+  hexagramImageKey,
+  trigramImageKey,
+  type IchingImagesMap,
+} from "@/lib/ichingImages";
 
 interface TarotCardSlot {
   cardId: string;
@@ -64,6 +68,8 @@ interface Record {
   changing_lines: number[] | null;
   /** phase16/17/31 加的占法分流欄位;舊資料為 null → fallback 'main' */
   method?: "main" | "plum-blossom" | "direction-hexagram" | "two-options" | null;
+  /** 方位卦象合參才有值;3-bit binary trigram code(後天八卦其一)。其他占法為 null。 */
+  direction_trigram?: string | null;
   // 二擇一(phase31)— A 卦走主欄位,B 卦走 cast_b_* 欄位;A/B 選項標籤共用 phase15 的 two_option_a/b
   cast_b_hexagram_number?: number | null;
   cast_b_primary_lines?: number[] | null;
@@ -178,7 +184,7 @@ export default function HistoryPage() {
           supabase
             .from("divinations")
             .select(
-              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, method, cast_b_hexagram_number, cast_b_primary_lines, cast_b_changing_lines, two_option_a, two_option_b, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages"
+              "id, created_at, question, category, divine_type, hexagram_number, primary_lines, changing_lines, method, direction_trigram, cast_b_hexagram_number, cast_b_primary_lines, cast_b_changing_lines, two_option_a, two_option_b, tarot_cards, tarot_spread_id, ai_reading, follow_ups, chat_messages"
             )
             .eq("user_id", user.id)
             .gte("created_at", sinceIso)
@@ -471,6 +477,12 @@ export default function HistoryPage() {
                 : "";
               const isIchingTwoOptions =
                 divineType === "iching" && record.method === "two-options";
+              const isIchingDirectionHex =
+                divineType === "iching" && record.method === "direction-hexagram";
+              const directionTg =
+                isIchingDirectionHex && record.direction_trigram
+                  ? trigramNames[record.direction_trigram] ?? null
+                  : null;
               const tarotLabel =
                 divineType === "tarot" && recordSpread
                   ? t(
@@ -481,9 +493,16 @@ export default function HistoryPage() {
                     )
                   : isIchingTwoOptions
                     ? t("易經 · 二擇一", "I Ching · A or B", "易経 · 二択", "주역 · 양자택일")
-                    : hex
-                      ? t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)
-                      : "";
+                    : isIchingDirectionHex
+                      ? t(
+                          "易經 · 方位 × 卦象 合參",
+                          "I Ching · Direction × Hexagram",
+                          "易経 · 方位 × 卦象 合参",
+                          "주역 · 방위 × 괘상 합참"
+                        )
+                      : hex
+                        ? t(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo)
+                        : "";
 
               return (
                 <motion.div key={record.id} layout className="mystic-card" style={{ overflow: "hidden" }}>
@@ -585,6 +604,103 @@ export default function HistoryPage() {
                                   </div>
                                 ) : null;
                               })()}
+                            </div>
+                          </div>
+                        ) : isIchingDirectionHex && record.primary_lines ? (
+                          // 方位卦象合參:方位八卦 → 卦象 兩段並列
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 16,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {directionTg && (
+                              <div style={{ textAlign: "center" }}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    letterSpacing: 2,
+                                    color: "rgba(212,168,85,0.7)",
+                                    marginBottom: 6,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  {t(
+                                    "方位",
+                                    "DIRECTION",
+                                    "方位",
+                                    "방위"
+                                  )}
+                                </div>
+                                <TrigramVisual
+                                  code={record.direction_trigram ?? null}
+                                  images={hexImages}
+                                />
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 12,
+                                    color: "rgba(212,168,85,0.85)",
+                                    fontFamily: "'Noto Serif TC', serif",
+                                  }}
+                                >
+                                  {t(directionTg.zh, directionTg.en, directionTg.ja, directionTg.ko)}
+                                  <span style={{ color: "rgba(192,192,208,0.6)", marginLeft: 4, fontSize: 11 }}>
+                                    ·{" "}
+                                    {t(
+                                      directionTg.directionZh,
+                                      directionTg.directionEn,
+                                      directionTg.directionJa,
+                                      directionTg.directionKo
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            <div
+                              aria-hidden="true"
+                              style={{ fontSize: 18, color: "rgba(212,168,85,0.5)" }}
+                            >
+                              ×
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  letterSpacing: 2,
+                                  color: "rgba(212,168,85,0.7)",
+                                  marginBottom: 6,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {t("卦象", "HEXAGRAM", "卦象", "괘상")}
+                              </div>
+                              <HexagramVisual
+                                hexNumber={record.hexagram_number}
+                                lines={record.primary_lines}
+                                changingLines={record.changing_lines ?? []}
+                                images={hexImages}
+                              />
+                              {hex && (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 12,
+                                    color: "rgba(212,168,85,0.85)",
+                                    fontFamily: "'Noto Serif TC', serif",
+                                  }}
+                                >
+                                  {t(
+                                    `第 ${hex.number} 卦 ${hex.nameZh}`,
+                                    `#${hex.number} ${hex.nameEn.split(" ")[0]}`,
+                                    `第 ${hex.number} 卦 ${hex.nameZh}`,
+                                    `제 ${hex.number} 괘 ${hex.nameZh}`
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ) : divineType === "iching" && record.primary_lines ? (
@@ -1374,5 +1490,48 @@ function HexagramVisual({
       size="sm"
       animate={false}
     />
+  );
+}
+
+// 後天八卦方位圖 — 跟 HexagramVisual 同一套來源,沒上傳就退回卦象 Unicode 符號
+function TrigramVisual({
+  code,
+  images,
+}: {
+  code: string | null | undefined;
+  images: IchingImagesMap;
+}) {
+  const tg = code ? trigramNames[code] : null;
+  if (!tg) return null;
+  const imgUrl = images[trigramImageKey(code!)];
+  return (
+    <div
+      style={{
+        width: 96,
+        aspectRatio: "9 / 14",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1px solid rgba(212,168,85,0.35)",
+        background:
+          "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+        boxShadow: "0 4px 14px rgba(212,168,85,0.15)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {imgUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgUrl}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+      ) : (
+        <span style={{ fontSize: 38, color: "#d4a855", lineHeight: 1 }}>
+          {tg.symbol}
+        </span>
+      )}
+    </div>
   );
 }
