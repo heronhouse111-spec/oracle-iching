@@ -33,6 +33,7 @@ import {
 import { recordCardObtained } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { validateUserText } from "@/lib/validateUserText";
 
 type Locale = "zh" | "en" | "ja" | "ko";
 type Category = "love" | "career" | "wealth" | "health" | "study" | "general";
@@ -78,11 +79,9 @@ export async function POST(request: NextRequest) {
     const safeLocale: Locale =
       locale === "zh" || locale === "ja" || locale === "ko" ? locale : "en";
 
-    if (typeof question !== "string" || question.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Question required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    {
+      const err = validateUserText(question);
+      if (err) return err;
     }
 
     // 用客端 epoch 起卦,落在 server 的 Date 物件上(年月日時直接 read)

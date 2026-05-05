@@ -39,6 +39,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { validateUserText } from "@/lib/validateUserText";
 
 type Locale = "zh" | "en" | "ja" | "ko";
 type Category = "love" | "career" | "wealth" | "health" | "study" | "general";
@@ -144,11 +145,9 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-    if (typeof question !== "string" || question.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Question required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    {
+      const err = validateUserText(question);
+      if (err) return err;
     }
 
     const hex = findHexagram(primaryLines);

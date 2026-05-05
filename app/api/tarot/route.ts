@@ -17,6 +17,7 @@ import {
   detectTwoChoiceQuestion,
   buildDecisionModePrompt,
 } from "@/lib/twoChoice";
+import { validateUserText } from "@/lib/validateUserText";
 
 // 客戶端送來的「抽牌結果」— position 改為任意 string,給多牌陣用
 interface DrawnCardRequest {
@@ -104,6 +105,20 @@ export async function POST(request: NextRequest) {
       twoOptionA?: string;
       twoOptionB?: string;
     } = body;
+
+    // 對應前端 maxLength={300};二擇一 A/B 標籤前端 200,server 端寬鬆給 300
+    {
+      const err = validateUserText(question);
+      if (err) return err;
+      if (twoOptionA != null) {
+        const e = validateUserText(twoOptionA, { field: "twoOptionA", allowEmpty: true });
+        if (e) return e;
+      }
+      if (twoOptionB != null) {
+        const e = validateUserText(twoOptionB, { field: "twoOptionB", allowEmpty: true });
+        if (e) return e;
+      }
+    }
 
     const spread = getSpread(spreadId);
     const isDeep = depth === "deep";
