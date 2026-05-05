@@ -2611,6 +2611,7 @@ export default function Home() {
           <textarea
             value={followUpQuestion}
             onChange={(e) => setFollowUpQuestion(e.target.value)}
+            maxLength={300}
             placeholder={t(
               "例如:那如果我真的轉職,下半年會順利嗎?",
               "e.g., If I actually make that move, will the second half go well?"
@@ -2631,6 +2632,19 @@ export default function Home() {
               boxSizing: "border-box",
             }}
           />
+          <div
+            style={{
+              color:
+                followUpQuestion.length >= 300
+                  ? "rgba(244,114,182,0.85)"
+                  : "rgba(192,192,208,0.5)",
+              fontSize: 11,
+              textAlign: "right",
+              marginTop: 4,
+            }}
+          >
+            {followUpQuestion.length} / 300
+          </div>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button
               onClick={handleCancelFollowUpForm}
@@ -3339,6 +3353,7 @@ export default function Home() {
                   id="question-textarea"
                   value={userQuestion}
                   onChange={(e) => setUserQuestion(e.target.value)}
+                  maxLength={300}
                   placeholder={t(
                     "例如：我近期的感情運勢如何？",
                     "e.g., What does my love life look like?",
@@ -3352,6 +3367,19 @@ export default function Home() {
                     outline: "none", fontFamily: "'Noto Sans TC', sans-serif",
                   }}
                 />
+                <div
+                  style={{
+                    color:
+                      userQuestion.length >= 300
+                        ? "rgba(244,114,182,0.85)"
+                        : "rgba(192,192,208,0.5)",
+                    fontSize: 11,
+                    textAlign: "right",
+                    marginTop: 4,
+                  }}
+                >
+                  {userQuestion.length} / 300
+                </div>
 
                 {/* 占卜師人格 + Quick/Deep 模式選擇 — picker 自己 fetch /api/personas,我們只給系統 */}
                 <PersonaDepthPicker
@@ -5174,6 +5202,7 @@ export default function Home() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
+                    maxLength={300}
                     placeholder={t(
                       `想問${personaDisplayName}什麼呢...`,
                       `Ask ${personaDisplayName}...`,
@@ -5745,6 +5774,7 @@ export default function Home() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) sendChatMessage(); }}
+                    maxLength={300}
                     placeholder={t(
                       `想問${personaDisplayName}什麼呢...`,
                       `Ask ${personaDisplayName}...`,
