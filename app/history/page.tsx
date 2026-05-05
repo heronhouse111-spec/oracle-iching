@@ -17,6 +17,7 @@ import { getHexagramByNumber } from "@/data/hexagrams";
 import { getCardById } from "@/data/tarot";
 import { getSpread, DEFAULT_SPREAD_ID } from "@/data/spreads";
 import { questionCategories } from "@/lib/divination";
+import { hexagramImageKey, type IchingImagesMap } from "@/lib/ichingImages";
 
 interface TarotCardSlot {
   cardId: string;
@@ -100,6 +101,9 @@ export default function HistoryPage() {
   const [source, setSource] = useState<Source>(null);
   const [isActive, setIsActive] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  // 64 卦圖檔(來自 admin 上傳的 app_content 'iching_images' row)— 卦象顯示優先用圖,
+  // 沒上傳的卦才 fallback 到 HexagramDisplay 陰陽爻線
+  const [hexImages, setHexImages] = useState<IchingImagesMap>({});
 
   useEffect(() => {
     const loadFromLocal = () => {
@@ -137,6 +141,18 @@ export default function HistoryPage() {
       try {
         const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
+
+        // 卦圖併行讀(client 端不走 unstable_cache,但 row 不大、anon SELECT 即可)
+        // 失敗就空 map → 仍能 fallback 到 HexagramDisplay 線條
+        supabase
+          .from("app_content")
+          .select("value")
+          .eq("key", "iching_images")
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.value) setHexImages(data.value as IchingImagesMap);
+          });
+
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -486,7 +502,17 @@ export default function HistoryPage() {
                           {tarotLabel}
                         </span>
                       </div>
-                      <p style={{ color: "rgba(192,192,208,0.6)", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 4 }}>
+                      <p
+                        style={{
+                          color: "rgba(192,192,208,0.6)",
+                          fontSize: 12,
+                          marginTop: 4,
+                          // 展開時讓問題完整顯示(可換行);收合時單行 ellipsis 維持 row 緊湊
+                          ...(isExpanded
+                            ? { whiteSpace: "pre-wrap", lineHeight: 1.55, wordBreak: "break-word" }
+                            : { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }),
+                        }}
+                      >
                         {record.question}
                       </p>
                     </div>
@@ -511,11 +537,11 @@ export default function HistoryPage() {
                                   {record.two_option_a}
                                 </div>
                               )}
-                              <HexagramDisplay
+                              <HexagramVisual
+                                hexNumber={record.hexagram_number}
                                 lines={record.primary_lines}
                                 changingLines={record.changing_lines ?? []}
-                                size="sm"
-                                animate={false}
+                                images={hexImages}
                               />
                               {record.hexagram_number != null && (() => {
                                 const hexA = getHexagramByNumber(record.hexagram_number);
@@ -540,11 +566,11 @@ export default function HistoryPage() {
                                   {record.two_option_b}
                                 </div>
                               )}
-                              <HexagramDisplay
+                              <HexagramVisual
+                                hexNumber={record.cast_b_hexagram_number}
                                 lines={record.cast_b_primary_lines}
                                 changingLines={record.cast_b_changing_lines ?? []}
-                                size="sm"
-                                animate={false}
+                                images={hexImages}
                               />
                               {record.cast_b_hexagram_number != null && (() => {
                                 const hexB = getHexagramByNumber(record.cast_b_hexagram_number);
@@ -562,11 +588,11 @@ export default function HistoryPage() {
                             </div>
                           </div>
                         ) : divineType === "iching" && record.primary_lines ? (
-                          <HexagramDisplay
+                          <HexagramVisual
+                            hexNumber={record.hexagram_number}
                             lines={record.primary_lines}
                             changingLines={record.changing_lines ?? []}
-                            size="sm"
-                            animate={false}
+                            images={hexImages}
                           />
                         ) : divineType === "tarot" && record.tarot_cards && recordSpread ? (
                           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
@@ -858,11 +884,11 @@ export default function HistoryPage() {
                                 </p>
                                 {isIching && Array.isArray(f.primaryLines) ? (
                                   <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-                                    <HexagramDisplay
+                                    <HexagramVisual
+                                      hexNumber={f.hexagramNumber ?? null}
                                       lines={f.primaryLines}
                                       changingLines={f.changingLines ?? []}
-                                      size="sm"
-                                      animate={false}
+                                      images={hexImages}
                                     />
                                   </div>
                                 ) : !isIching && Array.isArray(f.tarotCards) && fSpread ? (
@@ -1299,5 +1325,54 @@ export default function HistoryPage() {
         )}
       </main>
     </div>
+  );
+}
+
+// 易經卦象顯示 — 優先用 admin 上傳的卦圖,沒有就 fallback 到 HexagramDisplay 陰陽爻線
+// (相容舊紀錄 / 圖檔尚未上傳的卦)
+function HexagramVisual({
+  hexNumber,
+  lines,
+  changingLines,
+  images,
+}: {
+  hexNumber: number | null | undefined;
+  lines: number[] | null | undefined;
+  changingLines: number[];
+  images: IchingImagesMap;
+}) {
+  const heroImg =
+    typeof hexNumber === "number" ? images[hexagramImageKey(hexNumber)] : undefined;
+  if (heroImg) {
+    return (
+      <div
+        style={{
+          width: 96,
+          aspectRatio: "9 / 14",
+          borderRadius: 8,
+          overflow: "hidden",
+          border: "1px solid rgba(212,168,85,0.35)",
+          background:
+            "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.6))",
+          boxShadow: "0 4px 14px rgba(212,168,85,0.15)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={heroImg}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+      </div>
+    );
+  }
+  if (!Array.isArray(lines)) return null;
+  return (
+    <HexagramDisplay
+      lines={lines}
+      changingLines={changingLines}
+      size="sm"
+      animate={false}
+    />
   );
 }
