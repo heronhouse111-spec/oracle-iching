@@ -24,6 +24,7 @@ import {
   CREDIT_COSTS,
 } from "@/lib/credits";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { validateUserText } from "@/lib/validateUserText";
 
 export type YesNoVerdict = "yes" | "no" | "depends";
 
@@ -114,10 +115,9 @@ export async function POST(request: NextRequest) {
         status: 400, headers: { "Content-Type": "application/json" },
       });
     }
-    if (typeof question !== "string" || question.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Question required" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+    {
+      const err = validateUserText(question);
+      if (err) return err;
     }
 
     const verdict = decideVerdict(card, isReversed);

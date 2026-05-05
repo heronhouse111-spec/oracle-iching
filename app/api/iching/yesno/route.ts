@@ -22,6 +22,7 @@ import {
 } from "@/lib/credits";
 import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
+import { validateUserText } from "@/lib/validateUserText";
 // Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
 // 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
 
@@ -137,10 +138,9 @@ export async function POST(request: NextRequest) {
         status: 400, headers: { "Content-Type": "application/json" },
       });
     }
-    if (typeof question !== "string" || question.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Question required" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+    {
+      const err = validateUserText(question);
+      if (err) return err;
     }
 
     const verdict = decideVerdict(hex, Boolean(hasChangingLine));

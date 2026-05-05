@@ -11,6 +11,7 @@ import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
+import { validateUserText } from "@/lib/validateUserText";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
     const type: "iching" | "tarot" = divineType === "tarot" ? "tarot" : "iching";
 
     const isZh = locale === "zh";
+
+    // 對應前端 maxLength={300};只驗最新一則 user 訊息(歷史訊息已扣過點、已驗過)
+    if (Array.isArray(messages) && messages.length > 0) {
+      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      if (lastUser) {
+        const err = validateUserText(lastUser.content, { field: "message" });
+        if (err) return err;
+      }
+    }
 
     // ──────────────────────────────────────────
     // 點數扣款(每一則聊天訊息 = 1 點;訪客目前仍允許免費聊,

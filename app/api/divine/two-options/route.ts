@@ -30,6 +30,7 @@ import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
 import { recordCardObtained } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
+import { validateUserText } from "@/lib/validateUserText";
 
 interface CastInput {
   hexagramNumber: number;
@@ -66,15 +67,18 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // ──── 基本欄位驗證 ────
-    if (
-      !question?.trim() ||
-      !optionA?.trim() ||
-      !optionB?.trim() ||
-      !castA?.hexagramNumber ||
-      !castB?.hexagramNumber
-    ) {
+    {
+      // question / optionA / optionB 都套 300 字上限(對應前端 maxLength 設定)
+      const qErr = validateUserText(question);
+      if (qErr) return qErr;
+      const aErr = validateUserText(optionA, { field: "optionA" });
+      if (aErr) return aErr;
+      const bErr = validateUserText(optionB, { field: "optionB" });
+      if (bErr) return bErr;
+    }
+    if (!castA?.hexagramNumber || !castB?.hexagramNumber) {
       return new Response(
-        JSON.stringify({ error: "Missing question / options / cast hexagrams" }),
+        JSON.stringify({ error: "Missing cast hexagrams" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
