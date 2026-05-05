@@ -54,7 +54,8 @@ const RESUME_STATE_KEY = "iching_resume_state";
 // 跟首頁那邊讀的 key shape 對齊 — 不要拼錯
 const METHOD_RESULT_KEY = "iching_method_result_state";
 
-type Step = "ask" | "throwA" | "throwB" | "result";
+// preResult:兩卦都擲完、跳轉前停留 3 秒讓使用者看到雙卦圖完整呈現
+type Step = "ask" | "throwA" | "throwB" | "preResult" | "result";
 
 interface CastState {
   result: DivinationResult;
@@ -185,7 +186,9 @@ export default function TwoOptionsView({ images }: { images: IchingImagesMap }) 
       return;
     }
 
-    await new Promise((r) => setTimeout(r, 600));
+    // ── 雙卦完成,進入 preResult:兩卦圖都展示完成,停留 3 秒讓使用者看清楚 ──
+    setStep("preResult");
+    await new Promise((r) => setTimeout(r, 3000));
 
     // ── 跳到首頁 result step,沿用主流程的統一結果頁(解說 + 繼續請教 + 衍伸占卜)──
     // 對齊 plum-blossom / direction-hexagram 的 hand-off pattern:
@@ -416,7 +419,10 @@ export default function TwoOptionsView({ images }: { images: IchingImagesMap }) 
             </motion.div>
           )}
 
-          {(step === "throwA" || step === "throwB" || step === "result") && (
+          {(step === "throwA" ||
+            step === "throwB" ||
+            step === "preResult" ||
+            step === "result") && (
             <motion.div
               key="hex-area"
               initial={{ opacity: 0 }}
@@ -494,7 +500,11 @@ export default function TwoOptionsView({ images }: { images: IchingImagesMap }) 
                   cast={castA}
                   revealed={revealedLinesA}
                   active={step === "throwA"}
-                  showFull={step === "result" || step === "throwB"}
+                  showFull={
+                    step === "result" ||
+                    step === "throwB" ||
+                    step === "preResult"
+                  }
                   isZh={isZh}
                   t={t}
                   images={images}
@@ -504,7 +514,7 @@ export default function TwoOptionsView({ images }: { images: IchingImagesMap }) 
                   cast={castB}
                   revealed={revealedLinesB}
                   active={step === "throwB"}
-                  showFull={step === "result"}
+                  showFull={step === "result" || step === "preResult"}
                   isZh={isZh}
                   t={t}
                   images={images}
@@ -682,15 +692,10 @@ function CastPanel({
           padding: "12px 8px",
         }}
       >
-        {/* 動畫期間(revealed < 6)+ 沒卦圖檔可顯示時 → 用陰陽爻線。
-            一旦六爻揭完(revealed >= 6 || showFull),改用卦象圖,不再重複顯示陰陽爻。 */}
-        {cast && (revealed >= 6 || showFull) && heroImg ? null : cast ? (
-          <HexagramLines
-            lines={cast.primary.lines}
-            changingIdx={cast.result.changingLines}
-            revealedCount={showFull ? 6 : revealed}
-          />
-        ) : (
+        {/* 擲卦中(revealed < 6 且未 showFull)→ 顯示陰陽爻線漸進動畫
+            擲完(revealed >= 6 || showFull)→ 直接顯示 64 卦插圖(沒上傳就用 unicode 卦符)
+            兩種狀態互斥,不再上下重複。 */}
+        {!cast ? (
           <div
             style={{
               height: 120,
@@ -703,25 +708,14 @@ function CastPanel({
           >
             {t("等待中", "Waiting", "待機中", "대기 중")}
           </div>
-        )}
-      </div>
-
-      {cast && (revealed >= 6 || showFull) && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          style={{ marginTop: 8 }}
-        >
-          {/* 64 卦插圖(來自 admin 上傳的 iching_images app_content row),
-              沒上傳時 fallback 為純 unicode 卦符 — 跟 /iching/hexagrams 詳細頁一致。 */}
-          {heroImg ? (
+        ) : revealed >= 6 || showFull ? (
+          heroImg ? (
             <div
               style={{
                 width: "100%",
                 maxWidth: 140,
                 aspectRatio: "9 / 14",
-                margin: "0 auto 8px",
+                margin: "0 auto",
                 borderRadius: 10,
                 overflow: "hidden",
                 border: "1px solid rgba(212,168,85,0.4)",
@@ -743,10 +737,33 @@ function CastPanel({
               />
             </div>
           ) : (
-            <div style={{ fontSize: 32, color: "rgba(212,168,85,0.9)", lineHeight: 1, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 80,
+                color: "rgba(212,168,85,0.9)",
+                lineHeight: 1,
+                textAlign: "center",
+              }}
+            >
               {cast.primary.character}
             </div>
-          )}
+          )
+        ) : (
+          <HexagramLines
+            lines={cast.primary.lines}
+            changingIdx={cast.result.changingLines}
+            revealedCount={revealed}
+          />
+        )}
+      </div>
+
+      {cast && (revealed >= 6 || showFull) && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          style={{ marginTop: 8 }}
+        >
           <div
             style={{
               color: "#e8e8f0",
