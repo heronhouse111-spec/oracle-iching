@@ -88,11 +88,14 @@ interface Record {
 
 type Source = "supabase" | "local" | null;
 
-const FREE_VISIBLE_LIMIT = 3;
 // 未登入訪客:列表只顯示 2 筆,展開只顯示一半 AI 回覆(下方加登入 CTA)
 const GUEST_VISIBLE_LIMIT = 2;
 // 歷史顯示的時間窗 —— 12 個月內,避免長期用戶 UI 爆掉
 const HISTORY_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+// Phase 34 paywall 改時間制:登入用戶 10 天內紀錄全免;
+// 10 天前 + 未在訂閱期內看過 → 鎖。用 ms 算簡單。
+const FREE_HISTORY_WINDOW_DAYS = 10;
+const FREE_HISTORY_WINDOW_MS = FREE_HISTORY_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 const isSupabaseConfigured =
   typeof window !== "undefined" &&
@@ -107,6 +110,8 @@ export default function HistoryPage() {
   const [source, setSource] = useState<Source>(null);
   const [isActive, setIsActive] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  // phase 34:訂閱期間看過的紀錄會 upsert 到 history_unlocks。退訂後仍能看。
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
   // 64 卦圖檔(來自 admin 上傳的 app_content 'iching_images' row)— 卦象顯示優先用圖,
   // 沒上傳的卦才 fallback 到 HexagramDisplay 陰陽爻線
   const [hexImages, setHexImages] = useState<IchingImagesMap>({});
@@ -173,8 +178,8 @@ export default function HistoryPage() {
         // 只撈最近 12 個月 — 避免訂閱者幾年後畫面炸掉(需要更早紀錄可之後加分頁)
         const sinceIso = new Date(Date.now() - HISTORY_WINDOW_MS).toISOString();
 
-        // Fetch subscription status + divinations in parallel
-        const [subRes, divRes] = await Promise.all([
+        // Fetch subscription + divinations + history unlocks in parallel
+        const [subRes, divRes, unlockRes] = await Promise.all([
           supabase
             .from("user_subscription_summary")
             .select("is_active")
@@ -189,6 +194,11 @@ export default function HistoryPage() {
             .eq("user_id", user.id)
             .gte("created_at", sinceIso)
             .order("created_at", { ascending: false }),
+          // phase 34:抓本 user 全部 unlock id(過濾 paywall 用)
+          supabase
+            .from("history_unlocks")
+            .select("divination_id")
+            .eq("user_id", user.id),
         ]);
 
         if (divRes.error) {
@@ -197,10 +207,41 @@ export default function HistoryPage() {
           return;
         }
 
-        setIsActive(Boolean(subRes.data?.is_active));
+        const isSub = Boolean(subRes.data?.is_active);
+        setIsActive(isSub);
         setRecords((divRes.data as Record[]) ?? []);
         setSource("supabase");
         setIsLoading(false);
+
+        // unlocks 集合(phase 34)
+        if (unlockRes.data) {
+          setUnlockedIds(
+            new Set(
+              (unlockRes.data as { divination_id: string }[]).map((r) => r.divination_id)
+            )
+          );
+        }
+
+        // 訂閱戶 → fire-and-forget 把當前所有歷史標記為解鎖。
+        // RPC 內已防呆(非訂閱戶 call 也只回 0),但這邊還是先判 isSub 省一個 round trip。
+        if (isSub) {
+          fetch("/api/history/unlock-all", { method: "POST" })
+            .then(async (r) => {
+              if (!r.ok) return;
+              const data = (await r.json()) as { newlyUnlocked?: number };
+              if (data.newlyUnlocked && data.newlyUnlocked > 0) {
+                // 新解鎖的紀錄加進集合 — 全部 record id 都該被解鎖
+                setUnlockedIds((prev) => {
+                  const next = new Set(prev);
+                  ((divRes.data as Record[]) ?? []).forEach((r) => next.add(r.id));
+                  return next;
+                });
+              }
+            })
+            .catch(() => {
+              /* unlock 失敗不影響顯示 — 訂閱戶 isActive 為 true 時 UI 仍 bypass paywall */
+            });
+        }
       } catch (e) {
         console.error("Supabase error:", e);
         loadFromLocal();
@@ -217,23 +258,35 @@ export default function HistoryPage() {
     setLoginModalOpen(true);
   };
 
-  // Subscription gating:
-  //   guest (local)      → 只能看 2 筆,展開只看一半
-  //   supabase 未訂閱    → 只能看 3 筆
-  //   supabase 訂閱戶    → 無限制
+  // Subscription gating(phase 34 改時間制):
+  //   guest (local)      → 只能看 2 筆,展開只看一半(維持原邏輯)
+  //   supabase 訂閱戶    → 全解鎖
+  //   supabase 非訂閱戶  → 10 天內全免;10 天前 + 不在 unlocks 集合 → 鎖
+  //
+  // 為什麼這樣設計:
+  //   - 退訂後不會「失去看過的紀錄」,使用體驗較公平
+  //   - 10 天提供「最近占卜」的完整體驗,不會剛問完就被鎖
+  //   - 解鎖紀錄(unlockedIds)永久有效,只在訂閱期間累積
   const isGuest = source === "local";
-  const gatingApplies = source === "supabase" && !isActive;
-  const visibleLimit = isGuest
-    ? GUEST_VISIBLE_LIMIT
-    : gatingApplies
-    ? FREE_VISIBLE_LIMIT
-    : null;
+  const cutoffMs = Date.now() - FREE_HISTORY_WINDOW_MS;
+
+  const isRecordLocked = (record: Record): boolean => {
+    if (isActive) return false;
+    if (isGuest) return false; // guest 自有獨立邏輯(下方 visibleLimit)
+    // 訂閱期內看過的紀錄永久解鎖
+    if (unlockedIds.has(record.id)) return false;
+    // 10 天內 → 全免
+    const ts = new Date(record.created_at).getTime();
+    return ts < cutoffMs;
+  };
+
+  // guest 仍維持「只看 2 筆」(因為 localStorage 場景無法分時間段)
+  const visibleLimit = isGuest ? GUEST_VISIBLE_LIMIT : null;
   const visibleRecords =
     visibleLimit !== null ? records.slice(0, visibleLimit) : records;
-  const lockedCount =
-    visibleLimit !== null
-      ? Math.max(0, records.length - visibleLimit)
-      : 0;
+  const lockedCount = isGuest
+    ? Math.max(0, records.length - GUEST_VISIBLE_LIMIT)
+    : visibleRecords.filter(isRecordLocked).length;
 
   // 對應 BCP-47 tag,給 toLocaleDateString 用 — zh-CN 也吃 zh-TW 字典(內容不影響日期格式)
   const dateLocaleTag =
@@ -461,7 +514,10 @@ export default function HistoryPage() {
             {visibleRecords.map((record) => {
               const divineType = record.divine_type ?? "iching";
               const cat = questionCategories.find((c) => c.id === record.category);
-              const isExpanded = expandedId === record.id;
+              // phase 34:鎖定的紀錄(超過 10 天 + 沒在訂閱期內看過)點擊不展開,
+              // 改導到訂閱頁。只有在 supabase 來源 + 非訂閱戶 + 非 guest 時生效。
+              const recordLocked = isRecordLocked(record);
+              const isExpanded = expandedId === record.id && !recordLocked;
               const hex =
                 divineType === "iching" && record.hexagram_number != null
                   ? getHexagramByNumber(record.hexagram_number)
@@ -505,21 +561,59 @@ export default function HistoryPage() {
                         : "";
 
               return (
-                <motion.div key={record.id} layout className="mystic-card" style={{ overflow: "hidden" }}>
-                  <button onClick={() => setExpandedId(isExpanded ? null : record.id)}
+                <motion.div
+                  key={record.id}
+                  layout
+                  className="mystic-card"
+                  style={{
+                    overflow: "hidden",
+                    opacity: recordLocked ? 0.7 : 1,
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      if (recordLocked) {
+                        // 鎖定 → 導去升級頁(用 router 而不是 window.location 保留動畫狀態)
+                        if (typeof window !== "undefined") {
+                          window.location.assign("/account/upgrade");
+                        }
+                        return;
+                      }
+                      setExpandedId(isExpanded ? null : record.id);
+                    }}
                     style={{
                       width: "100%", padding: 16, display: "flex", alignItems: "center", gap: 16,
                       textAlign: "left", background: "none", border: "none", cursor: "pointer", color: "white",
                     }}>
-                    <div style={{ fontSize: 28, minWidth: 36, textAlign: "center" }}>
+                    <div style={{ fontSize: 28, minWidth: 36, textAlign: "center", filter: recordLocked ? "grayscale(0.6)" : undefined }}>
                       {divineType === "tarot" ? "🃏" : hex?.character}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span>{cat?.icon}</span>
-                        <span style={{ color: "#d4a855", fontFamily: "'Noto Serif TC', serif", fontSize: 14 }}>
+                        <span style={{ color: recordLocked ? "rgba(212,168,85,0.5)" : "#d4a855", fontFamily: "'Noto Serif TC', serif", fontSize: 14 }}>
                           {tarotLabel}
                         </span>
+                        {recordLocked && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              color: "rgba(212,168,85,0.85)",
+                              border: "1px solid rgba(212,168,85,0.4)",
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              letterSpacing: 0.5,
+                            }}
+                            title={t(
+                              "已封存 — 訂閱即可解鎖完整內容",
+                              "Archived — subscribe to unlock full reading",
+                              "アーカイブ済 — サブスクで全文解放",
+                              "보관됨 — 구독으로 전체 해제"
+                            )}
+                          >
+                            🔒 {t("已封存", "Archived", "アーカイブ", "보관됨")}
+                          </span>
+                        )}
                       </div>
                       <p
                         style={{
@@ -1351,8 +1445,10 @@ export default function HistoryPage() {
                     }}
                   >
                     {t(
-                      `還有 ${lockedCount} 筆紀錄已鎖定`,
-                      `${lockedCount} more record${lockedCount === 1 ? "" : "s"} locked`
+                      `${lockedCount} 筆紀錄已封存`,
+                      `${lockedCount} record${lockedCount === 1 ? "" : "s"} archived`,
+                      `${lockedCount} 件の記録がアーカイブ済`,
+                      `${lockedCount}건의 기록이 보관됨`
                     )}
                   </p>
                   <p
@@ -1361,7 +1457,7 @@ export default function HistoryPage() {
                       fontSize: 12,
                       lineHeight: 1.6,
                       marginBottom: 16,
-                      maxWidth: 320,
+                      maxWidth: 360,
                       marginLeft: "auto",
                       marginRight: "auto",
                     }}
@@ -1369,11 +1465,15 @@ export default function HistoryPage() {
                     {isGuest
                       ? t(
                           "未登入訪客僅顯示最近 2 筆紀錄。登入即可查看全部,並跨裝置同步。",
-                          "Guests see only the 2 most recent records. Sign in to view all and sync across devices."
+                          "Guests see only the 2 most recent records. Sign in to view all and sync across devices.",
+                          "未登録のゲストは最新 2 件のみ。ログインで全件 + 端末間同期。",
+                          "비로그인 게스트는 최근 2건만 표시. 로그인하면 전체 + 기기 간 동기화."
                         )
                       : t(
-                          "免費會員僅顯示最近 3 筆占卜紀錄。升級訂閱後可解鎖全部歷史,並支援無浮水印輸出。",
-                          "Free members can see the 3 most recent divinations. Upgrade to unlock full history and watermark-free output."
+                          `免費會員可看最近 ${FREE_HISTORY_WINDOW_DAYS} 天的占卜;訂閱戶享全紀錄永久解鎖(退訂後仍可看當期間瀏覽過的紀錄)。`,
+                          `Free members can view the last ${FREE_HISTORY_WINDOW_DAYS} days. Subscribers get full history — records viewed during your subscription stay unlocked permanently.`,
+                          `無料会員は直近 ${FREE_HISTORY_WINDOW_DAYS} 日分の履歴を閲覧可能。サブスク会員は全履歴永久解放(解約後もサブスク期間中に閲覧した記録は引き続き閲覧可)。`,
+                          `무료 회원은 최근 ${FREE_HISTORY_WINDOW_DAYS}일 기록 열람. 구독 회원은 전체 기록 영구 해제 (해지 후에도 구독 기간 중 열람한 기록은 계속 볼 수 있음).`
                         )}
                   </p>
                   {isGuest && isSupabaseConfigured ? (

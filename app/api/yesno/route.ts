@@ -23,8 +23,13 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { consumeDailyYesno } from "@/lib/dailyCheckin";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
+import {
+  buildGuestFingerprint,
+  tryConsumeGuestYesno,
+} from "@/lib/guestYesnoLimit";
 
 export type YesNoVerdict = "yes" | "no" | "depends";
 
@@ -143,7 +148,45 @@ export async function POST(request: NextRequest) {
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = CREDIT_COSTS.YESNO;
 
+    // phase 35.7:訪客 server-side 限流 — IP+UA fingerprint 查 DB(取代 cookie 方案)
+    if (!user) {
+      const fp = buildGuestFingerprint(request.headers);
+      const decision = await tryConsumeGuestYesno(fp);
+      if (!decision.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "GUEST_LIMIT_REACHED",
+            reason: decision.reason,
+            daysRemaining: decision.daysRemaining,
+            message: pickStr(
+              safeLocale,
+              decision.reason === "used_today"
+                ? "你今日已用過免費 Yes/No,明天再來或登入即可繼續"
+                : "訪客 10 天免費期已用完,登入即可繼續占卜",
+              decision.reason === "used_today"
+                ? "Today's free Yes/No is used. Come back tomorrow or sign in."
+                : "Guest 10-day free trial is over. Sign in to continue.",
+              decision.reason === "used_today"
+                ? "本日の無料 Yes/No を使い切りました。明日また、またはログインで続行"
+                : "ゲスト 10 日間無料体験が終了しました。ログインで続行",
+              decision.reason === "used_today"
+                ? "오늘 무료 Yes/No 사용 완료. 내일 또는 로그인하여 계속"
+                : "게스트 10일 무료 체험 종료. 로그인하여 계속"
+            ),
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // phase 34:登入用戶若今日已簽到且未消耗,本次免費(不扣點)。
+    // RPC 原子操作,RPC 內 update used_at 成功才回 true。
+    let usedDailyCheckin = false;
     if (user) {
+      usedDailyCheckin = await consumeDailyYesno(user.id);
+    }
+
+    if (user && !usedDailyCheckin) {
       try {
         await spendCredits({
           userId: user.id,
@@ -246,7 +289,8 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error("DeepSeek API error (yesno):", response.status, err);
-      if (user) {
+      // 用了簽到 token 不扣點 → 也不需要退款。只在實扣點數時退。
+      if (user && !usedDailyCheckin) {
         await refundCredits({
           userId: user.id,
           amount: cost,

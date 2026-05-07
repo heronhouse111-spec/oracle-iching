@@ -7,6 +7,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { consumeDeepInsightTrial } from "@/lib/deepInsightTrial";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -101,12 +102,30 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       isActiveSubscriber = Boolean(profile?.is_active);
     }
-    const effectiveDepth: "quick" | "deep" =
-      depth === "deep" && isActiveSubscriber ? "deep" : "quick";
+    // Deep Insight 規則(phase 33):
+    //   - 訂閱戶:永久解鎖,不再加 +3 點
+    //   - 免費登入用戶:每月 3 次試用配額,扣配額但不扣 +3 點
+    //   - 訪客 / 配額用完:降級成 quick
+    // 配額 RPC 一定要在 user 存在 && depth=deep 時才呼叫(避免污染未登入的試用紀錄)
+    let usedFreeDeepTrial = false;
+    let effectiveDepth: "quick" | "deep" = "quick";
+    if (depth === "deep") {
+      if (isActiveSubscriber) {
+        effectiveDepth = "deep";
+      } else if (user) {
+        const granted = await consumeDeepInsightTrial(user.id);
+        if (granted) {
+          effectiveDepth = "deep";
+          usedFreeDeepTrial = true;
+        }
+      }
+    }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
     let cost = isFollowUp ? await getCreditCost("DIVINE_FOLLOWUP") : await getCreditCost("DIVINE");
-    if (effectiveDepth === "deep") cost += await getCreditCost("DEEP_INSIGHT_SURCHARGE");
+    // 只在「訂閱戶 / 免費試用」之外的非典型路徑才會走到 deep + 加 +3 — 目前 effectiveDepth=deep
+    // 必然代表訂閱戶或試用,兩者都不該加 +3。整段條件保留語意但實際不會觸發,留作 defensive。
+    // (簡單說:phase 33 之後 DEEP_INSIGHT_SURCHARGE 不再被收取)
     const reason = isFollowUp ? "spend_divine_followup" : "spend_divine";
 
     if (user) {
@@ -122,6 +141,7 @@ export async function POST(request: NextRequest) {
             locale,
             personaId: persona.id,
             depth: effectiveDepth,
+            ...(usedFreeDeepTrial ? { deepInsightFreeTrial: true } : {}),
           },
         });
       } catch (err) {

@@ -13,7 +13,7 @@
  *      跟塔羅版的 CardBacks.jpg 對等。
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,16 @@ import {
   notifyCreditsChanged,
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
+// phase 35.7:訪客限流改 server DB,banner status 直接 fetch /api/yesno/guest-status
+const GUEST_YESNO_FREE_DAYS = 10;
+type GuestStatus = {
+  authenticated: boolean;
+  allowed: boolean;
+  reason: "ok" | "used_today" | "limit_reached";
+  daysRemaining: number;
+  usedToday: boolean;
+  limit: number;
+};
 
 type Step = "ask" | "drawing" | "result";
 type Verdict = "yes" | "no" | "depends";
@@ -46,10 +56,42 @@ export default function IChingYesNoPage() {
   });
   const abortRef = useRef<AbortController | null>(null);
 
+  // 認證 + 訪客限流狀態 — 一次 fetch /api/yesno/guest-status 拿全部
+  // 為什麼合併:authed 狀態必須跟 guest status 同步揭曉,避免「authed=null + status=loaded」
+  // 這種半生不熟的中間狀態讓 banner 顯示錯
+  const [guestStatus, setGuestStatus] = useState<GuestStatus | null>(null);
+
+  const refetchStatus = async () => {
+    try {
+      const res = await fetch("/api/yesno/guest-status", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as GuestStatus;
+      setGuestStatus(data);
+    } catch {
+      /* ignore — UI 退回未載入態(banner 不顯示,按鈕仍可點) */
+    }
+  };
+
+  useEffect(() => {
+    void refetchStatus();
+  }, []);
+
+  const authed = guestStatus ? guestStatus.authenticated : null;
+
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
 
   const handleDraw = async () => {
     if (!question.trim()) return;
+
+    // phase 35.7:狀態還在 loading 直接 return — 按鈕本來就 disabled,這層是 defensive。
+    // 訪客限流由 server 端在 /api/iching/yesno 內判斷, 401 → 彈登入。
+    // 這裡的 client-side preflight 純粹改善 UX(避免提交無謂請求),不是商業邏輯。
+    if (!guestStatus) return;
+    if (!guestStatus.authenticated && !guestStatus.allowed) {
+      setLoginOpen(true);
+      return;
+    }
+
     setStep("drawing");
 
     // 立刻抽一卦(no 擲銅錢過程)
@@ -81,7 +123,11 @@ export default function IChingYesNoPage() {
       });
 
       if (res.status === 401) {
+        // phase 35.7:訪客被 server-side DB 限流擋下也是 401
         setIsLoading(false);
+        setStep("ask");
+        // 同步重抓最新 status — banner 立即反映「用盡」或「今日已用」
+        void refetchStatus();
         setLoginOpen(true);
         return;
       }
@@ -113,6 +159,8 @@ export default function IChingYesNoPage() {
         setAiText((prev) => prev + decoder.decode(value, { stream: true }));
       }
       notifyCreditsChanged();
+      // phase 35.7:server DB 已記錄,重抓 status 讓 banner 反映新剩餘天數
+      void refetchStatus();
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -236,26 +284,85 @@ export default function IChingYesNoPage() {
                 </div>
               </div>
 
+              {/* 訪客 10 天免費期提示(phase 35.7)— status 從 /api/yesno/guest-status 來。
+                  authenticated=false 才顯示,authenticated=true(會員)隱藏。 */}
+              {guestStatus && !guestStatus.authenticated && (() => {
+                const isExhausted = guestStatus.reason === "limit_reached";
+                const isUsedToday = guestStatus.reason === "used_today";
+                const isAvailable = guestStatus.allowed;
+                const accent = isExhausted ? "#fca5a5" : isUsedToday ? "#d4a855" : "#6ee7b7";
+                const bgFrom = isExhausted
+                  ? "rgba(248,113,113,0.10)"
+                  : isUsedToday
+                    ? "rgba(212,168,85,0.10)"
+                    : "rgba(16,185,129,0.08)";
+                const borderColor = isExhausted
+                  ? "rgba(248,113,113,0.45)"
+                  : isUsedToday
+                    ? "rgba(212,168,85,0.45)"
+                    : "rgba(110,231,183,0.35)";
+
+                return (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      fontSize: 12,
+                      lineHeight: 1.55,
+                      border: `1px solid ${borderColor}`,
+                      background: `linear-gradient(135deg, ${bgFrom}, rgba(0,0,0,0.02))`,
+                      color: accent,
+                    }}
+                  >
+                    {isExhausted
+                      ? t(
+                          `你的訪客 ${GUEST_YESNO_FREE_DAYS} 天免費期已用完。登入即可繼續占卜,首次登入贈送 30 點 🎁`,
+                          `Your ${GUEST_YESNO_FREE_DAYS}-day guest free trial is over. Sign in to continue — 30 free credits on first login 🎁`,
+                          `ゲスト ${GUEST_YESNO_FREE_DAYS} 日間の無料体験が終了しました。ログインで続行 — 初回 30 ポイント贈呈 🎁`,
+                          `게스트 ${GUEST_YESNO_FREE_DAYS}일 무료 체험이 끝났습니다. 로그인하면 계속 점치기 — 첫 로그인 30 포인트 증정 🎁`
+                        )
+                      : isUsedToday
+                        ? t(
+                            `你今日已用過免費 Yes/No(訪客剩 ${guestStatus.daysRemaining} 天免費期)。明天再來,或登入贈 30 點 🎁`,
+                            `Today's free Yes/No used (${guestStatus.daysRemaining} guest days left). Come back tomorrow, or sign in for 30 free credits 🎁`,
+                            `本日の無料 Yes/No を使用済(残り ${guestStatus.daysRemaining} 日)。明日また、またはログインで 30 ポイント贈呈 🎁`,
+                            `오늘 무료 Yes/No 사용 완료 (남은 무료 ${guestStatus.daysRemaining}일). 내일 다시 오거나 로그인하면 30 포인트 증정 🎁`
+                          )
+                        : isAvailable
+                          ? t(
+                              `✨ 訪客免費期還剩 ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS} 天,每日 1 次。登入會員贈 30 點 + 解鎖每日簽到`,
+                              `✨ ${guestStatus.daysRemaining} of ${GUEST_YESNO_FREE_DAYS} guest free days left, 1 reading per day. Sign in for 30 free credits + daily check-in`,
+                              `✨ ゲスト無料期間 残り ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS} 日、1 日 1 回。ログインで 30 ポイント贈呈 + デイリーチェックイン解放`,
+                              `✨ 게스트 무료 ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS}일 남음, 하루 1회. 로그인하면 30 포인트 증정 + 매일 출석체크 해제`
+                            )
+                          : null}
+                  </div>
+                );
+              })()}
+
               <button
                 onClick={handleDraw}
-                disabled={!question.trim()}
+                disabled={!question.trim() || guestStatus === null}
                 style={{
                   width: "100%",
                   padding: "14px 24px",
-                  background: question.trim()
+                  background: question.trim() && guestStatus !== null
                     ? "linear-gradient(135deg, #d4a855, #f0d78c)"
                     : "rgba(212,168,85,0.2)",
-                  color: question.trim() ? "#0a0a1a" : "rgba(192,192,208,0.4)",
+                  color: question.trim() && guestStatus !== null ? "#0a0a1a" : "rgba(192,192,208,0.4)",
                   border: "none",
                   borderRadius: 12,
                   fontSize: 16,
                   fontWeight: 700,
-                  cursor: question.trim() ? "pointer" : "not-allowed",
+                  cursor: question.trim() && guestStatus !== null ? "pointer" : "not-allowed",
                   fontFamily: "inherit",
-                  boxShadow: question.trim() ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
+                  boxShadow: question.trim() && guestStatus !== null ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
                 }}
               >
-                {t("✦ 抽一卦", "✦ Draw One Hexagram", "✦ 一卦を引く", "✦ 한 괘 뽑기")}
+                {guestStatus === null
+                  ? t("載入中…", "Loading…", "読み込み中…", "로딩 중…")
+                  : t("✦ 抽一卦", "✦ Draw One Hexagram", "✦ 一卦を引く", "✦ 한 괘 뽑기")}
               </button>
             </motion.div>
           )}
@@ -520,7 +627,22 @@ export default function IChingYesNoPage() {
         </AnimatePresence>
       </div>
 
-      <LoginOptionsModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginOptionsModal
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        title={t(
+          "登入即可繼續占卜",
+          "Sign in to keep going",
+          "ログインで占いを続ける",
+          "로그인하여 점치기 계속"
+        )}
+        subtitle={t(
+          "🎁 首次登入贈送 30 點(夠占 6 次易經 / 塔羅、15 次每日一卡)",
+          "🎁 Sign up bonus: 30 free credits (≈ 6 readings or 15 daily cards)",
+          "🎁 初回ログインで 30 ポイント贈呈(易経・タロット 6 回分相当)",
+          "🎁 첫 로그인 시 30 포인트 증정 (점 6회 분량)"
+        )}
+      />
       <InsufficientCreditsModal
         open={creditsModal.open}
         required={creditsModal.required}

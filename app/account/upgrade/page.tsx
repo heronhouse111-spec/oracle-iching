@@ -664,6 +664,99 @@ export default function UpgradePage() {
         </div>
         )}
 
+        {/* ---- 適合誰對照表 —— 幫使用者判斷該選訂閱還是加購包 ----
+             加在方案 grid 跟「看加購包」按鈕之間,讓重度用戶看完價格時,
+             立刻被「我每月占 > 40 次」的描述對到,主動轉訂閱。 */}
+        <div
+          className="mystic-card"
+          style={{
+            padding: 20,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              color: "#d4a855",
+              fontFamily: "'Noto Serif TC', serif",
+              fontSize: 15,
+              textAlign: "center",
+              marginBottom: 14,
+              letterSpacing: 0.5,
+            }}
+          >
+            {t(
+              "✦ 我該選訂閱還是加購包?",
+              "✦ Subscription or Credit Pack?",
+              "✦ サブスクとポイントパック、どちらを選ぶ?",
+              "✦ 구독과 포인트 팩, 어느 쪽을 선택할까요?"
+            )}
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto 1fr",
+              gap: "10px 14px",
+              fontSize: 12.5,
+              lineHeight: 1.55,
+              color: "rgba(232,232,240,0.85)",
+            }}
+          >
+            <div style={{ color: "#d4a855", fontWeight: 600, whiteSpace: "nowrap" }}>
+              {t("每月 < 20 次", "< 20 / month", "月 20 回未満", "월 20회 미만")}
+            </div>
+            <div style={{ color: "rgba(192,192,208,0.85)" }}>
+              {t(
+                "加購包就夠了 — 200 點 NT$120 約可占 40 次,用完再買",
+                "Credit pack is enough — 200 credits for NT$120 covers ~40 readings.",
+                "ポイントパックで十分 — 200 ポイント NT$120 で約 40 回",
+                "포인트 팩이면 충분 — 200 포인트 NT$120 로 약 40회"
+              )}
+            </div>
+
+            <div style={{ color: "#d4a855", fontWeight: 600, whiteSpace: "nowrap" }}>
+              {t("每月 20-40 次", "20-40 / month", "月 20-40 回", "월 20-40회")}
+            </div>
+            <div style={{ color: "rgba(192,192,208,0.85)" }}>
+              {t(
+                "兩者皆可 — 想要無浮水印分享、premium 占卜師、Deep Insight 就訂閱",
+                "Either works — subscribe if you want watermark-free shares, premium readers, or Deep Insight.",
+                "どちらでも可 — 透かしなし共有 / Premium 占い師 / Deep Insight が欲しいならサブスク",
+                "둘 다 가능 — 워터마크 없는 공유 / 프리미엄 점술사 / Deep Insight 원하면 구독"
+              )}
+            </div>
+
+            <div style={{ color: "#6ee7b7", fontWeight: 600, whiteSpace: "nowrap" }}>
+              {t("每月 > 40 次", "> 40 / month", "月 40 回以上", "월 40회 이상")}
+            </div>
+            <div style={{ color: "rgba(232,232,240,0.95)" }}>
+              {t(
+                "月訂閱 NT$150 最划算 — 等於每點 NT$0.25,比加購包便宜 40%+",
+                "Monthly subscription wins — NT$0.25 per credit, 40%+ cheaper than packs.",
+                "月額プランがお得 — 1 ポイント NT$0.25、パックより 40%+ 安い",
+                "월간 구독이 가장 저렴 — 1 포인트 NT$0.25, 팩보다 40%+ 저렴"
+              )}
+            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: "1px solid rgba(212,168,85,0.15)",
+              fontSize: 11,
+              color: "rgba(192,192,208,0.55)",
+              lineHeight: 1.55,
+              textAlign: "center",
+            }}
+          >
+            {t(
+              "註:1 次易經 / 塔羅占卜 = 5 點;衍伸占卜 10 點;Yes/No 2 點",
+              "Note: 1 reading = 5 credits; follow-up = 10; Yes/No = 2",
+              "備考:占い 1 回 = 5 ポイント;フォローアップ = 10;Yes/No = 2",
+              "참고: 점 1회 = 5 포인트; 후속 점 = 10; Yes/No = 2"
+            )}
+          </div>
+        </div>
+
         {/* ---- Footer links(TWA + web 都顯示) ---- */}
         {(
         <div
