@@ -13,6 +13,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { getCardById, type TarotCard } from "@/data/tarot";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -26,6 +27,11 @@ import {
 import { consumeDailyYesno } from "@/lib/dailyCheckin";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
+import {
+  decideGuestYesnoLimit,
+  buildGuestYesnoCookie,
+  GUEST_YESNO_COOKIE_NAME,
+} from "@/lib/guestYesnoLimit";
 
 export type YesNoVerdict = "yes" | "no" | "depends";
 
@@ -143,6 +149,40 @@ export async function POST(request: NextRequest) {
     }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = CREDIT_COSTS.YESNO;
+
+    // phase 35.6:訪客 server-side 限流(HttpOnly cookie 累計使用天數)
+    let guestCookieToSet: string | null = null;
+    if (!user) {
+      const cookieStore = await cookies();
+      const raw = cookieStore.get(GUEST_YESNO_COOKIE_NAME)?.value;
+      const decision = decideGuestYesnoLimit(raw);
+      if (!decision.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "GUEST_LIMIT_REACHED",
+            reason: decision.reason,
+            daysRemaining: decision.daysRemaining,
+            message: pickStr(
+              safeLocale,
+              decision.reason === "used_today"
+                ? "你今日已用過免費 Yes/No,明天再來或登入即可繼續"
+                : "訪客 10 天免費期已用完,登入即可繼續占卜",
+              decision.reason === "used_today"
+                ? "Today's free Yes/No is used. Come back tomorrow or sign in."
+                : "Guest 10-day free trial is over. Sign in to continue.",
+              decision.reason === "used_today"
+                ? "本日の無料 Yes/No を使い切りました。明日また、またはログインで続行"
+                : "ゲスト 10 日間無料体験が終了しました。ログインで続行",
+              decision.reason === "used_today"
+                ? "오늘 무료 Yes/No 사용 완료. 내일 또는 로그인하여 계속"
+                : "게스트 10일 무료 체험 종료. 로그인하여 계속"
+            ),
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      guestCookieToSet = decision.setCookieValue;
+    }
 
     // phase 34:登入用戶若今日已簽到且未消耗,本次免費(不扣點)。
     // RPC 原子操作,RPC 內 update used_at 成功才回 true。
@@ -304,13 +344,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new Response(readable, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        "X-YesNo-Verdict": verdict, // client 從 header 拿 verdict
-      },
-    });
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+      "X-YesNo-Verdict": verdict, // client 從 header 拿 verdict
+    };
+    if (guestCookieToSet) {
+      responseHeaders["Set-Cookie"] = buildGuestYesnoCookie(guestCookieToSet);
+    }
+    return new Response(readable, { headers: responseHeaders });
   } catch (error) {
     console.error("YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {

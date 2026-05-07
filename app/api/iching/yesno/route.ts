@@ -10,6 +10,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -23,6 +24,11 @@ import {
 import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
+import {
+  decideGuestYesnoLimit,
+  buildGuestYesnoCookie,
+  GUEST_YESNO_COOKIE_NAME,
+} from "@/lib/guestYesnoLimit";
 // Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
 // 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
 
@@ -166,6 +172,41 @@ export async function POST(request: NextRequest) {
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = await getCreditCost("YESNO");
 
+    // phase 35.6:訪客 server-side 限流(HttpOnly cookie 計算累計使用天數)
+    // 在 spendCredits 之前判斷 — 通過後才繼續走 AI 解卦流程
+    let guestCookieToSet: string | null = null;
+    if (!user) {
+      const cookieStore = await cookies();
+      const raw = cookieStore.get(GUEST_YESNO_COOKIE_NAME)?.value;
+      const decision = decideGuestYesnoLimit(raw);
+      if (!decision.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "GUEST_LIMIT_REACHED",
+            reason: decision.reason,
+            daysRemaining: decision.daysRemaining,
+            message: pickStr(
+              safeLocale,
+              decision.reason === "used_today"
+                ? "你今日已用過免費 Yes/No,明天再來或登入即可繼續"
+                : "訪客 10 天免費期已用完,登入即可繼續占卜",
+              decision.reason === "used_today"
+                ? "Today's free Yes/No is used. Come back tomorrow or sign in."
+                : "Guest 10-day free trial is over. Sign in to continue.",
+              decision.reason === "used_today"
+                ? "本日の無料 Yes/No を使い切りました。明日また、またはログインで続行"
+                : "ゲスト 10 日間無料体験が終了しました。ログインで続行",
+              decision.reason === "used_today"
+                ? "오늘 무료 Yes/No 사용 완료. 내일 또는 로그인하여 계속"
+                : "게스트 10일 무료 체험 종료. 로그인하여 계속"
+            ),
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      guestCookieToSet = decision.setCookieValue;
+    }
+
     if (user) {
       try {
         await spendCredits({
@@ -302,13 +343,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new Response(readable, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        "X-YesNo-Verdict": verdict,
-      },
-    });
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+      "X-YesNo-Verdict": verdict,
+    };
+    // 訪客成功流程 → 寫回更新後的 cookie
+    if (guestCookieToSet) {
+      responseHeaders["Set-Cookie"] = buildGuestYesnoCookie(guestCookieToSet);
+    }
+
+    return new Response(readable, { headers: responseHeaders });
   } catch (error) {
     console.error("IChing YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {

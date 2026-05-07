@@ -121,7 +121,17 @@ export default function YesNoPage() {
       });
 
       if (res.status === 401) {
+        // phase 35.6:訪客被 server-side 限流擋下也是 401
         setIsLoading(false);
+        setStep("ask"); // 退回 ask 讓 banner 顯示「免費期已用完」
+        try {
+          const body = await res.clone().json();
+          if (body?.error === "GUEST_LIMIT_REACHED") {
+            markGuestYesnoUsed();
+          }
+        } catch {
+          /* ignore */
+        }
         setLoginOpen(true);
         return;
       }

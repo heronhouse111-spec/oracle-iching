@@ -130,7 +130,22 @@ export default function IChingYesNoPage() {
       });
 
       if (res.status === 401) {
+        // phase 35.6:訪客被 server-side 限流擋下,也是 401。讀 body 拿 reason 顯示更精準提示。
+        // 不論原因,行為都是彈登入 modal,只是文案稍有差異(modal subtitle 已寫 30 點)
         setIsLoading(false);
+        setStep("ask"); // 從 drawing/result 退回 ask,讓 banner 顯示「免費期已用完」
+        // 嘗試解析 body,失敗也無妨
+        try {
+          const body = await res.clone().json();
+          if (body?.error === "GUEST_LIMIT_REACHED") {
+            // 同步 client localStorage 為「已用滿」,讓 banner 立即顯示用盡狀態
+            // 用日期 array 直接寫入,跟 server cookie 一致
+            // 簡化:把今日加進 array(與 server 行為一致)
+            markGuestYesnoUsed();
+          }
+        } catch {
+          /* ignore */
+        }
         setLoginOpen(true);
         return;
       }
