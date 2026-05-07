@@ -86,6 +86,9 @@ export function decideGuestYesnoLimit(rawCookieValue: string | undefined): Guest
 /**
  * 建出 Set-Cookie header 字串。HttpOnly + SameSite=Lax + 60 天 maxAge。
  * 注意 production 加 Secure;開發本機不加(沒 HTTPS)。
+ *
+ * @deprecated 用 NextResponse.cookies.set() 比 raw Set-Cookie header 在 streaming
+ *  響應 + middleware 介入時更可靠。保留此函式不破壞既有 import。
  */
 export function buildGuestYesnoCookie(value: string): string {
   const isProd = process.env.NODE_ENV === "production";
@@ -99,5 +102,17 @@ export function buildGuestYesnoCookie(value: string): string {
   if (isProd) parts.push("Secure");
   return parts.join("; ");
 }
+
+/**
+ * 共用 cookie 屬性 — 給 NextResponse.cookies.set() 用。
+ * 跟 buildGuestYesnoCookie 同步;改 maxAge 兩邊都要動。
+ */
+export const GUEST_YESNO_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: 60 * 60 * 24 * 60,
+  secure: process.env.NODE_ENV === "production",
+};
 
 export const GUEST_YESNO_COOKIE_NAME = COOKIE_NAME;

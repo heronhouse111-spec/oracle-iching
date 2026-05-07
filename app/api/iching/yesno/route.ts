@@ -9,7 +9,7 @@
  * 回傳:streaming AI 文字 + X-YesNo-Verdict header
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
 import { appendPersonaPrompt } from "@/lib/personas";
@@ -26,8 +26,8 @@ import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
 import {
   decideGuestYesnoLimit,
-  buildGuestYesnoCookie,
   GUEST_YESNO_COOKIE_NAME,
+  GUEST_YESNO_COOKIE_OPTIONS,
 } from "@/lib/guestYesnoLimit";
 // Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
 // 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
@@ -343,17 +343,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Transfer-Encoding": "chunked",
-      "X-YesNo-Verdict": verdict,
-    };
-    // 訪客成功流程 → 寫回更新後的 cookie
+    // phase 35.6:用 NextResponse + cookies.set() 比 raw Set-Cookie header 可靠 —
+    // streaming response + middleware 介入時更穩定。NextResponse 可吃 ReadableStream。
+    const finalResponse = new NextResponse(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-YesNo-Verdict": verdict,
+      },
+    });
     if (guestCookieToSet) {
-      responseHeaders["Set-Cookie"] = buildGuestYesnoCookie(guestCookieToSet);
+      finalResponse.cookies.set(
+        GUEST_YESNO_COOKIE_NAME,
+        guestCookieToSet,
+        GUEST_YESNO_COOKIE_OPTIONS
+      );
     }
-
-    return new Response(readable, { headers: responseHeaders });
+    return finalResponse;
   } catch (error) {
     console.error("IChing YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {

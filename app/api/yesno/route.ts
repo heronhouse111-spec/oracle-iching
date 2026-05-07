@@ -12,7 +12,7 @@
  *   - 規則寫死後 AI 只負責解釋「為何是這個答案」,輸出穩定
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getCardById, type TarotCard } from "@/data/tarot";
 import { appendPersonaPrompt } from "@/lib/personas";
@@ -29,8 +29,8 @@ import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
 import {
   decideGuestYesnoLimit,
-  buildGuestYesnoCookie,
   GUEST_YESNO_COOKIE_NAME,
+  GUEST_YESNO_COOKIE_OPTIONS,
 } from "@/lib/guestYesnoLimit";
 
 export type YesNoVerdict = "yes" | "no" | "depends";
@@ -344,15 +344,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const responseHeaders: Record<string, string> = {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Transfer-Encoding": "chunked",
-      "X-YesNo-Verdict": verdict, // client 從 header 拿 verdict
-    };
+    // phase 35.6:用 NextResponse 比 raw Response + Set-Cookie header 在 middleware 環境更可靠
+    const finalResponse = new NextResponse(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-YesNo-Verdict": verdict,
+      },
+    });
     if (guestCookieToSet) {
-      responseHeaders["Set-Cookie"] = buildGuestYesnoCookie(guestCookieToSet);
+      finalResponse.cookies.set(
+        GUEST_YESNO_COOKIE_NAME,
+        guestCookieToSet,
+        GUEST_YESNO_COOKIE_OPTIONS
+      );
     }
-    return new Response(readable, { headers: responseHeaders });
+    return finalResponse;
   } catch (error) {
     console.error("YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {
