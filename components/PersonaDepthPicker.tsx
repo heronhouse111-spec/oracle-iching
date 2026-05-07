@@ -160,6 +160,37 @@ export default function PersonaDepthPicker({
     };
   }, [system]);
 
+  // Deep Insight 試用配額 — 免費用戶每月 3 次免費試用(phase 33)
+  // 訂閱戶不受限制;未登入訪客 remaining=0、isSubscriber=false
+  const [trialRemaining, setTrialRemaining] = useState<number | null>(null);
+  const [trialAuthenticated, setTrialAuthenticated] = useState<boolean>(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/deep-insight/trial-status", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          authenticated?: boolean;
+          isSubscriber?: boolean;
+          remaining?: number;
+        };
+        if (cancelled) return;
+        setTrialAuthenticated(Boolean(data.authenticated));
+        // 訂閱戶在這裡 remaining 會回 limit,但 UI 走 isSubscriber 分支不會用這個值
+        setTrialRemaining(typeof data.remaining === "number" ? data.remaining : 0);
+      } catch {
+        /* 沿用 null,UI 退回保守顯示 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSubscriber]);
+
+  // 是否還能用 Deep Insight(訂閱戶 OR 免費試用尚有配額)
+  const canUseDeep = isSubscriber || (trialAuthenticated && (trialRemaining ?? 0) > 0);
+
   const handlePersonaClick = (p: DisplayPersona) => {
     if (p.tier === "premium" && !isSubscriber) {
       if (onUpgrade) onUpgrade();
@@ -169,7 +200,8 @@ export default function PersonaDepthPicker({
   };
 
   const handleDepthClick = (d: ReadingDepth) => {
-    if (d === "deep" && !isSubscriber) {
+    if (d === "deep" && !canUseDeep) {
+      // 未登入 / 配額用完 → 引導訂閱
       if (onUpgrade) onUpgrade();
       return;
     }
@@ -292,31 +324,67 @@ export default function PersonaDepthPicker({
               borderRadius: 8,
               cursor: "pointer",
               fontFamily: "inherit",
-              color: isSubscriber ? "#e8e8f0" : "rgba(192,192,208,0.5)",
+              color: canUseDeep ? "#e8e8f0" : "rgba(192,192,208,0.5)",
               fontSize: 12,
               fontWeight: 600,
-              opacity: isSubscriber ? 1 : 0.7,
+              opacity: canUseDeep ? 1 : 0.7,
             }}
             title={
               isSubscriber
                 ? t(
-                    "Deep Insight — 約 500 字深度解析(+3 點)",
-                    "Deep Insight — ~350-word deep read (+3 credits)",
-                    "Deep Insight — 約500字の深い解読(+3クレジット)",
-                    "Deep Insight — 약 500자 심층 해석 (+3 크레딧)"
+                    "Deep Insight — 約 500 字深度解析(訂閱專屬)",
+                    "Deep Insight — ~500-word deep read (subscriber benefit)",
+                    "Deep Insight — 約500字の深い解読(サブスク特典)",
+                    "Deep Insight — 약 500자 심층 해석 (구독 혜택)"
                   )
-                : t(
-                    "Deep Insight 為訂閱戶限定",
-                    "Deep Insight is for subscribers",
-                    "Deep Insight は有料会員限定",
-                    "Deep Insight 은 구독자 전용"
-                  )
+                : trialAuthenticated && (trialRemaining ?? 0) > 0
+                  ? t(
+                      `本月還有 ${trialRemaining} 次免費試用 Deep Insight`,
+                      `${trialRemaining} free Deep Insight trials left this month`,
+                      `今月 Deep Insight 無料体験 残り ${trialRemaining} 回`,
+                      `이번 달 Deep Insight 무료 체험 ${trialRemaining}회 남음`
+                    )
+                  : trialAuthenticated
+                    ? t(
+                        "本月免費試用已用完,訂閱即可解鎖無限次",
+                        "Free trials used up — subscribe to unlock unlimited.",
+                        "今月の無料体験を使い切りました。サブスクで無制限に。",
+                        "이번 달 무료 체험을 모두 사용했습니다. 구독으로 무제한 이용."
+                      )
+                    : t(
+                        "登入即可每月免費試用 3 次 Deep Insight",
+                        "Sign in for 3 free Deep Insight trials per month",
+                        "ログインで毎月 3 回 Deep Insight を無料体験",
+                        "로그인하면 매월 3회 무료 Deep Insight 체험"
+                      )
             }
           >
             🔮 {t("深度洞察", "Deep", "深い", "심층")}
-            {!isSubscriber && <span style={{ marginLeft: 4, fontSize: 10 }}>🔒</span>}
-            {depth === "deep" && isSubscriber && (
-              <span style={{ fontSize: 9, marginLeft: 4, color: "rgba(212,168,85,0.8)" }}>+3</span>
+            {!canUseDeep && <span style={{ marginLeft: 4, fontSize: 10 }}>🔒</span>}
+            {/* 訂閱戶徽章:訂閱專屬,無加價 */}
+            {isSubscriber && depth === "deep" && (
+              <span
+                style={{
+                  fontSize: 9,
+                  marginLeft: 4,
+                  color: "rgba(110,231,183,0.9)",
+                }}
+              >
+                ✦
+              </span>
+            )}
+            {/* 免費用戶徽章:剩餘試用次數 */}
+            {!isSubscriber && trialAuthenticated && trialRemaining !== null && trialRemaining > 0 && (
+              <span
+                style={{
+                  fontSize: 9,
+                  marginLeft: 4,
+                  color: "rgba(212,168,85,0.9)",
+                  fontWeight: 700,
+                }}
+              >
+                {t(`✨ 免費 ${trialRemaining}/3`, `✨ Free ${trialRemaining}/3`, `✨ 無料 ${trialRemaining}/3`, `✨ 무료 ${trialRemaining}/3`)}
+              </span>
             )}
           </button>
         </div>

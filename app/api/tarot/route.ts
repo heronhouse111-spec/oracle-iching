@@ -10,6 +10,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { consumeDeepInsightTrial } from "@/lib/deepInsightTrial";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained, aggregateResults } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
@@ -179,15 +180,29 @@ export async function POST(request: NextRequest) {
       isActiveSubscriber = Boolean(profile?.is_active);
     }
 
-    // Deep Insight 限訂閱戶 — 非訂閱戶傳 deep 自動降級為 quick
-    const effectiveDepth: "quick" | "deep" =
-      isDeep && isActiveSubscriber ? "deep" : "quick";
+    // Deep Insight 規則(phase 33):
+    //   - 訂閱戶:永久解鎖,不再加 +3 點
+    //   - 免費登入用戶:每月 3 次試用配額,扣配額但不扣 +3 點
+    //   - 訪客 / 配額用完:降級成 quick
+    let usedFreeDeepTrial = false;
+    let effectiveDepth: "quick" | "deep" = "quick";
+    if (isDeep) {
+      if (isActiveSubscriber) {
+        effectiveDepth = "deep";
+      } else if (user) {
+        const granted = await consumeDeepInsightTrial(user.id);
+        if (granted) {
+          effectiveDepth = "deep";
+          usedFreeDeepTrial = true;
+        }
+      }
+    }
 
     // Persona — premium 人格在非訂閱戶會自動退回 default
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    let cost = await tarotCostFor(spread, isFollowUp);
-    if (effectiveDepth === "deep") cost += await getCreditCost("DEEP_INSIGHT_SURCHARGE");
+    const cost = await tarotCostFor(spread, isFollowUp);
+    // phase 33:DEEP_INSIGHT_SURCHARGE 不再加(訂閱免費 + 試用免費)
     const reason = isFollowUp ? "spend_tarot_followup" : "spend_tarot";
 
     if (user) {
@@ -204,6 +219,7 @@ export async function POST(request: NextRequest) {
             personaId: persona.id,
             depth: effectiveDepth,
             cards: cards.map((c) => ({ id: c.cardId, pos: c.position, rev: c.isReversed })),
+            ...(usedFreeDeepTrial ? { deepInsightFreeTrial: true } : {}),
           },
         });
       } catch (err) {

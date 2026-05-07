@@ -39,7 +39,8 @@ export const CREDIT_COSTS = {
   TAROT_5_CARD: 10,
   TAROT_10_CARD: 20,
   TAROT_12_CARD: 14,
-  /** Deep Insight 模式加成(訂閱戶才能用,免費版鎖在 Quick) */
+  /** @deprecated phase 33:不再加價。訂閱戶免費內含,免費用戶每月 3 次試用配額(see deepInsightTrial.ts)。
+   *  保留欄位給 lib/creditCostsDb.ts fallback 與既有 admin CMS UI 不破版,實際 API 已不再加總。 */
   DEEP_INSIGHT_SURCHARGE: 3,
   /** 方位卦象合參 — 兩段式占法(羅盤方位 + 完整六爻),含 AI 合參 600 字解讀。
    *  兩段卜法 + 長 prompt + 600 字回應,token 成本接近愛情十字,定 10 點。 */
