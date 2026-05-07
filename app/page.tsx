@@ -48,6 +48,7 @@ import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import LoginOptionsModal from "@/components/LoginOptionsModal";
 import NewCardToast from "@/components/NewCardToast";
 import PersonaDepthPicker, { type ReadingDepth } from "@/components/PersonaDepthPicker";
+import DailyCheckInBanner from "@/components/DailyCheckInBanner";
 import QuestionInspirations from "@/components/QuestionInspirations";
 import { useUiImages } from "@/hooks/useUiImages";
 import {
@@ -2790,6 +2791,9 @@ export default function Home() {
       />
 
       <main style={{ paddingTop: 80, paddingBottom: 48, paddingLeft: 16, paddingRight: 16, maxWidth: 640, margin: "0 auto" }}>
+        {/* 每日簽到鉤子(phase 34)— 登入後顯示;未登入或已用完則隱藏 / 收成提示條 */}
+        <DailyCheckInBanner />
+
         <AnimatePresence mode="wait">
 
           {/* ===== STEP 1: Category ===== */}

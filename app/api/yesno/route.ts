@@ -23,6 +23,7 @@ import {
   InsufficientCreditsError,
   CREDIT_COSTS,
 } from "@/lib/credits";
+import { consumeDailyYesno } from "@/lib/dailyCheckin";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
 
@@ -143,7 +144,14 @@ export async function POST(request: NextRequest) {
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = CREDIT_COSTS.YESNO;
 
+    // phase 34:登入用戶若今日已簽到且未消耗,本次免費(不扣點)。
+    // RPC 原子操作,RPC 內 update used_at 成功才回 true。
+    let usedDailyCheckin = false;
     if (user) {
+      usedDailyCheckin = await consumeDailyYesno(user.id);
+    }
+
+    if (user && !usedDailyCheckin) {
       try {
         await spendCredits({
           userId: user.id,
@@ -246,7 +254,8 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error("DeepSeek API error (yesno):", response.status, err);
-      if (user) {
+      // 用了簽到 token 不扣點 → 也不需要退款。只在實扣點數時退。
+      if (user && !usedDailyCheckin) {
         await refundCredits({
           userId: user.id,
           amount: cost,
