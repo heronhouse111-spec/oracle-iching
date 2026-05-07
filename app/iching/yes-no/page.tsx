@@ -13,7 +13,7 @@
  *      跟塔羅版的 CardBacks.jpg 對等。
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,10 @@ import {
   notifyCreditsChanged,
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
+import {
+  isGuestYesnoAvailableToday,
+  markGuestYesnoUsed,
+} from "@/lib/clientGuestYesno";
 
 type Step = "ask" | "drawing" | "result";
 type Verdict = "yes" | "no" | "depends";
@@ -46,10 +50,41 @@ export default function IChingYesNoPage() {
   });
   const abortRef = useRef<AbortController | null>(null);
 
+  // 認證狀態 — 用來分流 guest 限流邏輯。null = 載入中 / 不確定
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!cancelled) setAuthed(Boolean(user));
+      } catch {
+        if (!cancelled) setAuthed(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Guest 今日是否還有免費額度(只在 authed=false 時生效)
+  const guestUsedToday = authed === false && !isGuestYesnoAvailableToday();
+
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
 
   const handleDraw = async () => {
     if (!question.trim()) return;
+
+    // phase 35:訪客每日限 1 次,已用過 → 直接彈登入提示(贈 30 點)
+    if (authed === false && !isGuestYesnoAvailableToday()) {
+      setLoginOpen(true);
+      return;
+    }
+
     setStep("drawing");
 
     // 立刻抽一卦(no 擲銅錢過程)
@@ -113,6 +148,8 @@ export default function IChingYesNoPage() {
         setAiText((prev) => prev + decoder.decode(value, { stream: true }));
       }
       notifyCreditsChanged();
+      // phase 35:成功後 guest 標記今日已用(localStorage,Asia/Taipei 日期)
+      if (authed === false) markGuestYesnoUsed();
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -235,6 +272,40 @@ export default function IChingYesNoPage() {
                   {question.length} / 140
                 </div>
               </div>
+
+              {/* 訪客每日 1 次免費提示 — 已用過 → 顯示登入引導,未用過 → 顯示「今日免費 1 次」 */}
+              {authed === false && (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 14px",
+                    borderRadius: 10,
+                    fontSize: 12,
+                    lineHeight: 1.55,
+                    border: guestUsedToday
+                      ? "1px solid rgba(212,168,85,0.45)"
+                      : "1px solid rgba(110,231,183,0.35)",
+                    background: guestUsedToday
+                      ? "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(212,168,85,0.02))"
+                      : "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))",
+                    color: guestUsedToday ? "#d4a855" : "#6ee7b7",
+                  }}
+                >
+                  {guestUsedToday
+                    ? t(
+                        "你今日訪客免費額度已用完。登入即可繼續占卜,首次登入贈送 30 點 🎁",
+                        "Today's guest free reading is used. Sign in to continue — 30 free credits on first login 🎁",
+                        "本日のゲスト無料枠を使い切りました。ログインで続行 — 初回 30 ポイント贈呈 🎁",
+                        "오늘 게스트 무료 사용량을 다 썼습니다. 로그인하면 계속 점치기 가능 — 첫 로그인 30 포인트 증정 🎁"
+                      )
+                    : t(
+                        "✨ 訪客今日免費 1 次。登入會員可解鎖每日簽到 + 完整紀錄,首次登入贈送 30 點",
+                        "✨ Guests get 1 free reading per day. Sign in to unlock daily check-in + full history — 30 free credits on first login",
+                        "✨ ゲストは 1 日 1 回無料。ログインでデイリーチェックイン + 履歴解放、初回 30 ポイント贈呈",
+                        "✨ 게스트는 하루 1회 무료. 로그인하면 매일 출석체크 + 기록 해제, 첫 로그인 30 포인트 증정"
+                      )}
+                </div>
+              )}
 
               <button
                 onClick={handleDraw}
@@ -520,7 +591,22 @@ export default function IChingYesNoPage() {
         </AnimatePresence>
       </div>
 
-      <LoginOptionsModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginOptionsModal
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        title={t(
+          "登入即可繼續占卜",
+          "Sign in to keep going",
+          "ログインで占いを続ける",
+          "로그인하여 점치기 계속"
+        )}
+        subtitle={t(
+          "🎁 首次登入贈送 30 點(夠占 6 次易經 / 塔羅、15 次每日一卡)",
+          "🎁 Sign up bonus: 30 free credits (≈ 6 readings or 15 daily cards)",
+          "🎁 初回ログインで 30 ポイント贈呈(易経・タロット 6 回分相当)",
+          "🎁 첫 로그인 시 30 포인트 증정 (점 6회 분량)"
+        )}
+      />
       <InsufficientCreditsModal
         open={creditsModal.open}
         required={creditsModal.required}
