@@ -66,10 +66,14 @@ export default function YesNoPage() {
     };
   }, []);
 
-  const guestStatus =
-    authed === false
-      ? getGuestYesnoStatus()
-      : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
+  // mounted 旗標 — SSR 階段 localStorage 不可用,等 client mount 後才讀
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const guestStatus = mounted
+    ? getGuestYesnoStatus()
+    : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
 
   const card = drawnCardId ? tarotDeck.find((c) => c.id === drawnCardId) : null;
 
@@ -272,8 +276,8 @@ export default function YesNoPage() {
                 </div>
               </div>
 
-              {/* 訪客 10 天免費期提示(phase 35.5)— 三狀態 */}
-              {authed === false && (() => {
+              {/* 訪客 10 天免費期提示(phase 35.5)— 顯示條件:authed !== true(連載入中也顯示) */}
+              {authed !== true && mounted && (() => {
                 const isExhausted = guestStatus.reason === "limit_reached";
                 const isUsedToday = guestStatus.reason === "used_today";
                 const isAvailable = guestStatus.available;

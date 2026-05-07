@@ -72,12 +72,16 @@ export default function IChingYesNoPage() {
     };
   }, []);
 
-  // Guest 免費期狀態(只在 authed=false 時生效) — 計算 banner 與限流共用
-  // status 是純 client-side 計算,authed 變化時也要重算,key 用 authed 觸發
-  const guestStatus =
-    authed === false
-      ? getGuestYesnoStatus()
-      : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
+  // Guest 免費期狀態 — 純 client-side 從 localStorage 算出,跟 authed 無關。
+  // banner / handleDraw 各自再依 authed 判斷要不要套用。
+  // 加 mounted 旗標確保 server-render 時 SSR 拿到的初值跟 client mount 後一致(避免 hydration mismatch)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const guestStatus = mounted
+    ? getGuestYesnoStatus()
+    : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
 
@@ -286,8 +290,10 @@ export default function IChingYesNoPage() {
               {/* 訪客 10 天免費期提示(phase 35.5)— 三狀態:
                     可用    → 綠色「✨ 還剩 X 天 / 共 10 天」
                     今日已用 → 金色「明天再來,還剩 X 天免費」
-                    額度用盡 → 紅金「免費期已結束,登入贈 30 點 🎁」 */}
-              {authed === false && (() => {
+                    額度用盡 → 紅金「免費期已結束,登入贈 30 點 🎁」
+                  顯示條件:`authed !== true` —— 連 authed=null(載入中)也顯示,
+                  避免使用者看不到 hint。已登入(true)才隱藏。 */}
+              {authed !== true && mounted && (() => {
                 const isExhausted = guestStatus.reason === "limit_reached";
                 const isUsedToday = guestStatus.reason === "used_today";
                 const isAvailable = guestStatus.available;
