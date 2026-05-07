@@ -27,11 +27,16 @@ import {
   notifyCreditsChanged,
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
-import {
-  getGuestYesnoStatus,
-  markGuestYesnoUsed,
-  GUEST_YESNO_FREE_DAYS,
-} from "@/lib/clientGuestYesno";
+// phase 35.7:訪客限流改 server DB,banner status 直接 fetch /api/yesno/guest-status
+const GUEST_YESNO_FREE_DAYS = 10;
+type GuestStatus = {
+  authenticated: boolean;
+  allowed: boolean;
+  reason: "ok" | "used_today" | "limit_reached";
+  daysRemaining: number;
+  usedToday: boolean;
+  limit: number;
+};
 
 type Step = "ask" | "drawing" | "result";
 type Verdict = "yes" | "no" | "depends";
@@ -51,52 +56,40 @@ export default function IChingYesNoPage() {
   });
   const abortRef = useRef<AbortController | null>(null);
 
-  // 認證狀態 — 用來分流 guest 限流邏輯。null = 載入中 / 不確定
-  const [authed, setAuthed] = useState<boolean | null>(null);
+  // 認證 + 訪客限流狀態 — 一次 fetch /api/yesno/guest-status 拿全部
+  // 為什麼合併:authed 狀態必須跟 guest status 同步揭曉,避免「authed=null + status=loaded」
+  // 這種半生不熟的中間狀態讓 banner 顯示錯
+  const [guestStatus, setGuestStatus] = useState<GuestStatus | null>(null);
+
+  const refetchStatus = async () => {
+    try {
+      const res = await fetch("/api/yesno/guest-status", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as GuestStatus;
+      setGuestStatus(data);
+    } catch {
+      /* ignore — UI 退回未載入態(banner 不顯示,按鈕仍可點) */
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!cancelled) setAuthed(Boolean(user));
-      } catch {
-        if (!cancelled) setAuthed(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void refetchStatus();
   }, []);
 
-  // Guest 免費期狀態 — 純 client-side 從 localStorage 算出,跟 authed 無關。
-  // banner / handleDraw 各自再依 authed 判斷要不要套用。
-  // 加 mounted 旗標確保 server-render 時 SSR 拿到的初值跟 client mount 後一致(避免 hydration mismatch)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  const guestStatus = mounted
-    ? getGuestYesnoStatus()
-    : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
+  const authed = guestStatus ? guestStatus.authenticated : null;
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
 
   const handleDraw = async () => {
     if (!question.trim()) return;
 
-    // phase 35.5:訪客累計可免費 10 天,每天 1 次。觸限或當日用過 → 彈登入提示。
-    // authed 還在 loading(null) 時直接 return — 按鈕本來就 disabled,這層是 defensive。
-    if (authed === null) return;
-    if (authed === false) {
-      const s = getGuestYesnoStatus();
-      if (!s.available) {
-        setLoginOpen(true);
-        return;
-      }
+    // phase 35.7:狀態還在 loading 直接 return — 按鈕本來就 disabled,這層是 defensive。
+    // 訪客限流由 server 端在 /api/iching/yesno 內判斷, 401 → 彈登入。
+    // 這裡的 client-side preflight 純粹改善 UX(避免提交無謂請求),不是商業邏輯。
+    if (!guestStatus) return;
+    if (!guestStatus.authenticated && !guestStatus.allowed) {
+      setLoginOpen(true);
+      return;
     }
 
     setStep("drawing");
@@ -130,22 +123,11 @@ export default function IChingYesNoPage() {
       });
 
       if (res.status === 401) {
-        // phase 35.6:訪客被 server-side 限流擋下,也是 401。讀 body 拿 reason 顯示更精準提示。
-        // 不論原因,行為都是彈登入 modal,只是文案稍有差異(modal subtitle 已寫 30 點)
+        // phase 35.7:訪客被 server-side DB 限流擋下也是 401
         setIsLoading(false);
-        setStep("ask"); // 從 drawing/result 退回 ask,讓 banner 顯示「免費期已用完」
-        // 嘗試解析 body,失敗也無妨
-        try {
-          const body = await res.clone().json();
-          if (body?.error === "GUEST_LIMIT_REACHED") {
-            // 同步 client localStorage 為「已用滿」,讓 banner 立即顯示用盡狀態
-            // 用日期 array 直接寫入,跟 server cookie 一致
-            // 簡化:把今日加進 array(與 server 行為一致)
-            markGuestYesnoUsed();
-          }
-        } catch {
-          /* ignore */
-        }
+        setStep("ask");
+        // 同步重抓最新 status — banner 立即反映「用盡」或「今日已用」
+        void refetchStatus();
         setLoginOpen(true);
         return;
       }
@@ -177,8 +159,8 @@ export default function IChingYesNoPage() {
         setAiText((prev) => prev + decoder.decode(value, { stream: true }));
       }
       notifyCreditsChanged();
-      // phase 35:成功後 guest 標記今日已用(localStorage,Asia/Taipei 日期)
-      if (authed === false) markGuestYesnoUsed();
+      // phase 35.7:server DB 已記錄,重抓 status 讓 banner 反映新剩餘天數
+      void refetchStatus();
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -302,16 +284,12 @@ export default function IChingYesNoPage() {
                 </div>
               </div>
 
-              {/* 訪客 10 天免費期提示(phase 35.5)— 三狀態:
-                    可用    → 綠色「✨ 還剩 X 天 / 共 10 天」
-                    今日已用 → 金色「明天再來,還剩 X 天免費」
-                    額度用盡 → 紅金「免費期已結束,登入贈 30 點 🎁」
-                  顯示條件:`authed !== true` —— 連 authed=null(載入中)也顯示,
-                  避免使用者看不到 hint。已登入(true)才隱藏。 */}
-              {authed !== true && mounted && (() => {
+              {/* 訪客 10 天免費期提示(phase 35.7)— status 從 /api/yesno/guest-status 來。
+                  authenticated=false 才顯示,authenticated=true(會員)隱藏。 */}
+              {guestStatus && !guestStatus.authenticated && (() => {
                 const isExhausted = guestStatus.reason === "limit_reached";
                 const isUsedToday = guestStatus.reason === "used_today";
-                const isAvailable = guestStatus.available;
+                const isAvailable = guestStatus.allowed;
                 const accent = isExhausted ? "#fca5a5" : isUsedToday ? "#d4a855" : "#6ee7b7";
                 const bgFrom = isExhausted
                   ? "rgba(248,113,113,0.10)"
@@ -365,24 +343,24 @@ export default function IChingYesNoPage() {
 
               <button
                 onClick={handleDraw}
-                disabled={!question.trim() || authed === null}
+                disabled={!question.trim() || guestStatus === null}
                 style={{
                   width: "100%",
                   padding: "14px 24px",
-                  background: question.trim() && authed !== null
+                  background: question.trim() && guestStatus !== null
                     ? "linear-gradient(135deg, #d4a855, #f0d78c)"
                     : "rgba(212,168,85,0.2)",
-                  color: question.trim() && authed !== null ? "#0a0a1a" : "rgba(192,192,208,0.4)",
+                  color: question.trim() && guestStatus !== null ? "#0a0a1a" : "rgba(192,192,208,0.4)",
                   border: "none",
                   borderRadius: 12,
                   fontSize: 16,
                   fontWeight: 700,
-                  cursor: question.trim() && authed !== null ? "pointer" : "not-allowed",
+                  cursor: question.trim() && guestStatus !== null ? "pointer" : "not-allowed",
                   fontFamily: "inherit",
-                  boxShadow: question.trim() && authed !== null ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
+                  boxShadow: question.trim() && guestStatus !== null ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
                 }}
               >
-                {authed === null
+                {guestStatus === null
                   ? t("載入中…", "Loading…", "読み込み中…", "로딩 중…")
                   : t("✦ 抽一卦", "✦ Draw One Hexagram", "✦ 一卦を引く", "✦ 한 괘 뽑기")}
               </button>

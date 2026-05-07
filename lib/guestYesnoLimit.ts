@@ -1,118 +1,134 @@
 /**
- * 訪客 Yes/No 服務端限流(phase 35.6)
+ * 訪客 Yes/No DB 限流(phase 35.7)
  *
- * 用 HttpOnly cookie 記錄訪客已用過哪幾天(Asia/Taipei),server 在 yesno API
- * 路由內讀+寫,client-side localStorage 只負責 UI hint banner。
+ * 取代 phase 35.6 的 cookie 方案 — Vercel streaming response + supabase auth
+ * middleware 把 Set-Cookie 吃掉,cookie 從未真的寫進瀏覽器。
  *
- * 為什麼要 server-side:
- *   - client-side localStorage 可被清除、繞過、被瀏覽器快取舊 JS 跳過
- *   - cookie 是 HttpOnly + SameSite=Lax,client console / 舊 bundle 都動不了
- *   - 真正的限流在這裡,client 只是 UI 配合
+ * 新方案:server 用 sha256(ip + ua) 當 fingerprint,記在 guest_yesno_log 表。
+ * 完全不依賴瀏覽器 cookie,只看 server 端能拿到的 request headers。
  *
- * Cookie 設計:
- *   key   = "guest_yn_dates"
- *   value = JSON.stringify(["YYYY-MM-DD", ...])  最多 10 個
- *   maxAge = 60 * 60 * 24 * 60 (60 天,讓使用者下個月再來時舊資料也已過期)
+ * Trade-off:
+ *   - 共用 IP 的用戶(咖啡廳 / NAT)會互相鎖,但 UA 通常會差(不同瀏覽器 / 裝置)
+ *   - 對個人來說很穩 — 同一台裝置同瀏覽器的累計就是公平地 10 天
+ *   - DB hiccup → fail-open(允許 + 記 warning),不要因此擋死整個訪客流量
  */
 
-const COOKIE_NAME = "guest_yn_dates";
+import crypto from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
+
 export const GUEST_YESNO_FREE_DAYS = 10;
 
-function todayInTaipei(): string {
-  try {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Taipei",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
-  } catch {
-    const d = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    return d.toISOString().slice(0, 10);
-  }
-}
+export type GuestYesnoReason = "ok" | "used_today" | "limit_reached";
 
-function parseDates(raw: string | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((s) => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s));
-  } catch {
-    return [];
-  }
+export interface GuestYesnoCheck {
+  allowed: boolean;
+  reason: GuestYesnoReason;
+  daysRemaining: number;
+  /** 純查詢時才有(banner 用) */
+  usedToday?: boolean;
 }
-
-export type GuestLimitDecision =
-  | { allowed: true; setCookieValue: string; daysRemaining: number }
-  | { allowed: false; reason: "used_today" | "limit_reached"; daysRemaining: number };
 
 /**
- * 讀 cookie 判斷 + 計算新值。caller 收到 allowed=true 後要把 setCookieValue
- * 透過 Response Set-Cookie header 回給 client。
+ * 從 request headers 取出 client IP。優先順序:
+ *   x-vercel-forwarded-for(Vercel 給的,最可靠)
+ *   x-forwarded-for(標準 proxy header,取第一個 IP)
+ *   x-real-ip
+ * 都沒有就回 "unknown",server 仍會記錄但所有 unknown 共用同一個 fingerprint
+ * (適度防刷,即使代理隱身也不能無限刷)
+ */
+function getClientIp(headers: Headers): string {
+  const vercel = headers.get("x-vercel-forwarded-for");
+  if (vercel) return vercel.split(",")[0]?.trim() || vercel;
+  const xff = headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]?.trim() || xff;
+  const real = headers.get("x-real-ip");
+  if (real) return real;
+  return "unknown";
+}
+
+/**
+ * 產生 fingerprint:sha256(ip + ua)。
+ * UA 截 200 字避免極端長度噪音(主要識別位元在前段)。
+ */
+export function buildGuestFingerprint(headers: Headers): string {
+  const ip = getClientIp(headers);
+  const ua = (headers.get("user-agent") || "unknown").slice(0, 200);
+  return crypto.createHash("sha256").update(`${ip}::${ua}`).digest("hex");
+}
+
+/**
+ * 嘗試消耗一次訪客配額。RPC 內原子寫入,
+ * 並發兩請求只會 insert 成功一筆但兩個都會被允許(罕見 race,可接受)。
  *
- * 用法(API route):
- *   import { cookies } from "next/headers";
- *   const cookieStore = await cookies();
- *   const raw = cookieStore.get("guest_yn_dates")?.value;
- *   const decision = decideGuestYesnoLimit(raw);
- *   if (!decision.allowed) return 401;
- *   // ... 占卜邏輯 ...
- *   return new Response(stream, {
- *     headers: { "Set-Cookie": buildGuestYesnoCookie(decision.setCookieValue) }
- *   });
+ * DB hiccup → fail-open(回 allowed: true)避免全站擋死訪客。
  */
-export function decideGuestYesnoLimit(rawCookieValue: string | undefined): GuestLimitDecision {
-  const dates = parseDates(rawCookieValue);
-  const today = todayInTaipei();
-  const total = dates.length;
-  const daysRemaining = Math.max(0, GUEST_YESNO_FREE_DAYS - total);
-
-  if (dates.includes(today)) {
-    return { allowed: false, reason: "used_today", daysRemaining };
+export async function tryConsumeGuestYesno(
+  fingerprint: string
+): Promise<GuestYesnoCheck> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("try_consume_guest_yesno", {
+      p_fingerprint: fingerprint,
+    });
+    if (error) {
+      console.error("[guestYesnoLimit] try_consume failed", error);
+      return { allowed: true, reason: "ok", daysRemaining: GUEST_YESNO_FREE_DAYS };
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      return { allowed: true, reason: "ok", daysRemaining: GUEST_YESNO_FREE_DAYS };
+    }
+    return {
+      allowed: Boolean(row.allowed),
+      reason: (row.reason as GuestYesnoReason) ?? "ok",
+      daysRemaining: row.days_remaining ?? 0,
+    };
+  } catch (e) {
+    console.error("[guestYesnoLimit] try_consume threw", e);
+    return { allowed: true, reason: "ok", daysRemaining: GUEST_YESNO_FREE_DAYS };
   }
-  if (total >= GUEST_YESNO_FREE_DAYS) {
-    return { allowed: false, reason: "limit_reached", daysRemaining: 0 };
-  }
-
-  const newDates = [...dates, today];
-  return {
-    allowed: true,
-    setCookieValue: JSON.stringify(newDates),
-    daysRemaining: GUEST_YESNO_FREE_DAYS - newDates.length,
-  };
 }
 
-/**
- * 建出 Set-Cookie header 字串。HttpOnly + SameSite=Lax + 60 天 maxAge。
- * 注意 production 加 Secure;開發本機不加(沒 HTTPS)。
- *
- * @deprecated 用 NextResponse.cookies.set() 比 raw Set-Cookie header 在 streaming
- *  響應 + middleware 介入時更可靠。保留此函式不破壞既有 import。
- */
-export function buildGuestYesnoCookie(value: string): string {
-  const isProd = process.env.NODE_ENV === "production";
-  const parts = [
-    `${COOKIE_NAME}=${encodeURIComponent(value)}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Lax",
-    `Max-Age=${60 * 60 * 24 * 60}`, // 60 天
-  ];
-  if (isProd) parts.push("Secure");
-  return parts.join("; ");
+/** 純查詢(不消耗)— 給 banner / status endpoint 用 */
+export async function getGuestYesnoStatus(
+  fingerprint: string
+): Promise<GuestYesnoCheck> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.rpc("get_guest_yesno_status", {
+      p_fingerprint: fingerprint,
+    });
+    if (error) {
+      console.error("[guestYesnoLimit] get_status failed", error);
+      return {
+        allowed: true,
+        reason: "ok",
+        daysRemaining: GUEST_YESNO_FREE_DAYS,
+        usedToday: false,
+      };
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) {
+      return {
+        allowed: true,
+        reason: "ok",
+        daysRemaining: GUEST_YESNO_FREE_DAYS,
+        usedToday: false,
+      };
+    }
+    return {
+      allowed: Boolean(row.allowed),
+      reason: (row.reason as GuestYesnoReason) ?? "ok",
+      daysRemaining: row.days_remaining ?? 0,
+      usedToday: Boolean(row.used_today),
+    };
+  } catch (e) {
+    console.error("[guestYesnoLimit] get_status threw", e);
+    return {
+      allowed: true,
+      reason: "ok",
+      daysRemaining: GUEST_YESNO_FREE_DAYS,
+      usedToday: false,
+    };
+  }
 }
-
-/**
- * 共用 cookie 屬性 — 給 NextResponse.cookies.set() 用。
- * 跟 buildGuestYesnoCookie 同步;改 maxAge 兩邊都要動。
- */
-export const GUEST_YESNO_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax" as const,
-  path: "/",
-  maxAge: 60 * 60 * 24 * 60,
-  secure: process.env.NODE_ENV === "production",
-};
-
-export const GUEST_YESNO_COOKIE_NAME = COOKIE_NAME;

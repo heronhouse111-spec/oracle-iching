@@ -12,8 +12,7 @@
  *   - 規則寫死後 AI 只負責解釋「為何是這個答案」,輸出穩定
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 import { getCardById, type TarotCard } from "@/data/tarot";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -28,9 +27,8 @@ import { consumeDailyYesno } from "@/lib/dailyCheckin";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
 import {
-  decideGuestYesnoLimit,
-  GUEST_YESNO_COOKIE_NAME,
-  GUEST_YESNO_COOKIE_OPTIONS,
+  buildGuestFingerprint,
+  tryConsumeGuestYesno,
 } from "@/lib/guestYesnoLimit";
 
 export type YesNoVerdict = "yes" | "no" | "depends";
@@ -150,12 +148,10 @@ export async function POST(request: NextRequest) {
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = CREDIT_COSTS.YESNO;
 
-    // phase 35.6:訪客 server-side 限流(HttpOnly cookie 累計使用天數)
-    let guestCookieToSet: string | null = null;
+    // phase 35.7:訪客 server-side 限流 — IP+UA fingerprint 查 DB(取代 cookie 方案)
     if (!user) {
-      const cookieStore = await cookies();
-      const raw = cookieStore.get(GUEST_YESNO_COOKIE_NAME)?.value;
-      const decision = decideGuestYesnoLimit(raw);
+      const fp = buildGuestFingerprint(request.headers);
+      const decision = await tryConsumeGuestYesno(fp);
       if (!decision.allowed) {
         return new Response(
           JSON.stringify({
@@ -181,7 +177,6 @@ export async function POST(request: NextRequest) {
           { status: 401, headers: { "Content-Type": "application/json" } }
         );
       }
-      guestCookieToSet = decision.setCookieValue;
     }
 
     // phase 34:登入用戶若今日已簽到且未消耗,本次免費(不扣點)。
@@ -344,22 +339,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // phase 35.6:用 NextResponse 比 raw Response + Set-Cookie header 在 middleware 環境更可靠
-    const finalResponse = new NextResponse(readable, {
+    return new Response(readable, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
-        "X-YesNo-Verdict": verdict,
+        "X-YesNo-Verdict": verdict, // client 從 header 拿 verdict
       },
     });
-    if (guestCookieToSet) {
-      finalResponse.cookies.set(
-        GUEST_YESNO_COOKIE_NAME,
-        guestCookieToSet,
-        GUEST_YESNO_COOKIE_OPTIONS
-      );
-    }
-    return finalResponse;
   } catch (error) {
     console.error("YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {

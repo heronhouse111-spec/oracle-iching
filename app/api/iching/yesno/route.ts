@@ -9,8 +9,7 @@
  * 回傳:streaming AI 文字 + X-YesNo-Verdict header
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
 import { getHexagramByNumber, type Hexagram } from "@/data/hexagrams";
 import { appendPersonaPrompt } from "@/lib/personas";
 import { resolvePersonaServer } from "@/lib/personasDb";
@@ -25,9 +24,8 @@ import { getCreditCost } from "@/lib/creditCostsDb";
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { validateUserText } from "@/lib/validateUserText";
 import {
-  decideGuestYesnoLimit,
-  GUEST_YESNO_COOKIE_NAME,
-  GUEST_YESNO_COOKIE_OPTIONS,
+  buildGuestFingerprint,
+  tryConsumeGuestYesno,
 } from "@/lib/guestYesnoLimit";
 // Yes/No 是輕量入口,單卦成本最低 — 為防止「Yes/No 刷收集套利」,
 // 刻意不接 recordCardObtained。卦象只在 daily / 主流占卜 / 梅花 / 方位 計入收集。
@@ -172,13 +170,11 @@ export async function POST(request: NextRequest) {
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
     const cost = await getCreditCost("YESNO");
 
-    // phase 35.6:訪客 server-side 限流(HttpOnly cookie 計算累計使用天數)
-    // 在 spendCredits 之前判斷 — 通過後才繼續走 AI 解卦流程
-    let guestCookieToSet: string | null = null;
+    // phase 35.7:訪客 server-side 限流 — 用 IP+UA fingerprint 查 DB 表(取代 cookie 方案)
+    // 通過則 RPC 已原子寫入該 fingerprint+今日;不通過則 401
     if (!user) {
-      const cookieStore = await cookies();
-      const raw = cookieStore.get(GUEST_YESNO_COOKIE_NAME)?.value;
-      const decision = decideGuestYesnoLimit(raw);
+      const fp = buildGuestFingerprint(request.headers);
+      const decision = await tryConsumeGuestYesno(fp);
       if (!decision.allowed) {
         return new Response(
           JSON.stringify({
@@ -204,7 +200,6 @@ export async function POST(request: NextRequest) {
           { status: 401, headers: { "Content-Type": "application/json" } }
         );
       }
-      guestCookieToSet = decision.setCookieValue;
     }
 
     if (user) {
@@ -343,23 +338,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // phase 35.6:用 NextResponse + cookies.set() 比 raw Set-Cookie header 可靠 —
-    // streaming response + middleware 介入時更穩定。NextResponse 可吃 ReadableStream。
-    const finalResponse = new NextResponse(readable, {
+    return new Response(readable, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
         "X-YesNo-Verdict": verdict,
       },
     });
-    if (guestCookieToSet) {
-      finalResponse.cookies.set(
-        GUEST_YESNO_COOKIE_NAME,
-        guestCookieToSet,
-        GUEST_YESNO_COOKIE_OPTIONS
-      );
-    }
-    return finalResponse;
   } catch (error) {
     console.error("IChing YesNo API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get reading" }), {
