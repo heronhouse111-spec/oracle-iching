@@ -85,6 +85,8 @@ export default function IChingYesNoPage() {
     if (!question.trim()) return;
 
     // phase 35.5:訪客累計可免費 10 天,每天 1 次。觸限或當日用過 → 彈登入提示。
+    // authed 還在 loading(null) 時直接 return — 按鈕本來就 disabled,這層是 defensive。
+    if (authed === null) return;
     if (authed === false) {
       const s = getGuestYesnoStatus();
       if (!s.available) {
@@ -342,24 +344,26 @@ export default function IChingYesNoPage() {
 
               <button
                 onClick={handleDraw}
-                disabled={!question.trim()}
+                disabled={!question.trim() || authed === null}
                 style={{
                   width: "100%",
                   padding: "14px 24px",
-                  background: question.trim()
+                  background: question.trim() && authed !== null
                     ? "linear-gradient(135deg, #d4a855, #f0d78c)"
                     : "rgba(212,168,85,0.2)",
-                  color: question.trim() ? "#0a0a1a" : "rgba(192,192,208,0.4)",
+                  color: question.trim() && authed !== null ? "#0a0a1a" : "rgba(192,192,208,0.4)",
                   border: "none",
                   borderRadius: 12,
                   fontSize: 16,
                   fontWeight: 700,
-                  cursor: question.trim() ? "pointer" : "not-allowed",
+                  cursor: question.trim() && authed !== null ? "pointer" : "not-allowed",
                   fontFamily: "inherit",
-                  boxShadow: question.trim() ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
+                  boxShadow: question.trim() && authed !== null ? "0 8px 24px rgba(212,168,85,0.25)" : "none",
                 }}
               >
-                {t("✦ 抽一卦", "✦ Draw One Hexagram", "✦ 一卦を引く", "✦ 한 괘 뽑기")}
+                {authed === null
+                  ? t("載入中…", "Loading…", "読み込み中…", "로딩 중…")
+                  : t("✦ 抽一卦", "✦ Draw One Hexagram", "✦ 一卦を引く", "✦ 한 괘 뽑기")}
               </button>
             </motion.div>
           )}
