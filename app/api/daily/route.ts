@@ -22,6 +22,8 @@ import {
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
+import { buildGuestFingerprint } from "@/lib/guestYesnoLimit";
+import { tryConsumeGuestDaily } from "@/lib/guestDailyLimit";
 
 type Locale = "zh" | "en" | "ja" | "ko";
 function pickStr(
@@ -81,38 +83,64 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in for daily card" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+    const dateKey = taipeiTodayKey();
+
+    // phase 36:訪客累計 3 天免費期 fingerprint 限流
+    const isGuest = !user;
+    let guestFingerprint: string | null = null;
+    let guestDaysRemaining = 0;
+    if (isGuest) {
+      const fp = buildGuestFingerprint(request.headers);
+      const decision = await tryConsumeGuestDaily(fp, "tarot");
+      if (!decision.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "GUEST_LIMIT_REACHED",
+            reason: decision.reason,
+            daysRemaining: decision.daysRemaining,
+            message: pickStr(
+              safeLocale,
+              "訪客 3 天免費期已用完。登入即可繼續每日一卡,首次登入贈送 30 點 🎁",
+              "Your 3-day guest free trial is over. Sign in to continue — 30 free credits on first login 🎁",
+              "ゲスト 3 日間の無料体験が終了しました。ログインで続行 — 初回 30 ポイント贈呈 🎁",
+              "게스트 3일 무료 체험이 끝났습니다. 로그인하면 계속 — 첫 로그인 30 포인트 증정 🎁"
+            ),
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      guestFingerprint = fp;
+      guestDaysRemaining = decision.daysRemaining;
     }
 
     let isActiveSubscriber = false;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_active")
-      .eq("id", user.id)
-      .maybeSingle();
-    isActiveSubscriber = Boolean(profile?.is_active);
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", user.id)
+        .maybeSingle();
+      isActiveSubscriber = Boolean(profile?.is_active);
+    }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    // 同日重抽 → 不再扣點。查 credit_transactions 今天有沒有 spend_daily 記錄
-    const dateKey = taipeiTodayKey();
-    const admin = createAdminClient();
-    const startOfDay = new Date(`${dateKey}T00:00:00+08:00`).toISOString();
-    const { data: existingTx } = await admin
-      .from("credit_transactions")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("reason", "spend_daily")
-      .gte("created_at", startOfDay)
-      .limit(1);
-
-    const alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
+    // 同日重抽 → 不再扣點(訪客本來就不扣點)
+    let alreadyChargedToday = false;
+    if (user) {
+      const admin = createAdminClient();
+      const startOfDay = new Date(`${dateKey}T00:00:00+08:00`).toISOString();
+      const { data: existingTx } = await admin
+        .from("credit_transactions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("reason", "spend_daily")
+        .gte("created_at", startOfDay)
+        .limit(1);
+      alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
+    }
 
     const dailyCost = await getCreditCost("DAILY");
-    if (!alreadyChargedToday) {
+    if (user && !alreadyChargedToday) {
       try {
         await spendCredits({
           userId: user.id,
@@ -144,17 +172,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 抽今天的牌(deterministic)
-    const drawn = drawCardForUser(user.id, dateKey);
+    // 訪客用 fingerprint 當 seed,登入用戶用 user.id —— 同台裝置/帳號同日抽到同一張
+    const drawn = drawCardForUser(user?.id ?? guestFingerprint!, dateKey);
     const card = drawn.card;
     const isReversed = drawn.isReversed;
 
-    // 卡牌收藏 — 只在「真正首次扣點」當下記錄,同日重抽不重複寫入
-    // (失敗不影響 daily 主流程,helper 內部已 try-catch)
+    // 卡牌收藏 — 訪客不入收集,登入用戶且首次扣點才記錄
     let collectionIsNew = false;
     let collectionCount = 0;
     let collectionRewards = 0;
-    if (!alreadyChargedToday) {
+    if (user && !alreadyChargedToday) {
       const r = await recordCardObtained({
         userId: user.id,
         collectionType: "tarot",
@@ -272,19 +299,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new Response(readable, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        "X-Daily-CardId": card.id,
-        "X-Daily-Reversed": isReversed ? "1" : "0",
-        "X-Daily-Date": dateKey,
-        "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
-        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
-        "X-Collection-Count": String(collectionCount),
-        "X-Collection-Rewards": String(collectionRewards),
-      },
-    });
+    const respHeaders: Record<string, string> = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+      "X-Daily-CardId": card.id,
+      "X-Daily-Reversed": isReversed ? "1" : "0",
+      "X-Daily-Date": dateKey,
+      "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
+      "X-Collection-IsNew": collectionIsNew ? "1" : "0",
+      "X-Collection-Count": String(collectionCount),
+      "X-Collection-Rewards": String(collectionRewards),
+    };
+    if (isGuest) {
+      respHeaders["X-Guest-Daily-DaysRemaining"] = String(guestDaysRemaining);
+    }
+    return new Response(readable, { headers: respHeaders });
   } catch (error) {
     console.error("Daily API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get daily card" }), {

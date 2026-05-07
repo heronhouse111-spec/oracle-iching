@@ -22,6 +22,8 @@ import {
 import { withSafetyPreamble } from "@/lib/ai/guardrail";
 import { recordCardObtained } from "@/lib/cardCollection";
 import { getCreditCost } from "@/lib/creditCostsDb";
+import { buildGuestFingerprint } from "@/lib/guestYesnoLimit";
+import { tryConsumeGuestDaily } from "@/lib/guestDailyLimit";
 
 /** 取台北今天日期字串 (YYYY-MM-DD, UTC+8) */
 function taipeiTodayKey(): string {
@@ -77,38 +79,67 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return new Response(
-        JSON.stringify({ error: "LOGIN_REQUIRED", message: "Please sign in for daily hexagram" }),
-        { status: 401, headers: { "Content-Type": "application/json" } }
-      );
+    const dateKey = taipeiTodayKey();
+
+    // ──────────────────────────────────────────
+    // phase 36:訪客累計 3 天免費期(用 fingerprint 限流 + seed 抽卦)
+    // 通過 → 走訪客版分支(不扣點、不入 collection、用 fp 當 seed 抽卦)
+    // 不通過 → 401 GUEST_LIMIT_REACHED → 前端彈登入 modal
+    // ──────────────────────────────────────────
+    let isGuest = !user;
+    let guestFingerprint: string | null = null;
+    let guestDaysRemaining = 0;
+    if (isGuest) {
+      const fp = buildGuestFingerprint(request.headers);
+      const decision = await tryConsumeGuestDaily(fp, "iching");
+      if (!decision.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "GUEST_LIMIT_REACHED",
+            reason: decision.reason,
+            daysRemaining: decision.daysRemaining,
+            message: pickStr(
+              "訪客 3 天免費期已用完。登入即可繼續每日一卦,首次登入贈送 30 點 🎁",
+              "Your 3-day guest free trial is over. Sign in to continue — 30 free credits on first login 🎁",
+              "ゲスト 3 日間の無料体験が終了しました。ログインで続行 — 初回 30 ポイント贈呈 🎁",
+              "게스트 3일 무료 체험이 끝났습니다. 로그인하면 계속 — 첫 로그인 30 포인트 증정 🎁"
+            ),
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      guestFingerprint = fp;
+      guestDaysRemaining = decision.daysRemaining;
     }
 
     let isActiveSubscriber = false;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_active")
-      .eq("id", user.id)
-      .maybeSingle();
-    isActiveSubscriber = Boolean(profile?.is_active);
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", user.id)
+        .maybeSingle();
+      isActiveSubscriber = Boolean(profile?.is_active);
+    }
     const persona = await resolvePersonaServer(personaId, isActiveSubscriber);
 
-    // 同日重抽 → 不再扣點
-    const dateKey = taipeiTodayKey();
-    const admin = createAdminClient();
-    const startOfDay = new Date(`${dateKey}T00:00:00+08:00`).toISOString();
-    const { data: existingTx } = await admin
-      .from("credit_transactions")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("reason", "spend_daily_iching")
-      .gte("created_at", startOfDay)
-      .limit(1);
-
-    const alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
+    // 同日重抽 → 不再扣點(訪客本來就不扣點,跳過此檢查)
+    let alreadyChargedToday = false;
+    if (user) {
+      const admin = createAdminClient();
+      const startOfDay = new Date(`${dateKey}T00:00:00+08:00`).toISOString();
+      const { data: existingTx } = await admin
+        .from("credit_transactions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("reason", "spend_daily_iching")
+        .gte("created_at", startOfDay)
+        .limit(1);
+      alreadyChargedToday = Array.isArray(existingTx) && existingTx.length > 0;
+    }
 
     const dailyCost = await getCreditCost("DAILY");
-    if (!alreadyChargedToday) {
+    if (user && !alreadyChargedToday) {
       try {
         await spendCredits({
           userId: user.id,
@@ -139,14 +170,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const hex = drawHexagramForUser(user.id, dateKey);
+    // 訪客用 fingerprint 當 seed,登入用戶用 user.id —— 同台裝置 / 同帳號同日抽到同一卦
+    const hex = drawHexagramForUser(user?.id ?? guestFingerprint!, dateKey);
     const hexName = pickStr(hex.nameZh, hex.nameEn, hex.nameJa, hex.nameKo);
 
-    // 卡牌收藏 — 同 daily 塔羅,只在首次扣點當下記錄
+    // 卡牌收藏 — 訪客不入收集(無帳號),登入用戶且首次扣點才記錄
     let collectionIsNew = false;
     let collectionCount = 0;
     let collectionRewards = 0;
-    if (!alreadyChargedToday) {
+    if (user && !alreadyChargedToday) {
       const r = await recordCardObtained({
         userId: user.id,
         collectionType: "iching",
@@ -252,18 +284,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new Response(readable, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-        "X-Daily-HexagramNumber": String(hex.number),
-        "X-Daily-Date": dateKey,
-        "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
-        "X-Collection-IsNew": collectionIsNew ? "1" : "0",
-        "X-Collection-Count": String(collectionCount),
-        "X-Collection-Rewards": String(collectionRewards),
-      },
-    });
+    const respHeaders: Record<string, string> = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+      "X-Daily-HexagramNumber": String(hex.number),
+      "X-Daily-Date": dateKey,
+      "X-Daily-Reread": alreadyChargedToday ? "1" : "0",
+      "X-Collection-IsNew": collectionIsNew ? "1" : "0",
+      "X-Collection-Count": String(collectionCount),
+      "X-Collection-Rewards": String(collectionRewards),
+    };
+    if (isGuest) {
+      respHeaders["X-Guest-Daily-DaysRemaining"] = String(guestDaysRemaining);
+    }
+    return new Response(readable, { headers: respHeaders });
   } catch (error) {
     console.error("IChing daily API error:", error);
     return new Response(JSON.stringify({ error: "Failed to get daily hexagram" }), {
