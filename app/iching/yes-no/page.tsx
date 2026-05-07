@@ -28,8 +28,9 @@ import {
   parseInsufficientCredits,
 } from "@/lib/clientCredits";
 import {
-  isGuestYesnoAvailableToday,
+  getGuestYesnoStatus,
   markGuestYesnoUsed,
+  GUEST_YESNO_FREE_DAYS,
 } from "@/lib/clientGuestYesno";
 
 type Step = "ask" | "drawing" | "result";
@@ -71,18 +72,25 @@ export default function IChingYesNoPage() {
     };
   }, []);
 
-  // Guest 今日是否還有免費額度(只在 authed=false 時生效)
-  const guestUsedToday = authed === false && !isGuestYesnoAvailableToday();
+  // Guest 免費期狀態(只在 authed=false 時生效) — 計算 banner 與限流共用
+  // status 是純 client-side 計算,authed 變化時也要重算,key 用 authed 觸發
+  const guestStatus =
+    authed === false
+      ? getGuestYesnoStatus()
+      : { available: true, reason: "ok" as const, daysUsed: 0, daysRemaining: GUEST_YESNO_FREE_DAYS };
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
 
   const handleDraw = async () => {
     if (!question.trim()) return;
 
-    // phase 35:訪客每日限 1 次,已用過 → 直接彈登入提示(贈 30 點)
-    if (authed === false && !isGuestYesnoAvailableToday()) {
-      setLoginOpen(true);
-      return;
+    // phase 35.5:訪客累計可免費 10 天,每天 1 次。觸限或當日用過 → 彈登入提示。
+    if (authed === false) {
+      const s = getGuestYesnoStatus();
+      if (!s.available) {
+        setLoginOpen(true);
+        return;
+      }
     }
 
     setStep("drawing");
@@ -273,39 +281,64 @@ export default function IChingYesNoPage() {
                 </div>
               </div>
 
-              {/* 訪客每日 1 次免費提示 — 已用過 → 顯示登入引導,未用過 → 顯示「今日免費 1 次」 */}
-              {authed === false && (
-                <div
-                  style={{
-                    marginBottom: 12,
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    fontSize: 12,
-                    lineHeight: 1.55,
-                    border: guestUsedToday
-                      ? "1px solid rgba(212,168,85,0.45)"
-                      : "1px solid rgba(110,231,183,0.35)",
-                    background: guestUsedToday
-                      ? "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(212,168,85,0.02))"
-                      : "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02))",
-                    color: guestUsedToday ? "#d4a855" : "#6ee7b7",
-                  }}
-                >
-                  {guestUsedToday
-                    ? t(
-                        "你今日訪客免費額度已用完。登入即可繼續占卜,首次登入贈送 30 點 🎁",
-                        "Today's guest free reading is used. Sign in to continue — 30 free credits on first login 🎁",
-                        "本日のゲスト無料枠を使い切りました。ログインで続行 — 初回 30 ポイント贈呈 🎁",
-                        "오늘 게스트 무료 사용량을 다 썼습니다. 로그인하면 계속 점치기 가능 — 첫 로그인 30 포인트 증정 🎁"
-                      )
-                    : t(
-                        "✨ 訪客今日免費 1 次。登入會員可解鎖每日簽到 + 完整紀錄,首次登入贈送 30 點",
-                        "✨ Guests get 1 free reading per day. Sign in to unlock daily check-in + full history — 30 free credits on first login",
-                        "✨ ゲストは 1 日 1 回無料。ログインでデイリーチェックイン + 履歴解放、初回 30 ポイント贈呈",
-                        "✨ 게스트는 하루 1회 무료. 로그인하면 매일 출석체크 + 기록 해제, 첫 로그인 30 포인트 증정"
-                      )}
-                </div>
-              )}
+              {/* 訪客 10 天免費期提示(phase 35.5)— 三狀態:
+                    可用    → 綠色「✨ 還剩 X 天 / 共 10 天」
+                    今日已用 → 金色「明天再來,還剩 X 天免費」
+                    額度用盡 → 紅金「免費期已結束,登入贈 30 點 🎁」 */}
+              {authed === false && (() => {
+                const isExhausted = guestStatus.reason === "limit_reached";
+                const isUsedToday = guestStatus.reason === "used_today";
+                const isAvailable = guestStatus.available;
+                const accent = isExhausted ? "#fca5a5" : isUsedToday ? "#d4a855" : "#6ee7b7";
+                const bgFrom = isExhausted
+                  ? "rgba(248,113,113,0.10)"
+                  : isUsedToday
+                    ? "rgba(212,168,85,0.10)"
+                    : "rgba(16,185,129,0.08)";
+                const borderColor = isExhausted
+                  ? "rgba(248,113,113,0.45)"
+                  : isUsedToday
+                    ? "rgba(212,168,85,0.45)"
+                    : "rgba(110,231,183,0.35)";
+
+                return (
+                  <div
+                    style={{
+                      marginBottom: 12,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      fontSize: 12,
+                      lineHeight: 1.55,
+                      border: `1px solid ${borderColor}`,
+                      background: `linear-gradient(135deg, ${bgFrom}, rgba(0,0,0,0.02))`,
+                      color: accent,
+                    }}
+                  >
+                    {isExhausted
+                      ? t(
+                          `你的訪客 ${GUEST_YESNO_FREE_DAYS} 天免費期已用完。登入即可繼續占卜,首次登入贈送 30 點 🎁`,
+                          `Your ${GUEST_YESNO_FREE_DAYS}-day guest free trial is over. Sign in to continue — 30 free credits on first login 🎁`,
+                          `ゲスト ${GUEST_YESNO_FREE_DAYS} 日間の無料体験が終了しました。ログインで続行 — 初回 30 ポイント贈呈 🎁`,
+                          `게스트 ${GUEST_YESNO_FREE_DAYS}일 무료 체험이 끝났습니다. 로그인하면 계속 점치기 — 첫 로그인 30 포인트 증정 🎁`
+                        )
+                      : isUsedToday
+                        ? t(
+                            `你今日已用過免費 Yes/No(訪客剩 ${guestStatus.daysRemaining} 天免費期)。明天再來,或登入贈 30 點 🎁`,
+                            `Today's free Yes/No used (${guestStatus.daysRemaining} guest days left). Come back tomorrow, or sign in for 30 free credits 🎁`,
+                            `本日の無料 Yes/No を使用済(残り ${guestStatus.daysRemaining} 日)。明日また、またはログインで 30 ポイント贈呈 🎁`,
+                            `오늘 무료 Yes/No 사용 완료 (남은 무료 ${guestStatus.daysRemaining}일). 내일 다시 오거나 로그인하면 30 포인트 증정 🎁`
+                          )
+                        : isAvailable
+                          ? t(
+                              `✨ 訪客免費期還剩 ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS} 天,每日 1 次。登入會員贈 30 點 + 解鎖每日簽到`,
+                              `✨ ${guestStatus.daysRemaining} of ${GUEST_YESNO_FREE_DAYS} guest free days left, 1 reading per day. Sign in for 30 free credits + daily check-in`,
+                              `✨ ゲスト無料期間 残り ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS} 日、1 日 1 回。ログインで 30 ポイント贈呈 + デイリーチェックイン解放`,
+                              `✨ 게스트 무료 ${guestStatus.daysRemaining} / ${GUEST_YESNO_FREE_DAYS}일 남음, 하루 1회. 로그인하면 30 포인트 증정 + 매일 출석체크 해제`
+                            )
+                          : null}
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={handleDraw}
