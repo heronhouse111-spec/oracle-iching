@@ -56,6 +56,14 @@ export default function DailyPage() {
     count: number;
     rewards: number;
   }>({ show: false, isNew: true, cardName: "", count: 0, rewards: 0 });
+  // phase 36:訪客 3 天免費期 banner
+  const [guestStatus, setGuestStatus] = useState<{
+    authenticated: boolean;
+    daysRemaining: number;
+    usedToday: boolean;
+    limit: number;
+    allowed: boolean;
+  } | null>(null);
   const ranRef = useRef(false);
 
   const card = cardId ? tarotDeck.find((c) => c.id === cardId) : null;
@@ -67,23 +75,27 @@ export default function DailyPage() {
   }, []);
 
   async function start() {
-    if (!isSupabaseConfigured) {
-      setPhase("guest");
-      return;
-    }
+    // phase 36:訪客也直接 fetchDaily,server 用 fingerprint 限流。banner status 併發拉。
     setPhase("loading");
+    void fetchGuestStatus();
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const sb = createClient();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) {
-        setPhase("guest");
-        return;
-      }
       await fetchDaily();
     } catch (e) {
       console.error(e);
       setPhase("guest");
+    }
+  }
+
+  async function fetchGuestStatus() {
+    try {
+      const res = await fetch("/api/daily/guest-status?kind=tarot", {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setGuestStatus(data);
+    } catch {
+      /* banner 不關鍵 */
     }
   }
 
@@ -100,8 +112,10 @@ export default function DailyPage() {
       });
 
       if (res.status === 401) {
+        // phase 36:訪客 3 天免費期用完才會 401
         setIsStreaming(false);
         setPhase("guest");
+        void fetchGuestStatus(); // 重抓 banner 反映用盡
         setLoginOpen(true);
         return;
       }
@@ -239,6 +253,49 @@ export default function DailyPage() {
                   )}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* phase 36:訪客 3 天免費期 banner */}
+          {guestStatus && !guestStatus.authenticated && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "10px 14px",
+                borderRadius: 10,
+                fontSize: 12,
+                lineHeight: 1.55,
+                border: !guestStatus.allowed
+                  ? "1px solid rgba(248,113,113,0.45)"
+                  : "1px solid rgba(110,231,183,0.35)",
+                background: !guestStatus.allowed
+                  ? "linear-gradient(135deg, rgba(248,113,113,0.10), rgba(0,0,0,0.02))"
+                  : "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(0,0,0,0.02))",
+                color: !guestStatus.allowed ? "#fca5a5" : "#6ee7b7",
+                display: "inline-block",
+                maxWidth: 480,
+              }}
+            >
+              {!guestStatus.allowed
+                ? t(
+                    `你的訪客 ${guestStatus.limit} 天免費期已用完。登入即可繼續每日一卡,首次登入贈送 30 點 🎁`,
+                    `Your ${guestStatus.limit}-day guest free trial is over. Sign in — 30 free credits on first login 🎁`,
+                    `ゲスト ${guestStatus.limit} 日間の無料体験が終了。ログインで続行、初回 30 ポイント贈呈 🎁`,
+                    `게스트 ${guestStatus.limit}일 무료 체험 종료. 로그인하면 계속 — 첫 로그인 30 포인트 증정 🎁`
+                  )
+                : guestStatus.usedToday
+                  ? t(
+                      `✨ 訪客今日已抽過(剩 ${guestStatus.daysRemaining} 天免費期)。登入會員贈 30 點`,
+                      `✨ Today's draw used (${guestStatus.daysRemaining} guest days left). Sign in for 30 free credits.`,
+                      `✨ 本日抽出済(残り ${guestStatus.daysRemaining} 日)。ログインで 30 ポイント贈呈。`,
+                      `✨ 오늘 이미 뽑음 (남은 ${guestStatus.daysRemaining}일). 로그인 시 30 포인트 증정.`
+                    )
+                  : t(
+                      `✨ 訪客免費期還剩 ${guestStatus.daysRemaining} / ${guestStatus.limit} 天。登入會員贈 30 點 + 卡牌收藏紀錄永久保留`,
+                      `✨ ${guestStatus.daysRemaining} of ${guestStatus.limit} guest free days left. Sign in for 30 free credits + permanent collection history.`,
+                      `✨ ゲスト無料 残り ${guestStatus.daysRemaining}/${guestStatus.limit} 日。ログインで 30 ポイント + コレクション永久保存。`,
+                      `✨ 게스트 무료 ${guestStatus.daysRemaining}/${guestStatus.limit}일 남음. 로그인하면 30 포인트 + 컬렉션 영구 저장.`
+                    )}
             </div>
           )}
         </div>
@@ -429,7 +486,23 @@ export default function DailyPage() {
         </AnimatePresence>
       </div>
 
-      <LoginOptionsModal open={loginOpen} onClose={() => setLoginOpen(false)} next="/daily" />
+      <LoginOptionsModal
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        next="/daily"
+        title={t(
+          "登入即可繼續每日一卡",
+          "Sign in to keep your daily card",
+          "ログインで毎日のカードを継続",
+          "로그인하여 매일의 카드 계속"
+        )}
+        subtitle={t(
+          "🎁 首次登入贈送 30 點(夠占 6 次易經 / 塔羅、15 次每日一卡)",
+          "🎁 Sign up bonus: 30 free credits (≈ 6 readings or 15 daily draws)",
+          "🎁 初回ログインで 30 ポイント贈呈(易経・タロット 6 回分相当)",
+          "🎁 첫 로그인 시 30 포인트 증정 (점 6회 분량)"
+        )}
+      />
       <InsufficientCreditsModal
         open={creditsModal.open}
         required={creditsModal.required}
