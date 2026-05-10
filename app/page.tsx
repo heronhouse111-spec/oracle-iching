@@ -2871,153 +2871,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* ===== 直接入口 CTA — 點下去跳到 /categories?type=...,
-                    分類選完再帶 ?type & ?category 回首頁進到 question step。
-                    舊版本是同一頁 scroll-into-view + 分類 grid,易誤點且資訊密度過高。 ===== */}
-              <p
-                style={{
-                  textAlign: "center",
-                  color: "rgba(212,168,85,0.85)",
-                  fontSize: 13,
-                  marginBottom: 10,
-                  letterSpacing: 0.5,
-                }}
-              >
-                {t(
-                  "選擇占卜方式,接著挑問事類別",
-                  "Pick a method, then a topic",
-                  "占いの方法を選び、次にテーマを",
-                  "방식을 고르고, 이어서 주제를"
-                )}
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
-                <Link
-                  href="/categories?type=iching"
-                  style={{
-                    display: "block",
-                    padding: 0,
-                    textAlign: "left",
-                    textDecoration: "none",
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    border: "1px solid rgba(212,168,85,0.25)",
-                    background: "rgba(13,13,43,0.8)",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <HeroImage url={uiImages["cta.iching"]} aspectRatio="4/3" />
-                  <div style={{ padding: "12px 14px 14px" }}>
-                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
-                      {t("易經占卜", "I Ching", "易経占い", "주역 점")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                      {t(
-                        "4 種主流占卜可選",
-                        "4 mainstream methods",
-                        "4 種類の主要占法",
-                        "4가지 주요 점법"
-                      )}
-                    </div>
-                  </div>
-                </Link>
-                <Link
-                  href="/categories?type=tarot"
-                  style={{
-                    display: "block",
-                    padding: 0,
-                    textAlign: "left",
-                    textDecoration: "none",
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    border: "1px solid rgba(212,168,85,0.25)",
-                    background: "rgba(13,13,43,0.8)",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <HeroImage url={uiImages["cta.tarot"]} aspectRatio="4/3" />
-                  <div style={{ padding: "12px 14px 14px" }}>
-                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
-                      {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
-                    </div>
-                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-                      {t(
-                        "4 種經典牌陣可選",
-                        "4 classic spreads",
-                        "4種類のスプレッド",
-                        "4가지 대표 스프레드"
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-
-              {/* ===== Trust signal strip ===== */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: 8,
-                  padding: "12px 8px",
-                  marginBottom: 24,
-                  borderTop: "1px solid rgba(212,168,85,0.15)",
-                  borderBottom: "1px solid rgba(212,168,85,0.15)",
-                }}
-              >
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      color: "#d4a855",
-                      fontWeight: 700,
-                      fontSize: 18,
-                      fontFamily: "'Noto Serif TC', serif",
-                    }}
-                  >
-                    64
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("卦完整解析", "Hexagrams", "卦の完全解析", "괘 완전 해석")}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    textAlign: "center",
-                    borderLeft: "1px solid rgba(212,168,85,0.12)",
-                    borderRight: "1px solid rgba(212,168,85,0.12)",
-                  }}
-                >
-                  <div
-                    style={{
-                      color: "#d4a855",
-                      fontWeight: 700,
-                      fontSize: 18,
-                      fontFamily: "'Noto Serif TC', serif",
-                    }}
-                  >
-                    78
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("塔羅牌百科", "Tarot cards", "タロット百科", "타로 백과")}
-                  </div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      color: "#d4a855",
-                      fontWeight: 700,
-                      fontSize: 18,
-                      fontFamily: "'Noto Serif TC', serif",
-                    }}
-                  >
-                    5+
-                  </div>
-                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
-                    {t("經典牌陣", "Classic spreads", "定番スプレッド", "대표 스프레드")}
-                  </div>
-                </div>
-              </div>
-
-              {/* 分類 grid 已搬到 /categories;首頁不再內嵌 — 由上方 CTA 帶過去。 */}
-
               {/* ===== Free tools ===== */}
               <div style={{ marginTop: 36 }}>
                 <div style={{ textAlign: "center", marginBottom: 14 }}>
@@ -3164,6 +3017,155 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
+
+              {/* ===== 直接入口 CTA — 點下去跳到 /categories?type=...,
+                    分類選完再帶 ?type & ?category 回首頁進到 question step。
+                    舊版本是同一頁 scroll-into-view + 分類 grid,易誤點且資訊密度過高。
+                    擺在 Free tools 下方:訪客先看到免費 Yes/No 入口降低門檻,再導去完整占卜。 ===== */}
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "rgba(212,168,85,0.85)",
+                  fontSize: 13,
+                  marginTop: 36,
+                  marginBottom: 10,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {t(
+                  "選擇占卜方式,接著挑問事類別",
+                  "Pick a method, then a topic",
+                  "占いの方法を選び、次にテーマを",
+                  "방식을 고르고, 이어서 주제를"
+                )}
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 22 }}>
+                <Link
+                  href="/categories?type=iching"
+                  style={{
+                    display: "block",
+                    padding: 0,
+                    textAlign: "left",
+                    textDecoration: "none",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    border: "1px solid rgba(212,168,85,0.25)",
+                    background: "rgba(13,13,43,0.8)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <HeroImage url={uiImages["cta.iching"]} aspectRatio="4/3" />
+                  <div style={{ padding: "12px 14px 14px" }}>
+                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
+                      {t("易經占卜", "I Ching", "易経占い", "주역 점")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                      {t(
+                        "4 種主流占卜可選",
+                        "4 mainstream methods",
+                        "4 種類の主要占法",
+                        "4가지 주요 점법"
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <Link
+                  href="/categories?type=tarot"
+                  style={{
+                    display: "block",
+                    padding: 0,
+                    textAlign: "left",
+                    textDecoration: "none",
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    border: "1px solid rgba(212,168,85,0.25)",
+                    background: "rgba(13,13,43,0.8)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <HeroImage url={uiImages["cta.tarot"]} aspectRatio="4/3" />
+                  <div style={{ padding: "12px 14px 14px" }}>
+                    <div style={{ color: "#d4a855", fontWeight: 700, fontSize: 16 }}>
+                      {t("塔羅占卜", "Tarot", "タロット占い", "타로 점")}
+                    </div>
+                    <div style={{ color: "rgba(192,192,208,0.7)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                      {t(
+                        "4 種經典牌陣可選",
+                        "4 classic spreads",
+                        "4種類のスプレッド",
+                        "4가지 대표 스프레드"
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              </div>
+
+              {/* ===== Trust signal strip ===== */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 8,
+                  padding: "12px 8px",
+                  marginBottom: 24,
+                  borderTop: "1px solid rgba(212,168,85,0.15)",
+                  borderBottom: "1px solid rgba(212,168,85,0.15)",
+                }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    64
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("卦完整解析", "Hexagrams", "卦の完全解析", "괘 완전 해석")}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    borderLeft: "1px solid rgba(212,168,85,0.12)",
+                    borderRight: "1px solid rgba(212,168,85,0.12)",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    78
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("塔羅牌百科", "Tarot cards", "タロット百科", "타로 백과")}
+                  </div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      color: "#d4a855",
+                      fontWeight: 700,
+                      fontSize: 18,
+                      fontFamily: "'Noto Serif TC', serif",
+                    }}
+                  >
+                    5+
+                  </div>
+                  <div style={{ color: "rgba(192,192,208,0.65)", fontSize: 10, marginTop: 2 }}>
+                    {t("經典牌陣", "Classic spreads", "定番スプレッド", "대표 스프레드")}
+                  </div>
+                </div>
+              </div>
+
+              {/* 分類 grid 已搬到 /categories;首頁不再內嵌 — 由上方 CTA 帶過去。 */}
 
               {/* ===== Dual system showcase ===== */}
               <div style={{ marginTop: 36, marginBottom: 8 }}>
