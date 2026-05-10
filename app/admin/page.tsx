@@ -5,10 +5,7 @@ import StatCard from "@/components/admin/StatCard";
 import TrendChart from "@/components/admin/TrendChart";
 import GuestMemberStatsRow from "@/components/admin/GuestMemberStatsRow";
 import CategoryBreakdown from "@/components/admin/CategoryBreakdown";
-import TopHexagrams from "@/components/admin/TopHexagrams";
 import LocaleSplit from "@/components/admin/LocaleSplit";
-import RecentDivinations from "@/components/admin/RecentDivinations";
-import RecentUsers from "@/components/admin/RecentUsers";
 import { getAdminUser, loadAdminStats, loadCollectionStats } from "@/lib/admin/stats";
 import { loadRevenueStats } from "@/lib/admin/revenue";
 
@@ -426,24 +423,10 @@ export default async function AdminDashboardPage() {
             />
           </section>
 
-          {/* 分類 + 語系 + 熱門卦 */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* 分類 + 語系 */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <CategoryBreakdown data={stats.categoryCounts} locale={LOCALE} />
             <LocaleSplit data={stats.localeCounts} locale={LOCALE} />
-            <TopHexagrams data={stats.topHexagrams} locale={LOCALE} />
-          </section>
-
-          {/* 活動流 + 用戶 */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <div className="lg:col-span-2">
-              <RecentDivinations
-                rows={stats.recentDivinations}
-                locale={LOCALE}
-              />
-            </div>
-            <div>
-              <RecentUsers rows={stats.recentUsers} locale={LOCALE} />
-            </div>
           </section>
 
           {/* ── 管理工具導覽 ── */}

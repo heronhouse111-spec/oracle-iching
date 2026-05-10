@@ -9,27 +9,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-export interface DivinationRow {
-  id: string;
-  user_id: string | null;
-  question: string;
-  category: string;
-  hexagram_number: number;
-  relating_hexagram_number: number | null;
-  locale: string;
-  created_at: string;
-}
-
-export interface AdminUserRow {
-  id: string;
-  email: string | null;
-  signed_up_at: string;
-  last_sign_in_at: string | null;
-  display_name: string | null;
-  preferred_locale: string | null;
-  is_admin: boolean | null;
-}
-
 export interface DailyPoint {
   date: string; // YYYY-MM-DD
   count: number;
@@ -62,10 +41,7 @@ export interface AdminStats {
   avgPerUser: number;
   dailyTrend30d: DailyPoint[];
   categoryCounts: CategoryCount[];
-  topHexagrams: HexagramCount[];
   localeCounts: LocaleCount[];
-  recentDivinations: DivinationRow[];
-  recentUsers: AdminUserRow[];
   // 訪客 vs 會員拆分(總/今日)+ 30 日趨勢,給 dashboard 第二排卡片用
   guestDivinationsTotal: number;
   guestDivinationsToday: number;
@@ -200,9 +176,7 @@ export async function loadAdminStats(): Promise<AdminStats> {
     guestDailyWeekRes,
     guestDailyMonthRes,
     newUsers7dRes,
-    recent30dRes, // 用來計算每日趨勢 + 熱門卦 + 分類 + 語系 + 活躍使用者
-    recentDivinationsRes,
-    recentUsersRes,
+    recent30dRes, // 用來計算每日趨勢 + 分類 + 語系 + 活躍使用者
     // 訪客 vs 會員 30 日趨勢資料
     divAll30dRes,
     freeFlow30dRes,
@@ -303,7 +277,7 @@ export async function loadAdminStats(): Promise<AdminStats> {
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .gte("created_at", sevenDaysAgo.toISOString()),
-    // Admin 目前的趨勢/分類/卦象分析只針對易經紀錄;塔羅統計後續再補(需另外聚合)
+    // 趨勢/分類/語系/活躍使用者用的 30 日易經紀錄(塔羅統計後續再補)
     supabase
       .from("divinations")
       .select("id,user_id,category,hexagram_number,locale,created_at")
@@ -311,21 +285,6 @@ export async function loadAdminStats(): Promise<AdminStats> {
       .gte("created_at", thirtyDaysAgo.toISOString())
       .order("created_at", { ascending: false })
       .limit(5000),
-    supabase
-      .from("divinations")
-      .select(
-        "id,user_id,question,category,hexagram_number,relating_hexagram_number,locale,created_at"
-      )
-      .eq("divine_type", "iching")
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("admin_users_view")
-      .select(
-        "id,email,signed_up_at,last_sign_in_at,display_name,preferred_locale,is_admin"
-      )
-      .order("signed_up_at", { ascending: false })
-      .limit(10),
     // 訪客 vs 會員 30 日趨勢用 — 各事件源只取 created_at/used_at 一欄,JS 端 bucket
     supabase
       .from("divinations")
@@ -433,19 +392,6 @@ export async function loadAdminStats(): Promise<AdminStats> {
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count);
 
-  // ── 熱門卦象 ─────────────────────────────────────
-  const hexMap = new Map<number, number>();
-  for (const row of recent30d) {
-    hexMap.set(
-      row.hexagram_number,
-      (hexMap.get(row.hexagram_number) ?? 0) + 1
-    );
-  }
-  const topHexagrams: HexagramCount[] = Array.from(hexMap.entries())
-    .map(([hexagram_number, count]) => ({ hexagram_number, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
   // ── 語系分布 ─────────────────────────────────────
   const localeMap = new Map<string, number>();
   for (const row of recent30d) {
@@ -529,10 +475,7 @@ export async function loadAdminStats(): Promise<AdminStats> {
     avgPerUser,
     dailyTrend30d,
     categoryCounts,
-    topHexagrams,
     localeCounts,
-    recentDivinations: (recentDivinationsRes.data ?? []) as DivinationRow[],
-    recentUsers: (recentUsersRes.data ?? []) as AdminUserRow[],
     guestDivinationsTotal,
     guestDivinationsToday,
     memberDivinationsTotal,
