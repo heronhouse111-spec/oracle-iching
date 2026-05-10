@@ -100,6 +100,21 @@ export default async function RootLayout({
   return (
     <html lang="zh-Hant">
       <head>
+        {/*
+          字體載入策略:CJK 字體保留 Google Fonts CDN(放棄 next/font 自架),
+          因為 Google 用 unicode-range 切片只下載頁面實際出現的字,而 next/font
+          的 self-host 會把整個 chinese-traditional subset(數 MB)全部打包進
+          deploy。對 CJK 來說 CDN 反而更小更快。
+
+          優化:加 preconnect 讓 fonts.googleapis.com / fonts.gstatic.com 的
+          DNS + TCP + TLS handshake 在 stylesheet 解析前就開始,可省 ~100-300ms。
+        */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
           rel="stylesheet"
