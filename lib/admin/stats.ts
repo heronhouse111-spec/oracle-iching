@@ -73,6 +73,9 @@ export interface AdminStats {
   memberDivinationsToday: number;
   guestDailyTrend30d: DailyPoint[];
   memberDailyTrend30d: DailyPoint[];
+  // 音樂功能扣點累計(跟占卜分開,因為跟占卜次數無關)
+  musicGenerateTotal: number;
+  musicCollectTotal: number;
 }
 
 function startOfDay(d: Date): Date {
@@ -138,6 +141,18 @@ const EXTRA_DIVINATION_SPENDS = [
   "spend_tarot_followup",
 ];
 
+// 音樂功能扣點 reason — 給 dashboard 「生成 AI 背景音樂次數 / 收藏音樂作品次數」卡片用。
+// 故意把 retry / subscriber 變體也納入同一張卡,因為使用者在意的是「總共做了幾次」,
+// 不在乎那一次走 retry 折扣或訂閱半價。
+const MUSIC_GENERATE_REASONS = [
+  "spend_music_generate",
+  "spend_music_generate_retry",
+];
+const MUSIC_COLLECT_REASONS = [
+  "spend_music_collect",
+  "spend_music_collect_subscriber",
+];
+
 /** 一次拉齊後台所需的統計資料。 */
 export async function loadAdminStats(): Promise<AdminStats> {
   const supabase = await createClient();
@@ -194,6 +209,9 @@ export async function loadAdminStats(): Promise<AdminStats> {
     checkin30dRes,
     guestYesno30dRes,
     guestDaily30dRes,
+    // 音樂統計卡
+    musicGenerateRes,
+    musicCollectRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase
@@ -336,6 +354,14 @@ export async function loadAdminStats(): Promise<AdminStats> {
       .select("used_at")
       .gte("used_at", thirtyDaysAgo.toISOString())
       .limit(10000),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", MUSIC_GENERATE_REASONS),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", MUSIC_COLLECT_REASONS),
   ]);
 
   const totalUsers = totalUsersRes.count ?? 0;
@@ -513,6 +539,8 @@ export async function loadAdminStats(): Promise<AdminStats> {
     memberDivinationsToday,
     guestDailyTrend30d,
     memberDailyTrend30d,
+    musicGenerateTotal: musicGenerateRes.count ?? 0,
+    musicCollectTotal: musicCollectRes.count ?? 0,
   };
 }
 

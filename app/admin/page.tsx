@@ -273,6 +273,24 @@ export default async function AdminDashboardPage() {
             }
           />
 
+          {/* 音樂功能扣點累計 — 跟占卜分開,合計兩條 reason(含 retry / subscriber 變體) */}
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard
+              label="生成 AI 背景音樂次數"
+              value={stats.musicGenerateTotal.toLocaleString()}
+              sublabel="含重試 (retry)"
+              icon="🎵"
+              accent="silver"
+            />
+            <StatCard
+              label="收藏音樂作品次數"
+              value={stats.musicCollectTotal.toLocaleString()}
+              sublabel="訂閱者 + 一般會員"
+              icon="🎧"
+              accent="emerald"
+            />
+          </section>
+
           {/* ── 今日銷售 ── */}
           <section className="mystic-card" style={{ padding: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
