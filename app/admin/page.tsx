@@ -3,6 +3,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import StatCard from "@/components/admin/StatCard";
 import TrendChart from "@/components/admin/TrendChart";
+import GuestMemberStatsRow from "@/components/admin/GuestMemberStatsRow";
 import CategoryBreakdown from "@/components/admin/CategoryBreakdown";
 import TopHexagrams from "@/components/admin/TopHexagrams";
 import LocaleSplit from "@/components/admin/LocaleSplit";
@@ -256,6 +257,21 @@ export default async function AdminDashboardPage() {
               accent="emerald"
             />
           </section>
+
+          {/* 訪客 vs 會員拆分 — 「今日」兩格可點開展開 30 日折線圖 */}
+          <GuestMemberStatsRow
+            guestTotal={stats.guestDivinationsTotal}
+            guestToday={stats.guestDivinationsToday}
+            memberTotal={stats.memberDivinationsTotal}
+            memberToday={stats.memberDivinationsToday}
+            guestTrend={stats.guestDailyTrend30d}
+            memberTrend={stats.memberDailyTrend30d}
+            memberAvgPerUser={
+              stats.totalUsers > 0
+                ? Math.round((stats.memberDivinationsTotal / stats.totalUsers) * 10) / 10
+                : 0
+            }
+          />
 
           {/* ── 今日銷售 ── */}
           <section className="mystic-card" style={{ padding: 20 }}>

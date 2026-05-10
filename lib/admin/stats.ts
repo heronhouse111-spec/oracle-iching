@@ -66,6 +66,13 @@ export interface AdminStats {
   localeCounts: LocaleCount[];
   recentDivinations: DivinationRow[];
   recentUsers: AdminUserRow[];
+  // 訪客 vs 會員拆分(總/今日)+ 30 日趨勢,給 dashboard 第二排卡片用
+  guestDivinationsTotal: number;
+  guestDivinationsToday: number;
+  memberDivinationsTotal: number;
+  memberDivinationsToday: number;
+  guestDailyTrend30d: DailyPoint[];
+  memberDailyTrend30d: DailyPoint[];
 }
 
 function startOfDay(d: Date): Date {
@@ -172,6 +179,12 @@ export async function loadAdminStats(): Promise<AdminStats> {
     recent30dRes, // 用來計算每日趨勢 + 熱門卦 + 分類 + 語系 + 活躍使用者
     recentDivinationsRes,
     recentUsersRes,
+    // 訪客 vs 會員 30 日趨勢資料
+    divAll30dRes,
+    freeFlow30dRes,
+    checkin30dRes,
+    guestYesno30dRes,
+    guestDaily30dRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase
@@ -286,6 +299,34 @@ export async function loadAdminStats(): Promise<AdminStats> {
       )
       .order("signed_up_at", { ascending: false })
       .limit(10),
+    // 訪客 vs 會員 30 日趨勢用 — 各事件源只取 created_at/used_at 一欄,JS 端 bucket
+    supabase
+      .from("divinations")
+      .select("created_at")
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("credit_transactions")
+      .select("created_at")
+      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("daily_checkins")
+      .select("used_at")
+      .not("used_at", "is", null)
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("guest_yesno_log")
+      .select("used_at")
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("guest_daily_log")
+      .select("used_at")
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
   ]);
 
   const totalUsers = totalUsersRes.count ?? 0;
@@ -392,6 +433,55 @@ export async function loadAdminStats(): Promise<AdminStats> {
   const avgPerUser =
     totalUsers > 0 ? Math.round((totalDivinations / totalUsers) * 10) / 10 : 0;
 
+  // ── 訪客 vs 會員拆分 ─────────────────────────────
+  // 訪客流量只會落在 guest_yesno_log + guest_daily_log(訪客沒帳號,進不了其他事件源)。
+  // 會員流量 = 全部 - 訪客,跟單獨各源相加同義,但用減法只需多 4 個欄位、不必再寫 sumCounts。
+  const guestDivinationsTotal =
+    (guestYesnoTotalRes.count ?? 0) + (guestDailyTotalRes.count ?? 0);
+  const guestDivinationsToday =
+    (guestYesnoTodayRes.count ?? 0) + (guestDailyTodayRes.count ?? 0);
+  const memberDivinationsTotal = totalDivinations - guestDivinationsTotal;
+  const memberDivinationsToday = divinationsToday - guestDivinationsToday;
+
+  // ── 訪客/會員 30 日趨勢 ──────────────────────────
+  const makeEmptyBucket = (): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(thirtyDaysAgo);
+      d.setDate(d.getDate() + i);
+      m.set(isoDate(d), 0);
+    }
+    return m;
+  };
+  const fillBucket = (
+    bucket: Map<string, number>,
+    rows: ReadonlyArray<Record<string, unknown>>,
+    field: "created_at" | "used_at",
+  ) => {
+    for (const r of rows) {
+      const ts = r[field];
+      if (typeof ts !== "string") continue;
+      const key = ts.slice(0, 10);
+      if (bucket.has(key)) bucket.set(key, (bucket.get(key) ?? 0) + 1);
+    }
+  };
+  const bucketToTrend = (bucket: Map<string, number>): DailyPoint[] =>
+    Array.from(bucket.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+  const memberBucket = makeEmptyBucket();
+  fillBucket(memberBucket, divAll30dRes.data ?? [], "created_at");
+  fillBucket(memberBucket, freeFlow30dRes.data ?? [], "created_at");
+  fillBucket(memberBucket, checkin30dRes.data ?? [], "used_at");
+
+  const guestBucket = makeEmptyBucket();
+  fillBucket(guestBucket, guestYesno30dRes.data ?? [], "used_at");
+  fillBucket(guestBucket, guestDaily30dRes.data ?? [], "used_at");
+
+  const memberDailyTrend30d = bucketToTrend(memberBucket);
+  const guestDailyTrend30d = bucketToTrend(guestBucket);
+
   return {
     totalUsers,
     totalAdmins,
@@ -408,6 +498,12 @@ export async function loadAdminStats(): Promise<AdminStats> {
     localeCounts,
     recentDivinations: (recentDivinationsRes.data ?? []) as DivinationRow[],
     recentUsers: (recentUsersRes.data ?? []) as AdminUserRow[],
+    guestDivinationsTotal,
+    guestDivinationsToday,
+    memberDivinationsTotal,
+    memberDivinationsToday,
+    guestDailyTrend30d,
+    memberDailyTrend30d,
   };
 }
 
