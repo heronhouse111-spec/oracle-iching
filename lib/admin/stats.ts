@@ -103,6 +103,25 @@ export async function getAdminUser() {
   };
 }
 
+/**
+ * 後台「總占卜次數 / 今日 / 週 / 月」要把免費入口也算進去 — 不能只看 divinations 表。
+ * 各事件源互斥(同一次占卜只會落到其中一處),所以加總不會重複計。
+ *
+ *   - divinations 表        : 主流程 + plum-blossom + direction-hex + two-options(每筆 saveDivination 寫一列)
+ *   - credit_transactions   : 登入用戶付點玩 free flow(yesno / daily / daily_iching)
+ *   - daily_checkins.used_at: 登入用戶用簽到 token 免費玩 yesno(這條路不扣點)
+ *   - guest_yesno_log       : 訪客 yes/no(無使用者帳號,不寫 credit_transactions)
+ *   - guest_daily_log       : 訪客每日一卦/一卡
+ *
+ * main-flow 的 spend_divine / spend_tarot / spend_plum_blossom 等 reason 已經對應到
+ * divinations 表的列,所以不要納入 FREE_FLOW_SPEND_REASONS 否則就會雙重計。
+ */
+const FREE_FLOW_SPEND_REASONS = [
+  "spend_yesno",
+  "spend_daily",
+  "spend_daily_iching",
+];
+
 /** 一次拉齊後台所需的統計資料。 */
 export async function loadAdminStats(): Promise<AdminStats> {
   const supabase = await createClient();
@@ -117,13 +136,38 @@ export async function loadAdminStats(): Promise<AdminStats> {
   const weekStart = new Date(todayStart);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // 週一為一週起點
 
+  const todayIso = todayStart.toISOString();
+  const weekIso = weekStart.toISOString();
+  const monthIso = monthStart.toISOString();
+
   const [
     totalUsersRes,
     totalAdminsRes,
-    totalDivinationsRes,
-    divinationsTodayRes,
-    divinationsThisWeekRes,
-    divinationsThisMonthRes,
+    // divinations 表 — 主流程留底
+    divTotalRes,
+    divTodayRes,
+    divWeekRes,
+    divMonthRes,
+    // free-flow 登入用戶 — credit_transactions
+    freeFlowTotalRes,
+    freeFlowTodayRes,
+    freeFlowWeekRes,
+    freeFlowMonthRes,
+    // 簽到免費 yesno — daily_checkins.used_at
+    checkinTotalRes,
+    checkinTodayRes,
+    checkinWeekRes,
+    checkinMonthRes,
+    // 訪客 yes/no
+    guestYesnoTotalRes,
+    guestYesnoTodayRes,
+    guestYesnoWeekRes,
+    guestYesnoMonthRes,
+    // 訪客每日一卦/一卡
+    guestDailyTotalRes,
+    guestDailyTodayRes,
+    guestDailyWeekRes,
+    guestDailyMonthRes,
     newUsers7dRes,
     recent30dRes, // 用來計算每日趨勢 + 熱門卦 + 分類 + 語系 + 活躍使用者
     recentDivinationsRes,
@@ -138,15 +182,83 @@ export async function loadAdminStats(): Promise<AdminStats> {
     supabase
       .from("divinations")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", todayStart.toISOString()),
+      .gte("created_at", todayIso),
     supabase
       .from("divinations")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", weekStart.toISOString()),
+      .gte("created_at", weekIso),
     supabase
       .from("divinations")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", monthStart.toISOString()),
+      .gte("created_at", monthIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", FREE_FLOW_SPEND_REASONS),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .gte("created_at", todayIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .gte("created_at", weekIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .gte("created_at", monthIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", todayIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", weekIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", monthIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true }),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", todayIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", weekIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", monthIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true }),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", todayIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", weekIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", monthIso),
     supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
@@ -178,10 +290,38 @@ export async function loadAdminStats(): Promise<AdminStats> {
 
   const totalUsers = totalUsersRes.count ?? 0;
   const totalAdmins = totalAdminsRes.count ?? 0;
-  const totalDivinations = totalDivinationsRes.count ?? 0;
-  const divinationsToday = divinationsTodayRes.count ?? 0;
-  const divinationsThisWeek = divinationsThisWeekRes.count ?? 0;
-  const divinationsThisMonth = divinationsThisMonthRes.count ?? 0;
+
+  // 把所有事件源加總:divinations 表 + 登入 free-flow 付點 + 簽到免費 + 訪客 yes/no + 訪客 daily
+  const sumCounts = (...rs: Array<{ count: number | null }>) =>
+    rs.reduce((sum, r) => sum + (r.count ?? 0), 0);
+  const totalDivinations = sumCounts(
+    divTotalRes,
+    freeFlowTotalRes,
+    checkinTotalRes,
+    guestYesnoTotalRes,
+    guestDailyTotalRes,
+  );
+  const divinationsToday = sumCounts(
+    divTodayRes,
+    freeFlowTodayRes,
+    checkinTodayRes,
+    guestYesnoTodayRes,
+    guestDailyTodayRes,
+  );
+  const divinationsThisWeek = sumCounts(
+    divWeekRes,
+    freeFlowWeekRes,
+    checkinWeekRes,
+    guestYesnoWeekRes,
+    guestDailyWeekRes,
+  );
+  const divinationsThisMonth = sumCounts(
+    divMonthRes,
+    freeFlowMonthRes,
+    checkinMonthRes,
+    guestYesnoMonthRes,
+    guestDailyMonthRes,
+  );
   const newUsers7d = newUsers7dRes.count ?? 0;
 
   const recent30d = (recent30dRes.data ?? []) as Array<{
