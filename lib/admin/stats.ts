@@ -111,22 +111,31 @@ export async function getAdminUser() {
 }
 
 /**
- * 後台「總占卜次數 / 今日 / 週 / 月」要把免費入口也算進去 — 不能只看 divinations 表。
+ * 後台「總占卜次數 / 今日 / 週 / 月」要把所有占卜行為都算進去,不能只看 divinations 表。
  * 各事件源互斥(同一次占卜只會落到其中一處),所以加總不會重複計。
  *
  *   - divinations 表        : 主流程 + plum-blossom + direction-hex + two-options(每筆 saveDivination 寫一列)
- *   - credit_transactions   : 登入用戶付點玩 free flow(yesno / daily / daily_iching)
+ *   - credit_transactions   : 登入用戶 free-flow(yesno / daily / daily_iching)+ 衍伸提問(*_followup)
  *   - daily_checkins.used_at: 登入用戶用簽到 token 免費玩 yesno(這條路不扣點)
  *   - guest_yesno_log       : 訪客 yes/no(無使用者帳號,不寫 credit_transactions)
  *   - guest_daily_log       : 訪客每日一卦/一卡
  *
- * main-flow 的 spend_divine / spend_tarot / spend_plum_blossom 等 reason 已經對應到
- * divinations 表的列,所以不要納入 FREE_FLOW_SPEND_REASONS 否則就會雙重計。
+ * main-flow 的 spend_divine / spend_tarot / spend_plum_blossom / spend_direction_hex /
+ * spend_ic_two_options 已經對應到 divinations 表的列,不能納入 EXTRA_DIVINATION_SPENDS
+ * 否則會雙重計。spend_chat / spend_music_* 不是占卜事件,當然也不要加。
+ *
+ * 衍伸提問(spend_*_followup)的特殊性:appendFollowUp() 把新問題附加進原 divinations
+ * 列的 follow_ups JSONB,並未寫新 row,所以從 divinations.count 抓不到。要把它算成
+ * 占卜次數就必須從 credit_transactions 補回來。
  */
-const FREE_FLOW_SPEND_REASONS = [
+const EXTRA_DIVINATION_SPENDS = [
+  // 輕量入口(訪客也能用 — 訪客那批由 guest_*_log 表獨立計,credit_transactions 只記登入用戶)
   "spend_yesno",
   "spend_daily",
   "spend_daily_iching",
+  // 衍伸提問:JSONB append 進原 divinations 列,row 計數抓不到,只能透過扣點流水補
+  "spend_divine_followup",
+  "spend_tarot_followup",
 ];
 
 /** 一次拉齊後台所需的統計資料。 */
@@ -207,21 +216,21 @@ export async function loadAdminStats(): Promise<AdminStats> {
     supabase
       .from("credit_transactions")
       .select("id", { count: "exact", head: true })
-      .in("reason", FREE_FLOW_SPEND_REASONS),
+      .in("reason", EXTRA_DIVINATION_SPENDS),
     supabase
       .from("credit_transactions")
       .select("id", { count: "exact", head: true })
-      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .in("reason", EXTRA_DIVINATION_SPENDS)
       .gte("created_at", todayIso),
     supabase
       .from("credit_transactions")
       .select("id", { count: "exact", head: true })
-      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .in("reason", EXTRA_DIVINATION_SPENDS)
       .gte("created_at", weekIso),
     supabase
       .from("credit_transactions")
       .select("id", { count: "exact", head: true })
-      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .in("reason", EXTRA_DIVINATION_SPENDS)
       .gte("created_at", monthIso),
     supabase
       .from("daily_checkins")
@@ -308,7 +317,7 @@ export async function loadAdminStats(): Promise<AdminStats> {
     supabase
       .from("credit_transactions")
       .select("created_at")
-      .in("reason", FREE_FLOW_SPEND_REASONS)
+      .in("reason", EXTRA_DIVINATION_SPENDS)
       .gte("created_at", thirtyDaysAgo.toISOString())
       .limit(10000),
     supabase
