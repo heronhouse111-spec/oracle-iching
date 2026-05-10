@@ -24,7 +24,7 @@ import LoginOptionsModal from "@/components/LoginOptionsModal";
 import InsufficientCreditsModal from "@/components/InsufficientCreditsModal";
 import NewCardToast from "@/components/NewCardToast";
 import { getHexagramByNumber, trigramNames } from "@/data/hexagrams";
-import { ICHING_BACK_IMAGE } from "@/lib/ichingImages";
+import { ICHING_BACK_IMAGE, hexagramImageKey } from "@/lib/ichingImages";
 import {
   notifyCreditsChanged,
   parseInsufficientCredits,
@@ -67,13 +67,43 @@ export default function IChingDailyPage() {
     allowed: boolean;
   } | null>(null);
   const ranRef = useRef(false);
+  // admin 上傳的 64 卦插圖 — 客端 lazy fetch,沒上傳的卦會 fallback 到爻線+卦名文字。
+  // pattern 跟 app/page.tsx 對齊,直接 dynamic import supabase/client 避免在 SSR bundle。
+  const [ichingImages, setIchingImages] = useState<Record<string, string>>({});
 
   const hex = hexNumber !== null ? getHexagramByNumber(hexNumber) : null;
+  const hexImgUrl = hex ? ichingImages[hexagramImageKey(hex.number)] : undefined;
 
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
     void start();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("app_content")
+          .select("value")
+          .eq("key", "iching_images")
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.value && typeof data.value === "object") {
+          setIchingImages(data.value as Record<string, string>);
+        }
+      } catch {
+        /* fallback 是爻線顯示,不影響流程 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function start() {
@@ -400,7 +430,7 @@ export default function IChingDailyPage() {
                     transformStyle: "preserve-3d",
                   }}
                 >
-                  {/* 正面 — 卦象方塊 */}
+                  {/* 正面 — 有 admin 卦圖優先用圖,字疊在底部漸層上;沒上傳則 fallback 到爻線+文字 */}
                   <div
                     style={{
                       position: "absolute",
@@ -410,41 +440,108 @@ export default function IChingDailyPage() {
                       overflow: "hidden",
                       border: "1px solid rgba(212,168,85,0.5)",
                       boxShadow: "0 8px 32px rgba(212,168,85,0.25)",
-                      background: "rgba(13,13,43,0.85)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "20px 16px",
+                      background:
+                        "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.85))",
                     }}
                   >
-                    <DailyHexagramLines lines={hex.lines} revealedCount={6} />
-                    <div style={{ marginTop: 16 }}>
+                    {hexImgUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={hexImgUrl}
+                          alt={t(
+                            hex.nameZh,
+                            hex.nameEn.split(" ")[0],
+                            hex.nameJa,
+                            hex.nameKo
+                          )}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            padding: "32px 16px 14px",
+                            background:
+                              "linear-gradient(to bottom, rgba(13,13,43,0) 0%, rgba(13,13,43,0.92) 70%)",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              color: "#fde68a",
+                              fontSize: 22,
+                              fontWeight: 700,
+                              fontFamily: "'Noto Serif TC', serif",
+                              lineHeight: 1.2,
+                              textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+                            }}
+                          >
+                            {t(
+                              hex.nameZh,
+                              hex.nameEn.split(" ")[0],
+                              hex.nameJa,
+                              hex.nameKo
+                            )}
+                          </div>
+                          <div style={{ color: "rgba(229,229,240,0.7)", fontSize: 11, marginTop: 4 }}>
+                            {t(
+                              `第 ${hex.number} 卦`,
+                              `Hexagram ${hex.number}`,
+                              `第 ${hex.number} 卦`,
+                              `제 ${hex.number} 괘`
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
                       <div
                         style={{
-                          color: "#fde68a",
-                          fontSize: 22,
-                          fontWeight: 700,
-                          fontFamily: "'Noto Serif TC', serif",
-                          lineHeight: 1.2,
+                          position: "absolute",
+                          inset: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "20px 16px",
                         }}
                       >
-                        {t(
-                          hex.nameZh,
-                          hex.nameEn.split(" ")[0],
-                          hex.nameJa,
-                          hex.nameKo
-                        )}
+                        <DailyHexagramLines lines={hex.lines} revealedCount={6} />
+                        <div style={{ marginTop: 16 }}>
+                          <div
+                            style={{
+                              color: "#fde68a",
+                              fontSize: 22,
+                              fontWeight: 700,
+                              fontFamily: "'Noto Serif TC', serif",
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {t(
+                              hex.nameZh,
+                              hex.nameEn.split(" ")[0],
+                              hex.nameJa,
+                              hex.nameKo
+                            )}
+                          </div>
+                          <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 4 }}>
+                            {t(
+                              `第 ${hex.number} 卦`,
+                              `Hexagram ${hex.number}`,
+                              `第 ${hex.number} 卦`,
+                              `제 ${hex.number} 괘`
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ color: "rgba(192,192,208,0.55)", fontSize: 11, marginTop: 4 }}>
-                        {t(
-                          `第 ${hex.number} 卦`,
-                          `Hexagram ${hex.number}`,
-                          `第 ${hex.number} 卦`,
-                          `제 ${hex.number} 괘`
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
                   {/* 背面 — 易經背牌圖 */}
                   <div
