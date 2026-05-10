@@ -86,6 +86,10 @@ const isSupabaseConfigured =
  * 大圖 hero 卡片用的圖片區塊。
  * 沒上傳就回 null — 由外層卡片決定要怎麼呈現「無圖」狀態(目前是讓卡片少一個影像區塊,
  * 文字往上頂)。這樣可以避免「emoji 占位 → 圖片載入後 swap」的閃爍。
+ *
+ * 用 next/image fill mode:next.config.ts 已經 allowlist `**.supabase.co/storage/v1/...`,
+ * 走 next/image 就會自動 WebP/AVIF + srcset + 行動裝置縮放。
+ * sizes 拿首頁實際斷點推估:tile 在桌機 ~50vw、手機接近滿版,給 (max-width: 640px) 100vw, 50vw。
  */
 function HeroImage({
   url,
@@ -98,21 +102,20 @@ function HeroImage({
   return (
     <div
       style={{
+        position: "relative",
         width: "100%",
         aspectRatio,
         background:
           "linear-gradient(135deg, rgba(212,168,85,0.10), rgba(13,13,43,0.45))",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         overflow: "hidden",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={url}
         alt=""
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        fill
+        sizes="(max-width: 640px) 100vw, 50vw"
+        style={{ objectFit: "cover" }}
       />
     </div>
   );
@@ -2821,7 +2824,7 @@ export default function Home() {
                     }}
                   />
                   <Image
-                    src="/logo-256.png"
+                    src="/logo-256.webp"
                     alt={t("易問", "Tarogram", "易問", "타로그램")}
                     width={140}
                     height={140}

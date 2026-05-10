@@ -446,8 +446,7 @@ export default function IChingYesNoPage() {
                   >
                     {hexImgUrl ? (
                       <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                           src={hexImgUrl}
                           alt={t(
                             hex.nameZh,
@@ -455,12 +454,9 @@ export default function IChingYesNoPage() {
                             hex.nameJa,
                             hex.nameKo
                           )}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
+                          fill
+                          sizes="200px"
+                          style={{ objectFit: "cover" }}
                         />
                         <div
                           style={{

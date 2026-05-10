@@ -232,7 +232,7 @@ export default function HomeMenu() {
         }}
       >
         <Image
-          src="/logo-64.png"
+          src="/logo-64.webp"
           alt={t("易問", "Tarogram", "易問", "타로그램")}
           width={36}
           height={36}

@@ -25,6 +25,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -712,6 +713,7 @@ function CastPanel({
           heroImg ? (
             <div
               style={{
+                position: "relative",
                 width: "100%",
                 maxWidth: 140,
                 aspectRatio: "9 / 14",
@@ -724,16 +726,12 @@ function CastPanel({
                 boxShadow: "0 4px 18px rgba(212,168,85,0.18)",
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={heroImg}
                 alt={cast.primary.nameZh}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  display: "block",
-                }}
+                fill
+                sizes="140px"
+                style={{ objectFit: "contain" }}
               />
             </div>
           ) : (
