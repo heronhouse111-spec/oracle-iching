@@ -12,6 +12,7 @@ import {
   SUIT_NAMES_KO,
 } from "@/data/tarot";
 import CollectionProgress from "@/components/CollectionProgress";
+import CollectionRewardToast from "@/components/CollectionRewardToast";
 import RedemptionModal, { type RedemptionResult } from "@/components/RedemptionModal";
 import NewCardToast from "@/components/NewCardToast";
 
@@ -379,6 +380,9 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
         rewardCredits={toast?.credits ?? 0}
         onDismiss={() => setToast(null)}
       />
+
+      {/* 未登入禮物提示 — 1.2s 後右下浮現,7 天 cooldown */}
+      <CollectionRewardToast authenticated={authed} surface="tarot" />
     </div>
   );
 }
