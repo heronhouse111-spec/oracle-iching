@@ -35,6 +35,10 @@ interface ModalState {
 
 export default function TarotCardsIndexView({ redeemRate }: Props) {
   const { t } = useLanguage();
+  // 未登入時:全彩預覽模式(讓使用者一眼看到價值,觸發登入收藏慾望)
+  // 已登入時:Pokédex 模式 — owned 才彩色,未抽到的灰階(現有 gamification)
+  // 初始 null → 還沒拿到 collection API 回應,先全彩比全灰好看
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [obtainCounts, setObtainCounts] = useState<Map<string, number>>(new Map());
   const [modal, setModal] = useState<ModalState | null>(null);
@@ -93,6 +97,7 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
         type="tarot"
         total={78}
         onLoaded={(d) => {
+          setAuthed(d.authenticated);
           setOwnedIds(d.ownedIds);
           setObtainCounts(d.obtainCounts);
         }}
@@ -125,6 +130,9 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
           >
             {cards.map((card) => {
               const owned = ownedIds.has(card.id);
+              // 未登入(或 API 還沒回來)→ 全彩預覽,讓圖鑑像 marketing window
+              // 登入 → 維持 Pokédex 模式:owned 彩色 / 未持有灰階
+              const showInColor = authed === false || authed === null ? true : owned;
               const cardCount = obtainCounts.get(card.id) ?? 0;
               const canRedeem = cardCount >= REDEEM_THRESHOLD && redeemRate > 0;
               const cardName = t(card.nameZh, card.nameEn, card.nameJa, card.nameKo);
@@ -136,12 +144,12 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
                     display: "block",
                     textDecoration: "none",
                     color: "inherit",
-                    background: owned
+                    background: showInColor
                       ? "rgba(13,13,43,0.5)"
                       : "rgba(13,13,43,0.35)",
                     border: canRedeem
                       ? "1px solid rgba(110,231,183,0.55)"
-                      : owned
+                      : showInColor
                       ? "1px solid rgba(212,168,85,0.4)"
                       : "1px solid rgba(212,168,85,0.1)",
                     borderRadius: 10,
@@ -235,7 +243,7 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
                       aspectRatio: "9 / 14",
                       marginBottom: 6,
                       border: "1px solid rgba(212,168,85,0.2)",
-                      filter: owned ? "none" : "grayscale(1) brightness(0.55)",
+                      filter: showInColor ? "none" : "grayscale(1) brightness(0.55)",
                       transition: "filter 0.3s",
                     }}
                   >
@@ -250,7 +258,7 @@ export default function TarotCardsIndexView({ redeemRate }: Props) {
                   <div
                     style={{
                       fontSize: 12,
-                      color: owned ? "#e8e8f0" : "rgba(192,192,208,0.45)",
+                      color: showInColor ? "#e8e8f0" : "rgba(192,192,208,0.45)",
                       lineHeight: 1.4,
                       textAlign: "center",
                     }}

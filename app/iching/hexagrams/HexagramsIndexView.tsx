@@ -33,6 +33,10 @@ interface ModalState {
 
 export default function HexagramsIndexView({ images, redeemRate }: Props) {
   const { t } = useLanguage();
+  // 未登入時:全彩預覽模式(讓使用者一眼看到價值,觸發登入收藏慾望)
+  // 已登入時:Pokédex 模式 — owned 才彩色,未抽到的灰階
+  // 兩個 CollectionProgress(hexagram + trigram)都會回拋 authenticated,任一條為 false 即視為未登入
+  const [authed, setAuthed] = useState<boolean | null>(null);
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   // hexagram 重複次數:cardId('1'..'64') → 抽到次數
   const [hexCounts, setHexCounts] = useState<Map<string, number>>(new Map());
@@ -93,6 +97,7 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
         type="iching"
         total={64}
         onLoaded={(d) => {
+          setAuthed(d.authenticated);
           setOwnedIds(d.ownedIds);
           setHexCounts(d.obtainCounts);
         }}
@@ -194,6 +199,8 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
           type="iching_trigram"
           total={8}
           onLoaded={(d) => {
+            // 雙保險:兩個 CollectionProgress 都回拋 authenticated,任一為 false 即視為未登入
+            setAuthed(d.authenticated);
             setOwnedTrigrams(d.ownedIds);
             setTrigramCounts(d.obtainCounts);
           }}
@@ -208,6 +215,8 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
         >
           {Object.entries(trigramNames).map(([code, tg]) => {
             const owned = ownedTrigrams.has(code);
+            // 未登入(或 API 還沒回)→ 全彩預覽,讓圖鑑像 marketing window;登入後維持 Pokédex 模式
+            const showInColor = authed === false || authed === null ? true : owned;
             const tgCount = trigramCounts.get(code) ?? 0;
             const canRedeemTg = tgCount >= REDEEM_THRESHOLD && redeemRate > 0;
             const imgUrl = images[trigramImageKey(code)];
@@ -240,10 +249,10 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                       )
                 }
                 style={{
-                  background: owned ? "rgba(13,13,43,0.5)" : "rgba(13,13,43,0.35)",
+                  background: showInColor ? "rgba(13,13,43,0.5)" : "rgba(13,13,43,0.35)",
                   border: canRedeemTg
                     ? "1px solid rgba(110,231,183,0.55)"
-                    : owned
+                    : showInColor
                     ? "1px solid rgba(212,168,85,0.15)"
                     : "1px solid rgba(212,168,85,0.08)",
                   borderRadius: 10,
@@ -252,7 +261,7 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                   gridTemplateColumns: "76px 1fr",
                   gap: 12,
                   alignItems: "start",
-                  opacity: owned ? 1 : 0.55,
+                  opacity: showInColor ? 1 : 0.55,
                   transition: "opacity 0.2s",
                   position: "relative",
                   boxShadow: canRedeemTg
@@ -337,7 +346,7 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                     background:
                       "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
                     flexShrink: 0,
-                    filter: owned ? "none" : "grayscale(1) brightness(0.55)",
+                    filter: showInColor ? "none" : "grayscale(1) brightness(0.55)",
                   }}
                 >
                   {imgUrl && (
@@ -523,6 +532,8 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                   `제 ${h.number}괘`
                 );
                 const owned = ownedIds.has(String(h.number));
+                // 未登入(或 API 還沒回)→ 全彩預覽;登入後維持 Pokédex 模式
+                const showInColor = authed === false || authed === null ? true : owned;
                 const obtainCount = hexCounts.get(String(h.number)) ?? 0;
                 const canRedeem = obtainCount >= REDEEM_THRESHOLD && redeemRate > 0;
                 return (
@@ -533,12 +544,12 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                       display: "block",
                       textDecoration: "none",
                       color: "inherit",
-                      background: owned
+                      background: showInColor
                         ? "rgba(13,13,43,0.5)"
                         : "rgba(13,13,43,0.35)",
                       border: canRedeem
                         ? "1px solid rgba(110,231,183,0.55)"
-                        : owned
+                        : showInColor
                         ? "1px solid rgba(212,168,85,0.4)"
                         : "1px solid rgba(212,168,85,0.1)",
                       borderRadius: 10,
@@ -636,8 +647,8 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                         border: "1px solid rgba(212,168,85,0.2)",
                         background:
                           "linear-gradient(135deg, rgba(212,168,85,0.08), rgba(13,13,43,0.5))",
-                        // 未收藏 → 灰階 + 半透明
-                        filter: owned ? "none" : "grayscale(1) brightness(0.55)",
+                        // 未收藏 → 灰階 + 半透明(未登入時 showInColor 永遠為 true,維持全彩預覽)
+                        filter: showInColor ? "none" : "grayscale(1) brightness(0.55)",
                       }}
                     >
                       {url && (
@@ -652,12 +663,12 @@ export default function HexagramsIndexView({ images, redeemRate }: Props) {
                     <div
                       style={{
                         fontSize: 12,
-                        color: owned ? "#e8e8f0" : "rgba(192,192,208,0.45)",
+                        color: showInColor ? "#e8e8f0" : "rgba(192,192,208,0.45)",
                         lineHeight: 1.4,
                         textAlign: "center",
                       }}
                     >
-                      <div style={{ fontSize: 10, color: owned ? "rgba(212,168,85,0.7)" : "rgba(192,192,208,0.4)" }}>
+                      <div style={{ fontSize: 10, color: showInColor ? "rgba(212,168,85,0.7)" : "rgba(192,192,208,0.4)" }}>
                         {numLabel}
                       </div>
                       <div

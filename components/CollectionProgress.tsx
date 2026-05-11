@@ -43,6 +43,8 @@ interface Props {
   total: number;
   /** 把 owned set + earned milestone set 回拋給 parent,parent 可以決定 grid 上灰階 / icon */
   onLoaded: (data: {
+    /** 是否已登入。未登入時 parent 應全彩展示(預覽模式),別套灰階。 */
+    authenticated: boolean;
     ownedIds: Set<string>;
     earnedMilestoneIds: Set<string>;
     /** 給 parent 用 — 為了 tarot subkind 統計 */
@@ -70,6 +72,7 @@ export default function CollectionProgress({ type, total, onLoaded }: Props) {
         const earnedIds = new Set(json.earnedMilestoneIds);
         const obtainCounts = new Map(json.owned.map((o) => [o.cardId, o.obtainCount]));
         onLoaded({
+          authenticated: json.authenticated,
           ownedIds,
           earnedMilestoneIds: earnedIds,
           ownedCount: json.ownedCount,
@@ -191,44 +194,110 @@ export default function CollectionProgress({ type, total, onLoaded }: Props) {
         </div>
       )}
 
-      {/* 未登入 CTA */}
+      {/* 未登入 CTA — 比一般 footer 大一截,首屏曝光率高,觸發收藏慾望 */}
       {data && !data.authenticated && (
         <div
           style={{
-            marginTop: 12,
-            paddingTop: 12,
-            borderTop: "1px dashed rgba(212,168,85,0.2)",
-            fontSize: 12,
-            color: "rgba(192,192,208,0.7)",
+            marginTop: 16,
+            padding: "16px 18px",
+            borderRadius: 12,
+            background:
+              "linear-gradient(135deg, rgba(212,168,85,0.18), rgba(139,92,246,0.12))",
+            border: "1px solid rgba(212,168,85,0.45)",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            flexDirection: "column",
             gap: 12,
-            flexWrap: "wrap",
           }}
         >
-          <span>
-            {t(
-              "登入後即可開始收集 — 抽到的卡片會變成彩色,集到一定數量還有點數獎勵。",
-              "Sign in to start collecting — drawn cards turn from grey to colour, with credit rewards at milestones.",
-              "ログインで収集開始 — 引いたカードがカラーになり、達成ごとにポイント報酬。",
-              "로그인 후 수집 시작 — 뽑은 카드가 컬러가 되고, 달성마다 포인트 보상.",
-            )}
-          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>✨</span>
+            <div
+              style={{
+                fontFamily: "'Noto Serif TC', serif",
+                fontSize: 15,
+                fontWeight: 700,
+                color: "#fde68a",
+                lineHeight: 1.4,
+              }}
+            >
+              {t(
+                "登入後,每次占卜抽到的卡都會永久留下",
+                "Sign in — every card you draw stays with you, forever",
+                "ログインで、引いたカードがあなたのものに",
+                "로그인하면 뽑은 카드가 영원히 당신의 것",
+              )}
+            </div>
+          </div>
+          <ul
+            style={{
+              margin: 0,
+              padding: 0,
+              listStyle: "none",
+              display: "grid",
+              gap: 6,
+              fontSize: 12.5,
+              color: "rgba(229,229,240,0.88)",
+              lineHeight: 1.6,
+            }}
+          >
+            <li>
+              🎁{" "}
+              {t(
+                "首次登入贈 30 點(夠你占 6 次 + 收幾張首發卡)",
+                "30 free credits on first login (≈ 6 readings + your first few cards)",
+                "初回ログインで 30 ポイント贈呈(占い 6 回 + 初コレクション)",
+                "첫 로그인 시 30 포인트 증정(점 6회 + 첫 카드 수집)",
+              )}
+            </li>
+            <li>
+              ✦{" "}
+              {t(
+                "收藏進度永久保留,跨裝置同步",
+                "Collection saved across devices, never lost",
+                "コレクション進捗は永久保存・端末間同期",
+                "수집 진행도 영구 보관, 기기 간 동기화",
+              )}
+            </li>
+            <li>
+              🏆{" "}
+              {t(
+                "達到收集里程碑會自動加贈點數",
+                "Hit collection milestones to earn bonus credits",
+                "コレクション達成ごとにポイント自動贈呈",
+                "수집 마일스톤 달성마다 자동 보너스",
+              )}
+            </li>
+          </ul>
           <Link
             href="/login"
             style={{
-              padding: "6px 14px",
-              borderRadius: 9999,
+              alignSelf: "stretch",
+              padding: "12px 18px",
+              borderRadius: 10,
               background: "linear-gradient(135deg, #d4a855, #f0d78c)",
               color: "#0a0a1a",
-              fontSize: 12,
-              fontWeight: 700,
+              fontSize: 14,
+              fontWeight: 800,
               textDecoration: "none",
-              whiteSpace: "nowrap",
+              textAlign: "center",
+              boxShadow: "0 4px 18px rgba(212,168,85,0.4)",
+              letterSpacing: 1,
             }}
           >
-            {t("登入", "Sign in", "ログイン", "로그인")}
+            ✦ {t(
+              "登入,開始我的收藏",
+              "Sign in — start collecting",
+              "ログインしてコレクション開始",
+              "로그인하고 수집 시작",
+            )}{" "}
+            →
           </Link>
         </div>
       )}
