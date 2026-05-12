@@ -95,7 +95,7 @@ ${labelLineJa}【二択モード — 必ず守ること】
 1. 「両方とも良い / どちらでもよい / あなた次第」のような曖昧な結論は禁止。最後に必ず「どちらか一方を明確に推奨」してください。
 2. 卦象の具体的な象徴(内外卦の構成、変爻、之卦の流れ)を根拠として、なぜその選択を推すのかを説明してください。
 3. 卦が「動かない方が良い」と示している場合は「保留」を勧めた上で、現状を守るのに適した方を選んでください。
-4. 最後の一文は明確な判定で締めくくる。「総合的に判断して、${hasLabels ? "A" : "一方"}を選ぶことをお勧めします」のような形。注意点(「ただし X に気をつけて」)を添えるのは可、ただし結論自体は曖昧にしないこと。
+4. 最後の一文は明確な判定で締めくくる。${hasLabels ? "「総合的に判断して、A を選ぶことをお勧めします」または「総合的に判断して、B を選ぶことをお勧めします」のような形。どちらを推すかは卦象のみに基づくこと — A が先に並んでいるからといって習慣的に A に偏らないこと。" : "「総合的に判断して、一方を選ぶことをお勧めします」のような形。"}注意点(「ただし X に気をつけて」)を添えるのは可、ただし結論自体は曖昧にしないこと。
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 
@@ -108,7 +108,7 @@ ${labelLineKo}[양자택일 모드 — 반드시 따를 것]
 1. "둘 다 좋다 / 어느 쪽이든 괜찮다 / 본인 마음" 같은 모호한 결론은 금지합니다. 마지막에 반드시 "한쪽을 명확히 추천"하세요.
 2. 괘상의 구체적 상징(내·외괘 구성, 변효, 지괘의 흐름)을 근거로 왜 그쪽을 추천하는지 설명하세요.
 3. 괘가 "움직이지 말라"고 시사한다면 '보류'를 권하되 둘 중 현 상태를 보호하는 쪽을 골라 주세요.
-4. 마지막 문장은 분명한 판정으로 끝낼 것. 예: "종합적으로 판단할 때 ${hasLabels ? "A" : "한쪽"}을 추천드립니다." 주의사항("단, X 에 유의하세요")을 덧붙이는 것은 좋지만 결론 자체는 흐릿하게 하지 마세요.
+4. 마지막 문장은 분명한 판정으로 끝낼 것. ${hasLabels ? '예: "종합적으로 판단할 때 A 를 추천드립니다." 또는 "종합적으로 판단할 때 B 를 추천드립니다." — 어느 쪽을 추천할지는 오로지 괘상에 근거할 것이며, A 가 앞에 나열돼 있다는 이유로 습관적으로 A 로 기울어서는 안 됩니다.' : '예: "종합적으로 판단할 때 한쪽을 추천드립니다."'} 주의사항("단, X 에 유의하세요")을 덧붙이는 것은 좋지만 결론 자체는 흐릿하게 하지 마세요.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 
@@ -121,7 +121,7 @@ This is a TWO-CHOICE decision question. Your reading MUST obey these rules:
 1. Do NOT hedge with "both have merit", "either is fine", "it's up to you", "they're equally valid". You MUST recommend ONE side at the end.
 2. Ground the recommendation in concrete hexagram symbolism — inner/outer trigrams, changing lines, the relating hexagram's direction — explain WHY that side is favoured.
 3. If the hexagram leans against action, recommend "hold" and identify which of ${aRefEn} / ${bRefEn} better preserves the current ground.
-4. Your closing sentence MUST be a clear verdict. E.g. "On balance, I recommend ${aRefEn}." A caveat ("but watch out for X") is fine — the verdict itself must not be vague.
+4. Your closing sentence MUST be a clear verdict. E.g. "On balance, I recommend ${aRefEn}." OR "On balance, I recommend ${bRefEn}."${hasLabels ? " — which side wins must come purely from the hexagram, do NOT default to A just because it is listed first." : ""} A caveat ("but watch out for X") is fine — the verdict itself must not be vague.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   }
 
@@ -134,6 +134,6 @@ ${labelLineZh}【二擇一模式 — 必須遵守】
 1. 嚴禁「兩個都好 / 兩個都不好 / 看你自己 / 各有利弊」這類水球話。結尾必須「明確建議其中一邊」。
 2. 用卦象的具體象徵(內外卦結構、變爻、之卦走向)當依據,說明為什麼推這一邊。
 3. 若卦象傾向「不利於現在動」,請建議「暫緩」並指出 ${aRefZh} / ${bRefZh} 哪一邊較能保護現況。
-4. 最後一句必須是清楚的決斷,例如:「綜合來看,建議你選 ${hasLabels ? "A" : "前者"}。」可以附帶提醒(「不過要注意 X」),但決斷本身不可模糊。
+4. 最後一句必須是清楚的決斷,例如:${hasLabels ? "「綜合來看,建議你選 A。」或「綜合來看,建議你選 B。」 — 哪一邊勝出完全依卦象判定,不要因為 A 列在前面就習慣性偏 A。" : "「綜合來看,建議你選前者。」或「綜合來看,建議你選後者。」"}可以附帶提醒(「不過要注意 X」),但決斷本身不可模糊。
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 }
