@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 【雙卦比對 · 二擇一決斷模式 — 必須遵守】
 1. 嚴禁「兩個都好 / 兩個都不好 / 看你自己 / 各有利弊」這類水球話。結尾必須「明確推 A 或 B」。
-2. 必須引用兩卦的具體差異(例:A 卦動爻顯動而吉,B 卦無變爻顯穩;A 內外卦相剋,B 內外卦相生),用差異論證為什麼推這一邊。
-3. 若兩卦都偏向「不利於現在動」,請建議「暫緩」並指出 A / B 哪一邊較能保護現況,仍要推一邊。
-4. 開頭一段先各自簡述兩卦對該選項的訊息,中段做差異比對,結尾一句必須是清楚的決斷,例如:「綜合兩卦,建議你選 A。」可以附帶提醒(「不過要注意 X」),但決斷本身不可模糊。
+2. 推薦的依據完全來自「比較兩卦的優劣」 — 比較哪一卦的卦辭更吉、變爻走向更順、之卦更利、內外卦更相生、整體更利於進行或更能保護現況。哪一卦比較吉,就推那一邊的選項。請把這個比較過程寫出來。
+3. 若兩卦都偏向「不利於現在動」,請建議「暫緩」並比較 A / B 哪一邊較能保護現況,推穩的那邊。
+4. 開頭一段先各自簡述兩卦對該選項的訊息,中段做差異比對,結尾一句必須是清楚的決斷,例如:「綜合兩卦,建議你選 A。」或「綜合兩卦,建議你選 B。」 — 結論必須由前面卦象比較的結果決定;若 B 卦更吉就推 B,不可因為 A 列在問題前面就習慣性偏 A。可以附帶提醒(「不過要注意 X」),但決斷本身不可模糊。
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const verdictRulesEn = `
@@ -212,9 +212,9 @@ export async function POST(request: NextRequest) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [TWO-HEXAGRAM COMPARISON · DECISION MODE — MUST FOLLOW]
 1. Do NOT hedge with "both have merit", "either is fine", "it's up to you", "they're equally valid". You MUST recommend A or B at the end.
-2. Cite concrete differences between the two hexagrams (e.g. A has changing lines indicating movement, B is stable; A's trigrams clash, B's harmonize) and use those differences as the reason for your pick.
+2. The recommendation MUST come from comparing the two hexagrams' relative favorability — which judgment is more auspicious, which changing-line direction is smoother, which relating hexagram is more favorable, which trigram pair harmonizes better, which one supports action or better preserves the ground. Recommend the option whose hexagram is more favorable. Show this comparison in your reading.
 3. If both hexagrams lean against action, recommend "hold" and identify which of A / B better preserves the current ground — still pick one.
-4. Open by briefly characterising what each hexagram says about its option, then compare, and close with a clear verdict like "On balance, I recommend Option A." A caveat ("watch out for X") is fine — the verdict itself must not be vague.
+4. Open by briefly characterising what each hexagram says about its option, then compare, and close with a clear verdict like "On balance, I recommend Option A." or "On balance, I recommend Option B." — the verdict must follow from the comparison above; if B's hexagram is more favorable, pick B, do NOT default to A just because it is listed first. A caveat ("watch out for X") is fine — the verdict itself must not be vague.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const verdictRulesJa = `
@@ -222,9 +222,9 @@ export async function POST(request: NextRequest) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 【双卦比較 · 二択判定モード — 必ず守ること】
 1. 「両方とも良い / どちらでもよい / あなた次第 / 一長一短」のような曖昧な結論は禁止。最後に必ず「A か B のどちらかを明確に推奨」してください。
-2. 両卦の具体的な違い(例:A は変爻があり動を示し吉、B は変爻なく安定;A は内外卦が相剋、B は相生)を引用し、違いを根拠に推奨理由を述べてください。
-3. 両卦とも「動かない方が良い」と示している場合は「保留」を勧めた上で、A / B のどちらが現状を守るかを指摘し、なお一方を選んでください。
-4. 冒頭で各卦が示すメッセージを簡述し、中段で差異を比較し、最終一文は明確な判定で締める。例:「総合的に判断して、A を選ぶことをお勧めします。」 注意点(「ただし X に気をつけて」)を添えるのは可、ただし判定自体は曖昧にしないこと。
+2. 推奨の根拠は「両卦の優劣を比較すること」に限ります — どちらの卦辞がより吉か、変爻の流れがより順調か、之卦がより有利か、内外卦がより相生か、全体としてどちらが行動に有利または現状の保護に適しているかを比べ、より吉である側の選択肢を推奨してください。この比較過程を読み解きの中に書き出すこと。
+3. 両卦とも「動かない方が良い」と示している場合は「保留」を勧めた上で、A / B のどちらが現状を守るかを比較し、安定する側を推してください。
+4. 冒頭で各卦が示すメッセージを簡述し、中段で差異を比較し、最終一文は明確な判定で締める。例:「総合的に判断して、A を選ぶことをお勧めします。」または「総合的に判断して、B を選ぶことをお勧めします。」 — 結論は前述の比較から導くこと。B 卦の方が吉なら B を推し、A が問いの先に並んでいるからといって習慣的に A に偏ってはいけない。注意点(「ただし X に気をつけて」)を添えるのは可、ただし判定自体は曖昧にしないこと。
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const verdictRulesKo = `
@@ -232,9 +232,9 @@ export async function POST(request: NextRequest) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 [양 괘 비교 · 양자택일 판정 모드 — 반드시 따를 것]
 1. "둘 다 좋다 / 어느 쪽이든 괜찮다 / 본인 마음 / 각각 장단점이 있다" 같은 모호한 결론은 금지합니다. 마지막에 반드시 "A 또는 B 중 한쪽을 명확히 추천"하세요.
-2. 두 괘의 구체적 차이(예: A 는 변효가 있어 움직임을 보이고 길, B 는 변효가 없어 안정; A 는 내외괘가 상극, B 는 상생)를 인용하고 그 차이를 근거로 추천 이유를 설명하세요.
-3. 두 괘가 모두 "움직이지 말라"고 시사한다면 '보류'를 권하되 A / B 중 현 상태를 더 잘 보호하는 쪽을 골라 한쪽을 추천해 주세요.
-4. 첫 단락에서 각 괘가 해당 선택에 대해 시사하는 바를 간단히 서술하고, 중반에서 차이를 비교하며, 마지막 문장은 분명한 판정으로 끝낼 것. 예: "종합적으로 판단할 때 A 를 추천드립니다." 주의사항("단, X 에 유의하세요")은 가능하지만 판정 자체는 흐릿하게 하지 마세요.
+2. 추천의 근거는 오로지 "두 괘의 우열 비교"에서 나와야 합니다 — 어느 쪽 괘사가 더 길한지, 변효의 흐름이 더 순한지, 지괘가 더 유리한지, 내외괘가 더 상생인지, 전체적으로 어느 쪽이 행동에 유리하거나 현 상태를 더 잘 보호하는지를 비교하고, 더 길한 쪽의 선택지를 추천하세요. 이 비교 과정을 풀이 속에 분명히 적어 주세요.
+3. 두 괘가 모두 "움직이지 말라"고 시사한다면 '보류'를 권하되 A / B 중 현 상태를 더 잘 보호하는 쪽을 비교해 안정적인 쪽을 추천하세요.
+4. 첫 단락에서 각 괘가 해당 선택에 대해 시사하는 바를 간단히 서술하고, 중반에서 차이를 비교하며, 마지막 문장은 분명한 판정으로 끝낼 것. 예: "종합적으로 판단할 때 A 를 추천드립니다." 또는 "종합적으로 판단할 때 B 를 추천드립니다." — 결론은 위의 비교에서 도출되어야 합니다. B 의 괘가 더 길하면 B 를 추천하세요. A 가 앞에 나열돼 있다는 이유로 습관적으로 A 로 기울어서는 안 됩니다. 주의사항("단, X 에 유의하세요")은 가능하지만 판정 자체는 흐릿하게 하지 마세요.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const verdictRules = isZh
