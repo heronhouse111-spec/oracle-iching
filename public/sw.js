@@ -4,9 +4,10 @@
  * 目的:
  * - 讓 Chrome / Android 把這個站判定為「可安裝 PWA」,跳自動安裝橫幅。
  * - 離線時給基本 fallback(至少能看到首頁 shell,不是白屏)。
+ * - 弱網路時讓使用者立刻看到上次的快取頁,背景再去拉新版。
  *
  * 保守策略 —— 不激進快取,避免踩到動態資料一致性地雷:
- * - GET 同源資源:network-first,失敗才從 cache 拿。
+ * - GET 同源資源:cache-first(資源)/ stale-while-revalidate(導航),失敗才從 cache 拿。
  * - API / auth / supabase / server actions:**完全跳過 SW**(bypass),直接走網路,
  *   不 cache 也不攔。這樣 Supabase session、點數、占卜結果永遠是最新的。
  * - 預載(precache)只有 "/" 跟 manifest,shell 壞了時至少首頁可用。
@@ -16,8 +17,8 @@
 
 // 每次換靜態資源(塔羅圖、logo、字型...)就 bump 這個版本號,
 // activate 階段會自動把舊 CACHE 整個砍掉,避免使用者卡在舊快取。
-// v2 (2026-04-22): 塔羅 PNG → JPG 全換,清掉舊 cache。
-const CACHE_VERSION = "oracle-v2";
+// v3 (2026-05-17): navigate 改 stale-while-revalidate,清掉 v2 cache 避免舊 HTML 黏住。
+const CACHE_VERSION = "oracle-v3";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 // 明確跳過 SW 的 path prefix —— 這些都會動態變,絕不 cache。
@@ -68,12 +69,27 @@ self.addEventListener("fetch", (event) => {
   // API / auth / 動態資料:絕對 bypass,不 cache
   if (BYPASS_PREFIXES.some((p) => url.pathname.startsWith(p))) return;
 
-  // Navigate request (頁面切換):network-first,離線時 fallback 到 cached "/"
+  // Navigate request (頁面切換):stale-while-revalidate
+  //   - 有 cache → 立刻回 cache(使用者感覺秒開),背景去網路拉新版蓋回 cache。
+  //   - 沒 cache → 等網路;失敗才退到 cached "/"(離線 shell)。
+  // 這比舊的 network-first 好很多 —— 弱網路下不再要等網路逾時才看到內容,
+  // 重訪首頁時感覺幾乎是 instant。
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(request).then((r) => r || caches.match("/"))
-      )
+      caches.match(request).then((cached) => {
+        const networkFetch = fetch(request)
+          .then((resp) => {
+            // 只 cache 成功的同源 HTML
+            if (resp.ok && resp.type === "basic") {
+              const copy = resp.clone();
+              caches.open(CACHE_VERSION).then((c) => c.put(request, copy));
+            }
+            return resp;
+          })
+          .catch(() => cached || caches.match("/"));
+        // 有 cache 立即回;否則等網路(會在 cache miss 時 fallback)
+        return cached || networkFetch;
+      })
     );
     return;
   }

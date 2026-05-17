@@ -96,45 +96,64 @@ export default function InstallPrompt() {
 
     // ⚠ TWA(Google Play 上架的 Android app)內絕對不顯示「加入主畫面」提示。
     // Play 政策(anti-steering)禁止 app 內出現引導用戶到 web 版本 / 外部安裝管道的內容。
-    // 雖然 isStandalone() 會擋掉大部分 TWA 情境,但保險起見再加一層。
     if (isTwa) return;
-
-    // 已安裝 / 已 standalone / 之前裝過 → 完全不顯示
     if (isStandalone() || wasInstalled()) return;
     if (isInCooldown()) return;
 
     const visits = bumpVisitCount();
     if (visits < MIN_VISITS) return;
 
-    // Android / desktop Chrome:等 beforeinstallprompt
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault(); // 阻止 Chrome 自動跳 mini-infobar
-      setDeferredEvent(e as BeforeInstallPromptEvent);
-      setShow(true);
-    };
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    // 把 listener 註冊延到 idle —— beforeinstallprompt 是 Chrome 隨機在「站值得安裝」時
+    // 才觸發的事件,延個 1-2 秒幾乎沒差,但首屏 hydration 完全不被打擾。
+    let onBeforeInstall: ((e: Event) => void) | null = null;
+    let onInstalled: (() => void) | null = null;
+    let idleHandle: number | undefined;
+    let timeoutHandle: number | undefined;
 
-    // 使用者從 Chrome 系統對話框或自家按鈕完成安裝
-    const onInstalled = () => {
-      try {
-        localStorage.setItem(INSTALLED_KEY, "true");
-      } catch {
-        // localStorage 寫失敗 → 下次還會跳,可接受
+    const start = () => {
+      onBeforeInstall = (e: Event) => {
+        e.preventDefault(); // 阻止 Chrome 自動跳 mini-infobar
+        setDeferredEvent(e as BeforeInstallPromptEvent);
+        setShow(true);
+      };
+      window.addEventListener("beforeinstallprompt", onBeforeInstall);
+
+      onInstalled = () => {
+        try {
+          localStorage.setItem(INSTALLED_KEY, "true");
+        } catch {
+          // localStorage 寫失敗 → 下次還會跳,可接受
+        }
+        setShow(false);
+        setDeferredEvent(null);
+      };
+      window.addEventListener("appinstalled", onInstalled);
+
+      // iOS Safari:沒事件,但符合條件就主動跳圖文
+      if (isIOSSafari()) {
+        setIosMode(true);
+        setShow(true);
       }
-      setShow(false);
-      setDeferredEvent(null);
     };
-    window.addEventListener("appinstalled", onInstalled);
 
-    // iOS Safari:沒事件,但符合條件就主動跳圖文
-    if (isIOSSafari()) {
-      setIosMode(true);
-      setShow(true);
+    const ric =
+      (window as typeof window & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      }).requestIdleCallback;
+    if (typeof ric === "function") {
+      idleHandle = ric(start, { timeout: 3000 });
+    } else {
+      timeoutHandle = window.setTimeout(start, 1500);
     }
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      window.removeEventListener("appinstalled", onInstalled);
+      if (onBeforeInstall) window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      if (onInstalled) window.removeEventListener("appinstalled", onInstalled);
+      const cic = (window as typeof window & {
+        cancelIdleCallback?: (handle: number) => void;
+      }).cancelIdleCallback;
+      if (idleHandle !== undefined && typeof cic === "function") cic(idleHandle);
+      if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
     };
   }, []);
 

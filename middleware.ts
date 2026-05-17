@@ -3,6 +3,25 @@ import { type NextRequest, NextResponse } from "next/server";
 const GEO_COOKIE = "oracle_country";
 
 /**
+ * 是否為「已登入訪客」── 看 cookies 有沒有 Supabase 的 sb-* auth token。
+ * 沒有 → 訪客身分,完全不需要打 supabase.auth.getUser() 去 refresh session,
+ * 直接 NextResponse.next() 就好。這條 fast-path 把每次 request 都打 Supabase 的成本
+ * (~150–800ms,看區域 + cold start)幾乎全砍掉,訪客 TTFB 立刻變快。
+ *
+ * Supabase SSR client 把 access/refresh token 存在 sb-<project-ref>-auth-token cookie,
+ * 偶爾也會 chunked 成 sb-<ref>-auth-token.0、.1。只要任一 sb-*-auth-token 存在,
+ * 就走原本的 updateSession 路徑刷新。
+ */
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  for (const cookie of request.cookies.getAll()) {
+    if (cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * 決定 response:先跑 Supabase session refresh(若有設),再疊上 geo cookie。
  */
 async function buildResponse(request: NextRequest): Promise<NextResponse> {
@@ -11,6 +30,10 @@ async function buildResponse(request: NextRequest): Promise<NextResponse> {
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_URL === "your_supabase_url_here"
   ) {
+    return NextResponse.next();
+  }
+  // Fast-path:訪客(無 sb-*-auth-token cookie)不需要 refresh session
+  if (!hasSupabaseAuthCookie(request)) {
     return NextResponse.next();
   }
   const { updateSession } = await import("@/lib/supabase/middleware");

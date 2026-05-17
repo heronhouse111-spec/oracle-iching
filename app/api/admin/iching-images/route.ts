@@ -3,14 +3,14 @@
  * PUT /api/admin/iching-images — admin 整包覆蓋(只接受 string→string 的平面 map)
  *
  * 跟 ui-images route 一樣走「整包替換」策略;value 是 Record<"1".."64", url>。
- * PUT 後 revalidateTag 觸發 lib/ichingImages.ts unstable_cache 重撈。
+ * PUT 後 bust lib/ichingImages.ts 的 module cache,本 instance 立即生效。
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { assertAdmin } from "@/lib/admin/apiAuth";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { bustIchingImagesCache } from "@/lib/ichingImages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,8 +86,9 @@ export async function PUT(req: NextRequest) {
     payload: { slotCount: Object.keys(body.images).length },
   });
 
-  // 戳掉 lib/ichingImages.ts 的 unstable_cache,讓使用者下次刷新就看到新圖
-  revalidateTag("iching-images");
+  // 戳掉 lib/ichingImages.ts 的 module-level cache(本 instance 立即生效;
+  // 其他 Vercel function instance 等下次 60 秒 TTL 自然 stale)
+  bustIchingImagesCache();
 
   return NextResponse.json({ ok: true, updatedAt: data.updated_at });
 }

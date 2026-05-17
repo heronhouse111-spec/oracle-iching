@@ -1,25 +1,38 @@
 /**
  * ichingImages.ts — 64 卦插圖的 server-side reader.
  *
- * 跟 lib/uiImages.ts 同一套 pattern:plain anon-key supabase client(避開 cookies
- * 觸發 dynamic API)+ unstable_cache 60s。讀 app_content 表 key='iching_images'
- * 那一筆,value 是 Record<"1".."64", url> 的平面 map(key 是 hexagram.number 字串)。
+ * 跟 lib/uiImages.ts 同一套 pattern。
  *
- * 為什麼跟 ui_images 分開存:
- *   ui_images 目前有 ~20 個 slot(CTAs / 類別 / 免費工具 / 雙系統 / 牌陣介紹圖),
- *   再塞 64 個卦會把 admin 介面跟 prod row 都搞肥;分開讓兩邊各自獨立更新、
- *   admin 介面也能專心做 64 卦的 grid。
+ * v2(2026-05-18):從 unstable_cache 改成 module-level memory cache + true SWR。
+ * 動機:unstable_cache 期到時下一個 request 阻塞重撈,造成「有時候卡頓」。改成 SWR 後
+ * stale 期間先回舊資料、背景刷新,使用者完全不等。詳見 lib/uiImages.ts 的長註解。
+ *
+ * 讀 app_content 表 key='iching_images' 那一筆,value 是 Record<"1".."64", url> 的
+ * 平面 map(key 是 hexagram.number 字串)。
+ *
+ * 為什麼跟 ui_images 分開存:ui_images 目前有 ~20 個 slot(CTAs / 類別 / 免費工具 /
+ * 雙系統 / 牌陣介紹圖),再塞 64 個卦會把 admin 介面跟 prod row 都搞肥。
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { unstable_cache } from "next/cache";
 
 export type IchingImagesMap = Record<string, string>;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-async function fetchIchingImages(): Promise<IchingImagesMap> {
+const REVALIDATE_MS = 60_000;
+const COLD_FETCH_TIMEOUT_MS = 5_000;
+
+type CacheEntry = {
+  data: IchingImagesMap;
+  fetchedAt: number;
+};
+
+let cache: CacheEntry | null = null;
+let inflight: Promise<IchingImagesMap> | null = null;
+
+async function fetchIchingImagesRaw(): Promise<IchingImagesMap> {
   if (!supabaseUrl || !supabaseAnonKey) return {};
   try {
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -37,10 +50,46 @@ async function fetchIchingImages(): Promise<IchingImagesMap> {
   }
 }
 
-export const getIchingImages = unstable_cache(fetchIchingImages, ["iching-images-map"], {
-  revalidate: 60,
-  tags: ["iching-images"],
-});
+export function bustIchingImagesCache(): void {
+  cache = null;
+  inflight = null;
+}
+
+function refresh(): Promise<IchingImagesMap> {
+  if (inflight) return inflight;
+  inflight = fetchIchingImagesRaw()
+    .then((data) => {
+      cache = { data, fetchedAt: Date.now() };
+      return data;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
+
+export async function getIchingImages(): Promise<IchingImagesMap> {
+  const now = Date.now();
+
+  if (cache) {
+    const age = now - cache.fetchedAt;
+    if (age > REVALIDATE_MS) {
+      void refresh();
+    }
+    return cache.data;
+  }
+
+  try {
+    return await Promise.race([
+      refresh(),
+      new Promise<IchingImagesMap>((resolve) =>
+        setTimeout(() => resolve({}), COLD_FETCH_TIMEOUT_MS)
+      ),
+    ]);
+  } catch {
+    return {};
+  }
+}
 
 /** key 形式:`hexagram.number` 字串(1..64),admin 跟 prod 兩邊都用同一個 key shape */
 export function hexagramImageKey(num: number): string {

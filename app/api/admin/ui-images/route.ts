@@ -6,10 +6,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
 import { assertAdmin } from "@/lib/admin/apiAuth";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { bustUiImagesCache } from "@/lib/uiImages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,8 +85,9 @@ export async function PUT(req: NextRequest) {
     payload: { slotCount: Object.keys(body.images).length },
   });
 
-  // 戳掉 lib/uiImages.ts 的 unstable_cache,讓使用者下次刷新就看到新圖
-  revalidateTag("ui-images");
+  // 戳掉 lib/uiImages.ts 的 module-level cache,讓本 instance 下次撈新值。
+  // 其他 Vercel function instance 還是要等 60 秒 TTL 自己 stale,但實務可接受。
+  bustUiImagesCache();
 
   return NextResponse.json({ ok: true, updatedAt: data.updated_at });
 }
