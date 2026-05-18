@@ -83,4 +83,4 @@ export const ALL_PLAY_SKUS: string[] = [
 ];
 
 /** Play Store 上架 package name(後端驗證時要傳給 Google API) */
-export const PLAY_PACKAGE_NAME = "me.heronhouse.oracle";
+export const PLAY_PACKAGE_NAME = "me.heronhouse.tarogram";
