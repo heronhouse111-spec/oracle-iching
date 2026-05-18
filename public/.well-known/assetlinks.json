@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "me.heronhouse.tarogram",
       "sha256_cert_fingerprints": [
-        "6C:72:C9:19:AD:F0:86:25:67:4C:C8:39:03:7F:85:3D:89:44:74:5B:DE:6F:BB:64:A4:20:44:FF:55:69:CC:96"
+        "6C:72:C9:19:AD:F0:86:25:67:4C:C8:39:03:7F:85:3D:89:44:74:5B:DE:6F:BB:64:A4:20:44:FF:55:69:CC:96",
+        "18:C6:80:F1:A3:8A:05:CC:E5:53:A8:4B:48:BE:67:D1:7A:AB:B5:5E:A0:3E:8C:05:64:E7:0A:98:83:8E:44:24"
       ]
     }
   }
