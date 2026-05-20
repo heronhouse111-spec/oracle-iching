@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
+import { PLAY_PACKAGE_NAME, SUBSCRIPTION_SKUS } from "@/lib/billing/playSkus";
 
 interface SubscriptionSummary {
   user_id: string;
@@ -13,6 +14,10 @@ interface SubscriptionSummary {
   subscription_plan: "monthly" | "yearly" | "lifetime" | null;
   subscription_started_at: string | null;
   subscription_expires_at: string | null;
+  // Phase 38 起新增:當前(最新一筆)訂閱的 provider。
+  // 'google_play' 走 Play Store deep link 取消、'ecpay' 走後端 API。
+  // null = 從沒訂閱過 / 舊資料,保守當 ecpay 處理。
+  subscription_provider: "google_play" | "ecpay" | "linepay" | "newebpay" | "manual" | null;
   is_active: boolean;
   days_remaining: number | null;
 }
@@ -49,7 +54,24 @@ export default function AccountPage() {
   const [savingNickname, setSavingNickname] = useState(false);
   const [nicknameError, setNicknameError] = useState("");
 
+  // Play Billing 訂閱者 → 取消必須走 Play Store(政策要求)。
+  // 構造 deep link:URL 在 TWA 內由 Android 系統攔截,直接開 Play app 的訂閱管理頁;
+  // 在普通瀏覽器則跳到網頁版,任一情境使用者都能順利取消。
+  const playSubscriptionDeepLink = (() => {
+    const plan = summary?.subscription_plan;
+    if (plan !== "monthly" && plan !== "yearly") return null;
+    const sku = SUBSCRIPTION_SKUS[plan];
+    if (!sku) return null;
+    return `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(sku)}&package=${encodeURIComponent(PLAY_PACKAGE_NAME)}`;
+  })();
+
   const handleCancelSubscription = async () => {
+    // Play Billing 訂閱:不打 ECPay API(會回 404),直接跳 Play Store 取消頁
+    if (summary?.subscription_provider === "google_play" && playSubscriptionDeepLink) {
+      window.location.assign(playSubscriptionDeepLink);
+      return;
+    }
+
     if (!confirm(
       t(
         "確認取消訂閱?\n\n下一期不會再自動扣款,但你仍可使用會員權益直到目前已付期限結束。",
@@ -860,7 +882,8 @@ export default function AccountPage() {
             {t("登出", "Sign Out", "ログアウト", "로그아웃")}
           </button>
 
-          {/* 取消訂閱 — 小、低調,只在有效中訂閱者出現 */}
+          {/* 取消訂閱 — 小、低調,只在有效中訂閱者出現。
+              Play Billing 訂閱者點下去會被導去 Play Store 訂閱頁(deep link), */}
           {canCancelSubscription && (
             <button
               onClick={handleCancelSubscription}
@@ -878,13 +901,27 @@ export default function AccountPage() {
                 textDecoration: "underline",
                 opacity: cancelLoading ? 0.5 : 1,
               }}
-              title={t(
-                "停止下期自動扣款。會員權益保留到目前期限結束。",
-                "Stop auto-renewal. Benefits keep until current period ends.",
-              )}
+              title={
+                summary?.subscription_provider === "google_play"
+                  ? t(
+                      "於 Google Play 訂閱頁停止下期續扣。會員權益保留到目前期限結束。",
+                      "Manage cancellation in Google Play. Benefits keep until current period ends.",
+                    )
+                  : t(
+                      "停止下期自動扣款。會員權益保留到目前期限結束。",
+                      "Stop auto-renewal. Benefits keep until current period ends.",
+                    )
+              }
             >
               {cancelLoading
                 ? t("處理中…", "Processing…", "処理中…", "처리 중…")
+                : summary?.subscription_provider === "google_play"
+                ? t(
+                    "於 Google Play 管理訂閱 →",
+                    "Manage subscription in Google Play →",
+                    "Google Play でサブスクを管理 →",
+                    "Google Play에서 구독 관리 →"
+                  )
                 : t(
                     "取消訂閱(停止下期續扣)",
                     "Cancel subscription (stop auto-renewal)",
