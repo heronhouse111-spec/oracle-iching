@@ -12,7 +12,9 @@
 -- 設計:
 --   - 從 subscriptions 表撈最新一筆 active(或 fallback 任意最新)的 provider
 --   - 沒任何訂閱紀錄 → null(免費會員 / 沒訂閱過的人)
---   - 既有欄位不動,只多一欄 subscription_provider
+--   - 既有欄位順序不動,subscription_provider 加在最尾
+--     (PostgreSQL 限制:CREATE OR REPLACE VIEW 只能 append 新欄,
+--      插在中間會跳 42P16 cannot change name of view column)
 --
 -- 可重複執行(create or replace view)
 -- ============================================
@@ -25,16 +27,6 @@ select
   p.subscription_plan,
   p.subscription_started_at,
   p.subscription_expires_at,
-  (
-    -- 優先取 active 那筆;沒有再退而求其次取最新一筆
-    select s.provider
-    from public.subscriptions s
-    where s.user_id = p.id
-    order by
-      case when s.status = 'active' then 0 else 1 end,
-      s.started_at desc nulls last
-    limit 1
-  ) as subscription_provider,
   case
     when p.subscription_status in ('active', 'canceled')
          and (p.subscription_expires_at is null or p.subscription_expires_at > now())
@@ -45,7 +37,17 @@ select
     when p.subscription_expires_at is not null
       then greatest(0, extract(day from (p.subscription_expires_at - now()))::integer)
     else null
-  end as days_remaining
+  end as days_remaining,
+  (
+    -- 優先取 active 那筆;沒有再退而求其次取最新一筆
+    select s.provider
+    from public.subscriptions s
+    where s.user_id = p.id
+    order by
+      case when s.status = 'active' then 0 else 1 end,
+      s.started_at desc nulls last
+    limit 1
+  ) as subscription_provider
 from public.profiles p;
 
 comment on view public.user_subscription_summary is
