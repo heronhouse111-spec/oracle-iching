@@ -1,0 +1,388 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useState } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
+import {
+  tarotDeck,
+  SUIT_NAMES_ZH,
+  SUIT_NAMES_EN,
+  SUIT_NAMES_JA,
+  SUIT_NAMES_KO,
+} from "@/data/tarot";
+import CollectionProgress from "@/components/CollectionProgress";
+import CollectionRewardToast from "@/components/CollectionRewardToast";
+import RedemptionModal, { type RedemptionResult } from "@/components/RedemptionModal";
+import NewCardToast from "@/components/NewCardToast";
+
+const SUIT_ORDER: Array<"major" | "wands" | "cups" | "swords" | "pentacles"> = [
+  "major", "wands", "cups", "swords", "pentacles",
+];
+
+const REDEEM_THRESHOLD = 10;
+
+interface Props {
+  /** 每組(10 張)可換的點數,從 server 端 getCreditCost("REDEEM_DUPLICATE_RATE") 拿 */
+  redeemRate: number;
+}
+
+interface ModalState {
+  cardId: string;
+  cardName: string;
+  cardImageUrl: string;
+  currentCount: number;
+}
+
+export default function TarotCardsIndexView({ redeemRate }: Props) {
+  const { t } = useLanguage();
+  // 未登入時:全彩預覽模式(讓使用者一眼看到價值,觸發登入收藏慾望)
+  // 已登入時:Pokédex 模式 — owned 才彩色,未抽到的灰階(現有 gamification)
+  // 初始 null → 還沒拿到 collection API 回應,先全彩比全灰好看
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
+  const [obtainCounts, setObtainCounts] = useState<Map<string, number>>(new Map());
+  const [modal, setModal] = useState<ModalState | null>(null);
+  const [toast, setToast] = useState<{ cardName: string; credits: number } | null>(null);
+  const suitName = (s: typeof SUIT_ORDER[number]) =>
+    t(SUIT_NAMES_ZH[s], SUIT_NAMES_EN[s], SUIT_NAMES_JA[s], SUIT_NAMES_KO[s]);
+
+  const grouped = SUIT_ORDER.map((suit) => ({
+    suit,
+    name: suitName(suit),
+    cards: tarotDeck.filter((c) => c.suit === suit).sort((a, b) => a.number - b.number),
+  }));
+
+  return (
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "16px" }}>
+      <header style={{ textAlign: "center", marginBottom: 32 }}>
+        <h1
+          className="text-gold-gradient"
+          style={{ fontFamily: "'Noto Serif TC', serif", fontSize: 32, fontWeight: 700, margin: 0 }}
+        >
+          {t(
+            "78 張塔羅牌牌意百科",
+            "78 Tarot Cards Encyclopedia",
+            "78枚タロットカード百科",
+            "78장 타로 카드 백과"
+          )}
+        </h1>
+        <p style={{ color: "#c0c0d0", fontSize: 14, marginTop: 8 }}>
+          {t(
+            "Rider-Waite-Smith 完整牌組",
+            "Rider-Waite-Smith complete deck",
+            "ライダー・ウェイト版 完全版",
+            "라이더-웨이트 전체 덱"
+          )}
+        </p>
+        <p
+          style={{
+            color: "rgba(192,192,208,0.7)",
+            fontSize: 13,
+            marginTop: 12,
+            lineHeight: 1.7,
+            maxWidth: 640,
+            margin: "12px auto 0",
+          }}
+        >
+          {t(
+            "22 張大阿爾克那(精神象徵)+ 56 張小阿爾克那(日常面向)。每張牌都附上正逆位牌義、關鍵字、與適用情境。",
+            "22 Major Arcana (spiritual archetypes) + 56 Minor Arcana (daily aspects). Each with upright/reversed meanings, keywords, and contexts.",
+            "22枚の大アルカナ(精神的アーキタイプ)+ 56枚の小アルカナ(日常的側面)。各カードに正位置・逆位置の意味、キーワード、適用シーンを掲載。",
+            "메이저 아르카나 22장(정신적 원형)+ 마이너 아르카나 56장(일상의 면). 각 카드마다 정·역방향 의미, 키워드, 적용 상황 포함."
+          )}
+        </p>
+      </header>
+
+      <CollectionProgress
+        type="tarot"
+        total={78}
+        onLoaded={(d) => {
+          setAuthed(d.authenticated);
+          setOwnedIds(d.ownedIds);
+          setObtainCounts(d.obtainCounts);
+        }}
+      />
+
+      {grouped.map(({ suit, name, cards }) => (
+        <section key={suit} style={{ marginBottom: 48 }}>
+          <h2
+            style={{
+              fontFamily: "'Noto Serif TC', serif",
+              fontSize: 22,
+              color: "#d4a855",
+              marginBottom: 16,
+              borderLeft: "3px solid #d4a855",
+              paddingLeft: 12,
+            }}
+          >
+            {name}
+            <span style={{ opacity: 0.5, fontSize: 13, marginLeft: 12 }}>
+              ({cards.length})
+            </span>
+          </h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {cards.map((card) => {
+              const owned = ownedIds.has(card.id);
+              // 未登入(或 API 還沒回來)→ 全彩預覽,讓圖鑑像 marketing window
+              // 登入 → 維持 Pokédex 模式:owned 彩色 / 未持有灰階
+              const showInColor = authed === false || authed === null ? true : owned;
+              const cardCount = obtainCounts.get(card.id) ?? 0;
+              const canRedeem = cardCount >= REDEEM_THRESHOLD && redeemRate > 0;
+              const cardName = t(card.nameZh, card.nameEn, card.nameJa, card.nameKo);
+              return (
+                <Link
+                  key={card.id}
+                  href={`/tarot/cards/${card.id}`}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    color: "inherit",
+                    background: showInColor
+                      ? "rgba(13,13,43,0.5)"
+                      : "rgba(13,13,43,0.35)",
+                    border: canRedeem
+                      ? "1px solid rgba(110,231,183,0.55)"
+                      : showInColor
+                      ? "1px solid rgba(212,168,85,0.4)"
+                      : "1px solid rgba(212,168,85,0.1)",
+                    borderRadius: 10,
+                    padding: 8,
+                    position: "relative",
+                    transition: "transform 0.2s, border-color 0.2s, filter 0.3s",
+                    boxShadow: canRedeem
+                      ? "0 0 16px rgba(110,231,183,0.15)"
+                      : undefined,
+                  }}
+                >
+                  {/* 角標:抽到 1 次 → ✓;抽到 ≥2 次 → ×N(取代 ✓ 避免重複) */}
+                  {owned && (
+                    <span
+                      title={
+                        cardCount >= 2
+                          ? t(
+                              `已抽到 ${cardCount} 次`,
+                              `Drawn ${cardCount} times`,
+                              `${cardCount} 回引いた`,
+                              `${cardCount}회 뽑음`
+                            )
+                          : t("已收藏", "Collected", "収集済み", "수집 완료")
+                      }
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 9999,
+                        background: "linear-gradient(135deg,#d4a855,#fde68a)",
+                        color: "#0a0a1a",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        padding: cardCount >= 2 ? "0 6px" : 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                        boxShadow: "0 2px 6px rgba(212,168,85,0.45)",
+                      }}
+                    >
+                      {cardCount >= 2 ? `×${cardCount}` : "✓"}
+                    </span>
+                  )}
+                  {/* 兌換 pill — 持有 ≥10 才出現 */}
+                  {canRedeem && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setModal({
+                          cardId: card.id,
+                          cardName,
+                          cardImageUrl: card.imagePath,
+                          currentCount: cardCount,
+                        });
+                      }}
+                      title={t(
+                        `用 10 張兌換 ${redeemRate} 點`,
+                        `Redeem 10 cards for ${redeemRate} credits`,
+                        `10 枚で ${redeemRate} ポイント交換`,
+                        `10장으로 ${redeemRate} 포인트 교환`
+                      )}
+                      style={{
+                        position: "absolute",
+                        bottom: 6,
+                        right: 6,
+                        background: "linear-gradient(135deg,#6ee7b7,#34d399)",
+                        color: "#0a0a1a",
+                        border: "none",
+                        borderRadius: 9999,
+                        padding: "3px 9px",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        zIndex: 3,
+                        boxShadow: "0 2px 8px rgba(110,231,183,0.4)",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ↺ {t("兌換", "Redeem", "交換", "교환")}
+                    </button>
+                  )}
+                  <div
+                    style={{
+                      borderRadius: 6,
+                      overflow: "hidden",
+                      aspectRatio: "9 / 14",
+                      marginBottom: 6,
+                      border: "1px solid rgba(212,168,85,0.2)",
+                      filter: showInColor ? "none" : "grayscale(1) brightness(0.55)",
+                      transition: "filter 0.3s",
+                    }}
+                  >
+                    <Image
+                      src={card.imagePath}
+                      alt={cardName}
+                      width={300}
+                      height={467}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: showInColor ? "#e8e8f0" : "rgba(192,192,208,0.45)",
+                      lineHeight: 1.4,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{cardName}</div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      <footer
+        style={{
+          marginTop: 48,
+          padding: "20px 16px",
+          textAlign: "center",
+          background: "rgba(13,13,43,0.5)",
+          borderRadius: 12,
+          border: "1px solid rgba(212,168,85,0.2)",
+        }}
+      >
+        <p style={{ color: "#e8e8f0", fontSize: 14, marginBottom: 12, lineHeight: 1.7 }}>
+          {t(
+            "想真正用這些牌做一次占卜?",
+            "Ready to use these cards in a real reading?",
+            "実際にこのカードで占ってみませんか?",
+            "이 카드로 실제 점을 쳐볼까요?"
+          )}
+        </p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+          <Link
+            href="/"
+            style={{
+              padding: "10px 20px",
+              background: "linear-gradient(135deg, #d4a855, #f0d78c)",
+              color: "#0a0a1a",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            ✦ {t("開始占卜", "Start Reading", "占いを始める", "점 시작하기")}
+          </Link>
+          <Link
+            href="/yes-no"
+            style={{
+              padding: "10px 20px",
+              background: "transparent",
+              color: "#d4a855",
+              border: "1px solid #d4a855",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            {t("Yes/No 速答", "Yes/No Quick", "Yes/No 即答", "Yes/No 즉답")}
+          </Link>
+          <Link
+            href="/daily"
+            style={{
+              padding: "10px 20px",
+              background: "transparent",
+              color: "#d4a855",
+              border: "1px solid #d4a855",
+              borderRadius: 8,
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            {t("每日一卡", "Daily Card", "今日の一枚", "오늘의 카드")}
+          </Link>
+        </div>
+      </footer>
+
+      {modal && (
+        <RedemptionModal
+          open={true}
+          collectionType="tarot"
+          cardId={modal.cardId}
+          cardName={modal.cardName}
+          cardImageUrl={modal.cardImageUrl}
+          currentCount={modal.currentCount}
+          rate={redeemRate}
+          onClose={() => setModal(null)}
+          onSuccess={(result: RedemptionResult) => {
+            // 更新本地 obtainCounts,讓 ×N pill 跟 redeem pill 立即反映新值
+            setObtainCounts((prev) => {
+              const next = new Map(prev);
+              next.set(modal.cardId, result.countAfter);
+              return next;
+            });
+            setToast({ cardName: modal.cardName, credits: result.creditsGranted });
+            setModal(null);
+          }}
+        />
+      )}
+
+      {/* 兌換成功 toast — 沿用 NewCardToast 的「重複卡」橘色變體 */}
+      <NewCardToast
+        show={toast !== null}
+        type="tarot"
+        isNew={false}
+        cardName={
+          toast
+            ? t(
+                `已兌換 ${toast.cardName} ×10`,
+                `Redeemed ${toast.cardName} ×10`,
+                `${toast.cardName} ×10 を交換`,
+                `${toast.cardName} ×10 교환 완료`
+              )
+            : ""
+        }
+        collectionCount={ownedIds.size}
+        total={78}
+        rewardCredits={toast?.credits ?? 0}
+        onDismiss={() => setToast(null)}
+      />
+
+      {/* 未登入禮物提示 — 1.2s 後右下浮現,7 天 cooldown */}
+      <CollectionRewardToast authenticated={authed} surface="tarot" />
+    </div>
+  );
+}

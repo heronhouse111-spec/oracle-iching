@@ -1,0 +1,159 @@
+{
+  "title": "Privacy Policy",
+  "lastUpdated": "Last updated: April 21, 2026",
+  "sections": [
+    {
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Heronhouse (heronhouse.me, \"we,\" \"us\") takes your privacy seriously. This Privacy Policy describes what personal data we collect, how we use it, and your rights when you use our platform and its services (the \"Service\"). By using the Service, you acknowledge that you have read and agree to this Policy."
+        }
+      ]
+    },
+    {
+      "heading": "1. Data We Collect",
+      "blocks": [
+        {
+          "type": "list",
+          "content": [
+            "**Account data**: When you sign in with Google OAuth, we receive your email address, display name, and avatar URL. We do not access your contacts, Drive, or other Google account data.",
+            "**Divination content**: Questions you submit, chosen categories, hexagrams or tarot cards drawn, AI-generated readings, follow-up threads, and chat messages.",
+            "**Credits & subscription**: Credit balance, consumption records, subscription plan and expiration date.",
+            "**Technical data**: Browser type, IP address, timestamps, and error logs. Used only for debugging and abuse prevention; never disclosed externally."
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "2. Purposes & Use",
+      "blocks": [
+        {
+          "type": "list",
+          "content": [
+            "Provide core features: AI readings, history, follow-up divinations",
+            "Maintain your membership, subscription status, and credit balance",
+            "Prevent abuse, attacks, and Terms violations",
+            "Comply with lawful requests from judicial authorities"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "We do not use your divination content for advertising and do not sell personal data."
+        }
+      ]
+    },
+    {
+      "heading": "3. Where Data Is Stored & Encryption",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "Data generated while signed in is hosted by third-party cloud providers (see Section 4) on servers located in the Asia-Pacific region, which constitutes an international transfer of personal data. Divination data generated while signed out is stored only in your browser's localStorage and is never uploaded to our servers."
+        },
+        {
+          "type": "paragraph",
+          "content": "**In transit**: All traffic between your browser or App and our servers is encrypted via HTTPS/TLS, including sign-in, divinations, AI follow-up chat, and subscription payments.\n**At rest**: Our cloud database provider applies encryption-at-rest by default at the storage layer, with keys managed by the provider."
+        }
+      ]
+    },
+    {
+      "heading": "4. Third-Party Services",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "To provide full functionality, we transmit necessary data to the following categories of third parties:"
+        },
+        {
+          "type": "list",
+          "content": [
+            "**Authentication providers**: You can sign in via Google OAuth or Facebook Login. We receive only email, display name, and avatar. We do not access your contacts, Drive, friend list, or any other social account data.",
+            "**AI service providers**: Your question, hexagram/cards, and follow-up chat are forwarded to a third-party AI service for generation. Email, real name, and IP address are not included.",
+            "**Cloud infrastructure providers**: Database hosting and website hosting for your account and divination data."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "These providers follow internationally recognized security standards, but we cannot fully control their internal processes."
+        }
+      ]
+    },
+    {
+      "heading": "5. Cookies & Similar",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "We use essential cookies to maintain your sign-in state and language preference, and browser localStorage to cache guest divination history (migrated to cloud upon sign-in). We do not use third-party advertising trackers."
+        }
+      ]
+    },
+    {
+      "heading": "6. Retention",
+      "blocks": [
+        {
+          "type": "list",
+          "content": [
+            "While the account exists: divination history, subscription, and credits remain available for you to view.",
+            "After deletion: all divination records, subscription data, and auth identity are purged within 24 hours. Third-party provider operational logs rotate per their respective policies (30–90 days).",
+            "Data legally required to retain (invoices, payment reconciliation) is kept 5 years per tax regulations."
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "7. Your Rights",
+      "blocks": [
+        { "type": "paragraph", "content": "You have the right to:" },
+        {
+          "type": "list",
+          "content": [
+            "Access and obtain a copy (see the History page)",
+            "Request correction (Google profile data via your Google account)",
+            "Request deletion or stop processing (see \"Account Deletion\" below)",
+            "Withdraw consent (equivalent to account deletion)"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": "**Account deletion:** visit [/account/delete](/account/delete). The self-service flow immediately removes all your data — no need to contact support."
+        }
+      ]
+    },
+    {
+      "heading": "8. Children's Privacy",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "The Service is not directed to children under 13 and we do not knowingly collect their data. If you learn that a minor has provided personal data without guardian consent, please contact us and we will remove it promptly."
+        }
+      ]
+    },
+    {
+      "heading": "9. Breach Notification",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "If a security incident may impact your personal data, we will notify you by email within 72 hours of discovery and post a notice on this page."
+        }
+      ]
+    },
+    {
+      "heading": "10. Changes",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "This Policy may be updated periodically. Material changes will update the date at the top of this page and be announced by email or site notice. Continued use after changes constitutes acceptance."
+        }
+      ]
+    },
+    {
+      "heading": "11. Contact",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "content": "For any question about this Policy, personal data handling, or to exercise your rights, email [contact@heronhouse.me](mailto:contact@heronhouse.me). We aim to reply within 7 business days."
+        },
+        { "type": "paragraph", "content": "Operator: Heronhouse" }
+      ]
+    }
+  ],
+  "footerNote": "By using the Service, you confirm that you have read and agreed to the entirety of this Privacy Policy."
+}

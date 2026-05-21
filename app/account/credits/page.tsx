@@ -1,0 +1,911 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useLanguage } from "@/i18n/LanguageContext";
+import Header from "@/components/Header";
+import CurrencySwitcher from "@/components/CurrencySwitcher";
+import LoginOptionsModal from "@/components/LoginOptionsModal";
+import { useIsTWA } from "@/lib/env/useIsTWA";
+import { useCurrency } from "@/lib/geo/useCurrency";
+import {
+  CREDIT_PACKS,
+  formatPriceOf,
+  type CreditPackId,
+} from "@/lib/pricing";
+import {
+  isPlayBillingAvailable,
+  purchaseCreditPack,
+} from "@/lib/billing/playBilling";
+
+const isSupabaseConfigured =
+  typeof window !== "undefined" &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== "your_supabase_url_here";
+
+interface BalanceResponse {
+  balance: number | null;
+  refillsAt: string | null;
+  authenticated: boolean;
+}
+
+export default function CreditsPurchasePage() {
+  const { locale, t } = useLanguage();
+  const isTwa = useIsTWA();
+  const { currency } = useCurrency();
+
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [refillsAt, setRefillsAt] = useState<string | null>(null);
+  const [pendingPack, setPendingPack] = useState<CreditPackId | null>(null);
+
+  // Play Billing 進行中的 pack id(顯示 loading + disable 按鈕)
+  const [playPurchasing, setPlayPurchasing] = useState<CreditPackId | null>(null);
+  // Play Billing 成功 / 失敗訊息
+  const [playToast, setPlayToast] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  // Web 端 ECPay 結帳:loading 中 pack id(避免 double-click)
+  const [ecpayLoading, setEcpayLoading] = useState<CreditPackId | null>(null);
+  const [ecpayError, setEcpayError] = useState<string | null>(null);
+
+  // 登入 modal 開關 + 「使用者剛剛點了哪個 pack」記下來,登入完成後自動觸發
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingAfterLoginPack, setPendingAfterLoginPack] =
+    useState<CreditPackId | null>(null);
+
+  // 防止 autoBuy URL param 被多次觸發(StrictMode 雙呼叫 / 重渲染)
+  const autoBuyTriggeredRef = useRef(false);
+
+  // 是否有過任何付費紀錄 — 用來決定要不要顯示 firstTimeOnly 的 pack(如 starter)
+  // null = 還沒查;訪客 fetch 後也會是 null(視同未購,可看 starter)
+  const [hasPurchased, setHasPurchased] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/account/has-purchased", {
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const j = (await res.json()) as {
+          authenticated: boolean;
+          hasPurchased?: boolean;
+        };
+        // 訪客一律視為「未購」可看 starter;登入用戶按 server 結果走
+        setHasPurchased(j.authenticated ? Boolean(j.hasPurchased) : false);
+      } catch {
+        // 失敗保守 → 視為已購買,避免漏發 starter 多次
+        if (!cancelled) setHasPurchased(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 過濾出可以顯示的 packs:
+  //   - firstTimeOnly 的要 hasPurchased === false
+  //   - TWA 環境(Play Billing)下,starter pack 暫時隱藏
+  //     (因為 Play Console 還沒建立 orc.credits.pack100_starter SKU)
+  const visiblePacks = CREDIT_PACKS.filter((p) => {
+    if (p.firstTimeOnly) {
+      if (hasPurchased !== false) return false;
+      if (isTwa) return false;  // TWA 暫時走 ECPay 路徑無 starter,等 Play SKU 建好移除
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setAuthed(false);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/credits/balance", {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          setAuthed(false);
+          return;
+        }
+        const data: BalanceResponse = await res.json();
+        setAuthed(data.authenticated);
+        setBalance(data.balance);
+        setRefillsAt(data.refillsAt);
+      } catch {
+        setAuthed(false);
+      }
+    })();
+  }, []);
+
+  const mainStyle = {
+    paddingTop: 80,
+    paddingBottom: 48,
+    paddingLeft: 16,
+    paddingRight: 16,
+    maxWidth: 720,
+    margin: "0 auto",
+  } as const;
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString(
+      locale === "zh" ? "zh-TW" : "en-US",
+      { year: "numeric", month: "long", day: "numeric" }
+    );
+  };
+
+  /**
+   * TWA 殼內透過 Play Billing 購買點數。
+   * 跟 web 不同:
+   *   - 不打開「金流準備中」modal,直接觸發 Google 內建付款 UI
+   *   - 成功後 backend 已補點,我們只要重抓餘額顯示
+   */
+  // 把 ?autoBuy=<packId> 推進 URL,確保不論用 OAuth redirect / Email magic link
+  // / GSI window.location.reload() 哪一條登入路徑,登入完成後頁面 URL 都還帶這參數,
+  // autoBuy useEffect 才會觸發。
+  const openLoginModalForPack = (packId: CreditPackId) => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("autoBuy", packId);
+      window.history.replaceState({}, "", url.toString());
+    }
+    setPendingAfterLoginPack(packId);
+    setLoginModalOpen(true);
+  };
+
+  const handlePlayPurchase = async (packId: CreditPackId) => {
+    if (!authed) {
+      // 未登入 → 開登入 modal,登入完成後 autoBuy useEffect 會自動續跑
+      openLoginModalForPack(packId);
+      return;
+    }
+    setPlayPurchasing(packId);
+    setPlayToast(null);
+    try {
+      const result = await purchaseCreditPack(packId);
+      if (!result.ok) {
+        if (result.code === "user_canceled") {
+          // 使用者自己取消,不顯示錯誤
+          return;
+        }
+        setPlayToast({
+          kind: "error",
+          text: t(
+            `購買失敗:${result.error}`,
+            `Purchase failed: ${result.error}`
+          ),
+        });
+        return;
+      }
+      // 成功 → 重抓餘額
+      try {
+        const res = await fetch("/api/credits/balance", { cache: "no-store" });
+        if (res.ok) {
+          const data: BalanceResponse = await res.json();
+          setBalance(data.balance);
+          setRefillsAt(data.refillsAt);
+        }
+      } catch {
+        /* 餘額拉失敗也沒關係,下次重整就有 */
+      }
+      setPlayToast({
+        kind: "success",
+        text: t(
+          "購買成功!點數已補入帳號",
+          "Purchase complete — credits added",
+          "購入完了 — ポイントが追加されました",
+          "구매 완료 — 포인트가 추가되었습니다"
+        ),
+      });
+    } finally {
+      setPlayPurchasing(null);
+    }
+  };
+
+  // TWA 環境下偵測 Play Billing 是否可用(有些舊版 Chrome 沒 Digital Goods API)
+  const [playReady, setPlayReady] = useState(false);
+  useEffect(() => {
+    if (isTwa) setPlayReady(isPlayBillingAvailable());
+  }, [isTwa]);
+
+  /**
+   * autoBuy URL 偵測:當使用者從登入頁回跳(URL 帶 ?autoBuy=<packId>),
+   * 且 authed === true,自動觸發對應結帳流程(TWA → Play、web → ECPay)。
+   *
+   * 跑完(或已觸發過)就把 query string 從網址裡清掉,避免重整再跑一次。
+   * 用 useRef 確保整個 page 生命週期只執行一次。
+   */
+  useEffect(() => {
+    if (authed !== true) return;
+    if (autoBuyTriggeredRef.current) return;
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    const autoBuy = url.searchParams.get("autoBuy");
+    if (!autoBuy) return;
+
+    const valid = (CREDIT_PACKS as readonly { id: CreditPackId }[]).some(
+      (p) => p.id === autoBuy
+    );
+    if (!valid) {
+      // 無效值,直接清掉 query
+      url.searchParams.delete("autoBuy");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    autoBuyTriggeredRef.current = true;
+    // 先把 URL 上的 autoBuy 拿掉,避免使用者按上一頁 / 重整時重打
+    url.searchParams.delete("autoBuy");
+    window.history.replaceState({}, "", url.toString());
+
+    // TWA / web 分流(注意:TWA 不會走這個 flow,因為 LoginOptionsModal
+    // 在 TWA 內開 Google OAuth 大多數情況也能成功;但保險起見兩條都接)
+    const packId = autoBuy as CreditPackId;
+    if (isTwa) {
+      void handlePlayPurchase(packId);
+    } else {
+      void handleEcpayCheckout(packId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, isTwa]);
+
+  /**
+   * Web 端走 ECPay 結帳 —— 打 /api/billing/ecpay/checkout 拿 hub checkoutUrl,
+   * 然後 window.location.assign 跳過去(hub 會 auto-submit ECPay form)。
+   */
+  const handleEcpayCheckout = async (packId: CreditPackId) => {
+    if (!authed) {
+      // 未登入 → 開登入 modal。LoginOptionsModal 會帶 next=/account/credits?autoBuy=<id>,
+      // 而我們同時把 autoBuy 寫進當前 URL —— 兩道保險,確保 OAuth redirect / Email link
+      // / GSI reload 三條路徑回來後,autoBuy useEffect 都能自動續跑結帳
+      openLoginModalForPack(packId);
+      return;
+    }
+    setEcpayLoading(packId);
+    setEcpayError(null);
+    try {
+      const res = await fetch("/api/billing/ecpay/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "credits", packId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setEcpayError(
+          t(
+            `下單失敗:${err.error ?? res.statusText}`,
+            `Checkout failed: ${err.error ?? res.statusText}`,
+          ),
+        );
+        return;
+      }
+      const { checkoutUrl } = (await res.json()) as { checkoutUrl: string };
+      // 跳到 hub checkout 頁,hub 會 auto-submit 到綠界
+      window.location.assign(checkoutUrl);
+    } catch (e) {
+      setEcpayError(
+        t(
+          `網路錯誤:${e instanceof Error ? e.message : String(e)}`,
+          `Network error: ${e instanceof Error ? e.message : String(e)}`,
+        ),
+      );
+    } finally {
+      // 跳轉中,通常使用者不會看到 loading 狀態被重置
+      setEcpayLoading(null);
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh" }}>
+      <Header />
+      <main style={mainStyle}>
+        {/* ---- Title ---- */}
+        <h1
+          className="text-gold-gradient"
+          style={{
+            fontSize: 24,
+            fontFamily: "'Noto Serif TC', serif",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
+          {t("購買點數", "Purchase Credits", "ポイント購入", "포인트 구매")}
+        </h1>
+        <p
+          style={{
+            textAlign: "center",
+            color: "rgba(192,192,208,0.6)",
+            fontSize: 13,
+            marginBottom: 28,
+            lineHeight: 1.6,
+          }}
+        >
+          {t(
+            "每次 AI 占卜分析扣 5 點、衍伸問卜扣 10 點、追問每則 2 點",
+            "Main divination costs 5 credits; follow-up reading 10; each chat message 2.",
+            "AI 占い解析は 5 ポイント、フォローアップ占いは 10 ポイント、追加質問は 1 件 2 ポイント。",
+            "AI 점 해석은 5 포인트, 후속 점은 10 포인트, 추가 질문은 1건당 2 포인트."
+          )}
+        </p>
+
+        {/* ---- Current balance (only for signed-in users) ---- */}
+        {authed && balance !== null && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 20,
+              marginBottom: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  color: "rgba(192,192,208,0.5)",
+                  fontSize: 11,
+                  marginBottom: 4,
+                }}
+              >
+                {t("目前餘額", "Current Balance", "現在の残高", "현재 잔액")}
+              </div>
+              <div
+                style={{
+                  color: "#d4a855",
+                  fontFamily: "'Noto Serif TC', serif",
+                  fontSize: 28,
+                  fontWeight: 600,
+                }}
+              >
+                <span style={{ fontSize: 16, marginRight: 6 }}>✦</span>
+                {balance}
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div
+                style={{
+                  color: "rgba(192,192,208,0.5)",
+                  fontSize: 11,
+                  marginBottom: 4,
+                }}
+              >
+                {t("下次補點", "Next Refill", "次回の補充", "다음 충전")}
+              </div>
+              <div
+                style={{
+                  color: "rgba(192,192,208,0.9)",
+                  fontSize: 13,
+                }}
+              >
+                {formatDate(refillsAt)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ---- Signed-out hint ----
+            未登入時提供柔和的提示;真正觸發登入是在點「購買」時,
+            handleEcpayCheckout / handlePlayPurchase 會自動開 LoginOptionsModal,
+            登入完成後 autoBuy useEffect 自動續跑結帳。所以不要顯示紅框錯誤訊息。 */}
+        {authed === false && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 20,
+              textAlign: "center",
+              background: "rgba(212,168,85,0.04)",
+              border: "1px solid rgba(212,168,85,0.18)",
+            }}
+          >
+            <span
+              style={{
+                color: "rgba(212,168,85,0.85)",
+                fontSize: 12,
+                lineHeight: 1.7,
+              }}
+            >
+              {t(
+                "點擊購買即可登入並完成付款",
+                "Tap a pack to sign in and complete checkout"
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* ---- TWA toast(購買結果通知) ---- */}
+        {isTwa && playToast && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: `1px solid ${
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.5)"
+                  : "rgba(248,113,113,0.5)"
+              }`,
+              background:
+                playToast.kind === "success"
+                  ? "rgba(110,231,183,0.08)"
+                  : "rgba(248,113,113,0.08)",
+              color:
+                playToast.kind === "success" ? "#6ee7b7" : "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {playToast.text}
+          </div>
+        )}
+
+        {/* ---- TWA: Play Billing 不可用警示 ---- */}
+        {isTwa && !playReady && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              fontSize: 12,
+              color: "rgba(192,192,208,0.7)",
+            }}
+          >
+            {t(
+              "正在初始化付款服務,請稍候…",
+              "Initializing payment service, please wait…"
+            )}
+          </div>
+        )}
+
+        {/* ---- Web ECPay 錯誤訊息 ---- */}
+        {!isTwa && ecpayError && (
+          <div
+            className="mystic-card"
+            style={{
+              padding: 14,
+              marginBottom: 16,
+              textAlign: "center",
+              border: "1px solid rgba(248,113,113,0.5)",
+              background: "rgba(248,113,113,0.08)",
+              color: "#fca5a5",
+              fontSize: 13,
+            }}
+          >
+            {ecpayError}
+          </div>
+        )}
+
+        {/* ---- Currency switcher (web only) ---- */}
+        {!isTwa && <CurrencySwitcher />}
+
+        {/* ---- Pack grid (TWA + web 都顯示;onClick 行為依環境分流) ---- */}
+        {(
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          {visiblePacks.map((pack) => {
+            return (
+              <div
+                key={pack.id}
+                className="mystic-card"
+                style={{
+                  padding: 20,
+                  position: "relative",
+                  border: pack.highlighted
+                    ? "1px solid rgba(212,168,85,0.6)"
+                    : undefined,
+                  boxShadow: pack.highlighted
+                    ? "0 0 30px rgba(212,168,85,0.2)"
+                    : undefined,
+                }}
+              >
+                {pack.highlighted && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -10,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background:
+                        "linear-gradient(135deg, #d4a855 0%, #f0d78c 50%, #d4a855 100%)",
+                      color: "#0a0a1a",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 9999,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    {t("最划算", "BEST VALUE", "最もお得", "최고 가성비")}
+                  </div>
+                )}
+                {pack.firstTimeOnly && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: -10,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background:
+                        "linear-gradient(135deg, #f97316 0%, #fb923c 50%, #f97316 100%)",
+                      color: "#0a0a1a",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: 9999,
+                      letterSpacing: 1,
+                      boxShadow: "0 2px 8px rgba(249,115,22,0.45)",
+                    }}
+                  >
+                    {t("新手限定 · 一次", "STARTER · ONE-TIME", "新規限定 · 一度のみ", "신규 한정 · 1회")}
+                  </div>
+                )}
+                <div
+                  style={{
+                    color: "rgba(192,192,208,0.5)",
+                    fontSize: 11,
+                    marginBottom: 8,
+                    textAlign: "center",
+                  }}
+                >
+                  {t("加購包", "Credit Pack", "ポイントパック", "포인트 팩")}
+                </div>
+                <div
+                  className="text-gold-gradient"
+                  style={{
+                    fontFamily: "'Noto Serif TC', serif",
+                    fontSize: 30,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  {pack.credits}
+                  <span
+                    style={{
+                      fontSize: 14,
+                      marginLeft: 4,
+                      color: "rgba(192,192,208,0.8)",
+                      WebkitTextFillColor: "rgba(192,192,208,0.8)",
+                      backgroundImage: "none",
+                    }}
+                  >
+                    {t("點", "pts", "pt", "pt")}
+                  </span>
+                </div>
+                {pack.bonusCredits > 0 ? (
+                  <div
+                    style={{
+                      color: "#6ee7b7",
+                      fontSize: 12,
+                      textAlign: "center",
+                      marginBottom: 12,
+                    }}
+                  >
+                    {t(
+                      `＋贈 ${pack.bonusCredits} 點`,
+                      `+${pack.bonusCredits} bonus`
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ height: 12, marginBottom: 12 }} />
+                )}
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#d4a855",
+                    fontSize: 20,
+                    fontWeight: 600,
+                    marginBottom: 16,
+                  }}
+                >
+                  {/* TWA 內價格由 Play Store 在地化顯示(未來可從 fetchSkuDetails 拉,
+                       目前先用 lib/pricing.ts 的硬編碼;Play 後台一致即可) */}
+                  {formatPriceOf(pack.price, currency)}
+                </div>
+                <button
+                  onClick={() => {
+                    if (isTwa) {
+                      handlePlayPurchase(pack.id);
+                    } else {
+                      handleEcpayCheckout(pack.id);
+                    }
+                  }}
+                  disabled={
+                    (isTwa && (!playReady || playPurchasing !== null)) ||
+                    (!isTwa && ecpayLoading === pack.id)
+                  }
+                  className="btn-gold"
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    fontSize: 13,
+                    opacity:
+                      (isTwa && (!playReady || playPurchasing !== null)) ||
+                      (!isTwa && ecpayLoading === pack.id)
+                        ? 0.5
+                        : 1,
+                    cursor:
+                      (isTwa && (!playReady || playPurchasing !== null)) ||
+                      (!isTwa && ecpayLoading === pack.id)
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
+                >
+                  {playPurchasing === pack.id || ecpayLoading === pack.id
+                    ? t("處理中…", "Processing…", "処理中…", "처리 중…")
+                    : t("購買", "Purchase", "購入", "구매")}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        )}
+
+        {/* ---- Footer links(TWA + web 都顯示) ---- */}
+        {(
+        <div
+          className="mystic-card"
+          style={{
+            padding: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              color: "rgba(192,192,208,0.7)",
+              fontSize: 12,
+              lineHeight: 1.6,
+            }}
+          >
+            {t(
+              "想改成月 / 年訂閱、省更多?",
+              "Want monthly / yearly subscriptions for deeper savings?"
+            )}
+          </div>
+          <Link
+            href="/account/upgrade"
+            style={{
+              fontSize: 13,
+              color: "#d4a855",
+              textDecoration: "none",
+              padding: "6px 14px",
+              borderRadius: 9999,
+              border: "1px solid rgba(212,168,85,0.4)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {t(
+              "看訂閱方案 →",
+              "See Subscription Plans →",
+              "サブスクプランを見る →",
+              "구독 플랜 보기 →"
+            )}
+          </Link>
+        </div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <Link
+            href="/account"
+            style={{
+              color: "rgba(192,192,208,0.5)",
+              fontSize: 12,
+              textDecoration: "none",
+            }}
+          >
+            ← {t(
+              "返回會員頁",
+              "Back to account",
+              "アカウントに戻る",
+              "계정으로 돌아가기"
+            )}
+          </Link>
+        </div>
+      </main>
+
+      {/* ---- 登入 modal —— 未登入點「購買」時開啟,
+            next 帶 ?autoBuy=<packId>,登入完 callback 跳回後 autoBuy useEffect 自動續跑 ---- */}
+      <LoginOptionsModal
+        open={loginModalOpen}
+        onClose={() => {
+          setLoginModalOpen(false);
+          setPendingAfterLoginPack(null);
+          // 使用者放棄登入 → 把 ?autoBuy 從 URL 清掉,避免下次重整還會觸發
+          if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has("autoBuy")) {
+              url.searchParams.delete("autoBuy");
+              window.history.replaceState({}, "", url.toString());
+            }
+          }
+        }}
+        next={
+          pendingAfterLoginPack
+            ? `/account/credits?autoBuy=${pendingAfterLoginPack}`
+            : "/account/credits"
+        }
+        title={t(
+          "登入即可完成購買",
+          "Sign in to complete your purchase",
+          "ログインで購入を完了",
+          "로그인하여 구매 완료"
+        )}
+        subtitle={t(
+          "登入後會自動帶你進入結帳頁",
+          "We'll take you straight to checkout after sign-in"
+        )}
+      />
+
+      {/* ---- "Coming soon" modal (web only — TWA has no purchase trigger) ---- */}
+      {!isTwa && pendingPack && (
+        <div
+          onClick={() => setPendingPack(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 16,
+          }}
+        >
+          <div
+            className="mystic-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              padding: 32,
+              maxWidth: 360,
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>
+              {authed ? "✦" : "🔐"}
+            </div>
+            <h3
+              className="text-gold-gradient"
+              style={{
+                fontFamily: "'Noto Serif TC', serif",
+                fontSize: 20,
+                marginBottom: 12,
+              }}
+            >
+              {!authed
+                ? t("請先登入", "Sign In First", "ログインが必要", "먼저 로그인")
+                : currency === "USD"
+                  ? t(
+                      "國際支付即將推出",
+                      "International Payment Coming Soon",
+                      "国際決済は近日公開",
+                      "국제 결제 곧 출시"
+                    )
+                  : t(
+                      "金流準備中",
+                      "Payment Coming Soon",
+                      "決済準備中",
+                      "결제 준비 중"
+                    )}
+            </h3>
+            <p
+              style={{
+                color: "rgba(192,192,208,0.75)",
+                fontSize: 13,
+                lineHeight: 1.7,
+                marginBottom: 20,
+              }}
+            >
+              {!authed
+                ? t(
+                    "購買點數需要綁定帳號。登入即贈 30 點,老使用者自動補 500 點。",
+                    "Purchases require an account. Sign in for 30 bonus credits (500 for returning users)."
+                  )
+                : currency === "USD"
+                ? t(
+                    "國際信用卡(USD)支付正在整合中。您可以切換到 NT$ 使用台灣金流,或等我們 email 通知。現階段登入即贈 30 點。",
+                    "International (USD) payment is being integrated. Switch to NT$ to use the Taiwan payment rail, or we'll email you when USD goes live. Signup grants 30 credits."
+                  )
+                : t(
+                    "購買功能即將開放,上線前會以 email 通知。現階段登入即贈 30 點,老使用者已自動補 500 點。",
+                    "Credit purchase will open shortly — you'll be notified via email. Meanwhile, signup grants 30 credits; existing users have been topped up with 500."
+                  )}
+            </p>
+            {authed ? (
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                {currency === "USD" && (
+                  <Link
+                    href="/account/international-soon"
+                    className="btn-gold"
+                    style={{ padding: "8px 18px", fontSize: 13, textDecoration: "none" }}
+                  >
+                    {t(
+                      "查看替代方案 →",
+                      "See alternatives →",
+                      "代替手段を見る →",
+                      "대체 방법 보기 →"
+                    )}
+                  </Link>
+                )}
+                <button
+                  onClick={() => setPendingPack(null)}
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("了解", "Got it", "了解", "확인")}
+                </button>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={() => setPendingPack(null)}
+                  style={{
+                    padding: "8px 18px",
+                    fontSize: 13,
+                    borderRadius: 9999,
+                    border: "1px solid rgba(192,192,208,0.3)",
+                    background: "none",
+                    color: "rgba(192,192,208,0.8)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("取消", "Cancel", "キャンセル", "취소")}
+                </button>
+                <Link
+                  href="/"
+                  className="btn-gold"
+                  style={{
+                    padding: "8px 24px",
+                    fontSize: 13,
+                    textDecoration: "none",
+                  }}
+                >
+                  {t(
+                    "回首頁登入",
+                    "Sign In",
+                    "ホームに戻ってログイン",
+                    "홈으로 돌아가 로그인"
+                  )}
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

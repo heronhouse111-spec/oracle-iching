@@ -1,0 +1,574 @@
+/**
+ * Admin dashboard data loaders.
+ *
+ * 所有函式都以 server-side Supabase client 執行,並且仰賴
+ * admin_schema.sql 中加入的 is_admin RLS policy。非 admin 呼叫時
+ * 會因為 RLS 過濾而只拿到自己的資料(或空結果),所以後台本身
+ * 還是必須在 page 層做權限守衛。
+ */
+
+import { createClient } from "@/lib/supabase/server";
+
+export interface DailyPoint {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
+export interface HexagramCount {
+  hexagram_number: number;
+  count: number;
+}
+
+export interface LocaleCount {
+  locale: string;
+  count: number;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalAdmins: number;
+  totalDivinations: number;
+  divinationsToday: number;
+  divinationsThisWeek: number;
+  divinationsThisMonth: number;
+  activeUsers7d: number;
+  newUsers7d: number;
+  avgPerUser: number;
+  dailyTrend30d: DailyPoint[];
+  categoryCounts: CategoryCount[];
+  localeCounts: LocaleCount[];
+  // 訪客 vs 會員拆分(總/今日)+ 30 日趨勢,給 dashboard 第二排卡片用
+  guestDivinationsTotal: number;
+  guestDivinationsToday: number;
+  memberDivinationsTotal: number;
+  memberDivinationsToday: number;
+  guestDailyTrend30d: DailyPoint[];
+  memberDailyTrend30d: DailyPoint[];
+  // 音樂功能扣點累計(跟占卜分開,因為跟占卜次數無關)
+  musicGenerateTotal: number;
+  musicCollectTotal: number;
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** 檢查目前登入者是否為 admin。沒登入回 null,非 admin 回 false。 */
+export async function getAdminUser() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { user: null, isAdmin: false as const };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, display_name, is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return {
+    user,
+    profile,
+    isAdmin: Boolean(profile?.is_admin),
+  };
+}
+
+/**
+ * 後台「總占卜次數 / 今日 / 週 / 月」要把所有占卜行為都算進去,不能只看 divinations 表。
+ * 各事件源互斥(同一次占卜只會落到其中一處),所以加總不會重複計。
+ *
+ *   - divinations 表        : 主流程 + plum-blossom + direction-hex + two-options(每筆 saveDivination 寫一列)
+ *   - credit_transactions   : 登入用戶 free-flow(yesno / daily / daily_iching)+ 衍伸提問(*_followup)
+ *   - daily_checkins.used_at: 登入用戶用簽到 token 免費玩 yesno(這條路不扣點)
+ *   - guest_yesno_log       : 訪客 yes/no(無使用者帳號,不寫 credit_transactions)
+ *   - guest_daily_log       : 訪客每日一卦/一卡
+ *
+ * main-flow 的 spend_divine / spend_tarot / spend_plum_blossom / spend_direction_hex /
+ * spend_ic_two_options 已經對應到 divinations 表的列,不能納入 EXTRA_DIVINATION_SPENDS
+ * 否則會雙重計。spend_chat / spend_music_* 不是占卜事件,當然也不要加。
+ *
+ * 衍伸提問(spend_*_followup)的特殊性:appendFollowUp() 把新問題附加進原 divinations
+ * 列的 follow_ups JSONB,並未寫新 row,所以從 divinations.count 抓不到。要把它算成
+ * 占卜次數就必須從 credit_transactions 補回來。
+ */
+const EXTRA_DIVINATION_SPENDS = [
+  // 輕量入口(訪客也能用 — 訪客那批由 guest_*_log 表獨立計,credit_transactions 只記登入用戶)
+  "spend_yesno",
+  "spend_daily",
+  "spend_daily_iching",
+  // 衍伸提問:JSONB append 進原 divinations 列,row 計數抓不到,只能透過扣點流水補
+  "spend_divine_followup",
+  "spend_tarot_followup",
+];
+
+// 音樂功能扣點 reason — 給 dashboard 「生成 AI 背景音樂次數 / 收藏音樂作品次數」卡片用。
+// 故意把 retry / subscriber 變體也納入同一張卡,因為使用者在意的是「總共做了幾次」,
+// 不在乎那一次走 retry 折扣或訂閱半價。
+const MUSIC_GENERATE_REASONS = [
+  "spend_music_generate",
+  "spend_music_generate_retry",
+];
+const MUSIC_COLLECT_REASONS = [
+  "spend_music_collect",
+  "spend_music_collect_subscriber",
+];
+
+/** 一次拉齊後台所需的統計資料。 */
+export async function loadAdminStats(): Promise<AdminStats> {
+  const supabase = await createClient();
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const sevenDaysAgo = new Date(todayStart);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // 含今天共 7 天
+  const thirtyDaysAgo = new Date(todayStart);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29); // 含今天共 30 天
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // 週一為一週起點
+
+  const todayIso = todayStart.toISOString();
+  const weekIso = weekStart.toISOString();
+  const monthIso = monthStart.toISOString();
+
+  const [
+    totalUsersRes,
+    totalAdminsRes,
+    // divinations 表 — 主流程留底
+    divTotalRes,
+    divTodayRes,
+    divWeekRes,
+    divMonthRes,
+    // free-flow 登入用戶 — credit_transactions
+    freeFlowTotalRes,
+    freeFlowTodayRes,
+    freeFlowWeekRes,
+    freeFlowMonthRes,
+    // 簽到免費 yesno — daily_checkins.used_at
+    checkinTotalRes,
+    checkinTodayRes,
+    checkinWeekRes,
+    checkinMonthRes,
+    // 訪客 yes/no
+    guestYesnoTotalRes,
+    guestYesnoTodayRes,
+    guestYesnoWeekRes,
+    guestYesnoMonthRes,
+    // 訪客每日一卦/一卡
+    guestDailyTotalRes,
+    guestDailyTodayRes,
+    guestDailyWeekRes,
+    guestDailyMonthRes,
+    newUsers7dRes,
+    recent30dRes, // 用來計算每日趨勢 + 分類 + 語系 + 活躍使用者
+    // 訪客 vs 會員 30 日趨勢資料
+    divAll30dRes,
+    freeFlow30dRes,
+    checkin30dRes,
+    guestYesno30dRes,
+    guestDaily30dRes,
+    // 音樂統計卡
+    musicGenerateRes,
+    musicCollectRes,
+  ] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("is_admin", true),
+    supabase.from("divinations").select("id", { count: "exact", head: true }),
+    supabase
+      .from("divinations")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", todayIso),
+    supabase
+      .from("divinations")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", weekIso),
+    supabase
+      .from("divinations")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", monthIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", EXTRA_DIVINATION_SPENDS),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", EXTRA_DIVINATION_SPENDS)
+      .gte("created_at", todayIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", EXTRA_DIVINATION_SPENDS)
+      .gte("created_at", weekIso),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", EXTRA_DIVINATION_SPENDS)
+      .gte("created_at", monthIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", todayIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", weekIso),
+    supabase
+      .from("daily_checkins")
+      .select("user_id", { count: "exact", head: true })
+      .not("used_at", "is", null)
+      .gte("used_at", monthIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true }),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", todayIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", weekIso),
+    supabase
+      .from("guest_yesno_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", monthIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true }),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", todayIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", weekIso),
+    supabase
+      .from("guest_daily_log")
+      .select("fingerprint", { count: "exact", head: true })
+      .gte("used_at", monthIso),
+    supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sevenDaysAgo.toISOString()),
+    // 趨勢/分類/語系/活躍使用者用的 30 日易經紀錄(塔羅統計後續再補)
+    supabase
+      .from("divinations")
+      .select("id,user_id,category,hexagram_number,locale,created_at")
+      .eq("divine_type", "iching")
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(5000),
+    // 訪客 vs 會員 30 日趨勢用 — 各事件源只取 created_at/used_at 一欄,JS 端 bucket
+    supabase
+      .from("divinations")
+      .select("created_at")
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("credit_transactions")
+      .select("created_at")
+      .in("reason", EXTRA_DIVINATION_SPENDS)
+      .gte("created_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("daily_checkins")
+      .select("used_at")
+      .not("used_at", "is", null)
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("guest_yesno_log")
+      .select("used_at")
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("guest_daily_log")
+      .select("used_at")
+      .gte("used_at", thirtyDaysAgo.toISOString())
+      .limit(10000),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", MUSIC_GENERATE_REASONS),
+    supabase
+      .from("credit_transactions")
+      .select("id", { count: "exact", head: true })
+      .in("reason", MUSIC_COLLECT_REASONS),
+  ]);
+
+  const totalUsers = totalUsersRes.count ?? 0;
+  const totalAdmins = totalAdminsRes.count ?? 0;
+
+  // 把所有事件源加總:divinations 表 + 登入 free-flow 付點 + 簽到免費 + 訪客 yes/no + 訪客 daily
+  const sumCounts = (...rs: Array<{ count: number | null }>) =>
+    rs.reduce((sum, r) => sum + (r.count ?? 0), 0);
+  const totalDivinations = sumCounts(
+    divTotalRes,
+    freeFlowTotalRes,
+    checkinTotalRes,
+    guestYesnoTotalRes,
+    guestDailyTotalRes,
+  );
+  const divinationsToday = sumCounts(
+    divTodayRes,
+    freeFlowTodayRes,
+    checkinTodayRes,
+    guestYesnoTodayRes,
+    guestDailyTodayRes,
+  );
+  const divinationsThisWeek = sumCounts(
+    divWeekRes,
+    freeFlowWeekRes,
+    checkinWeekRes,
+    guestYesnoWeekRes,
+    guestDailyWeekRes,
+  );
+  const divinationsThisMonth = sumCounts(
+    divMonthRes,
+    freeFlowMonthRes,
+    checkinMonthRes,
+    guestYesnoMonthRes,
+    guestDailyMonthRes,
+  );
+  const newUsers7d = newUsers7dRes.count ?? 0;
+
+  const recent30d = (recent30dRes.data ?? []) as Array<{
+    id: string;
+    user_id: string | null;
+    category: string;
+    hexagram_number: number;
+    locale: string;
+    created_at: string;
+  }>;
+
+  // ── 每日趨勢 (過去 30 天) ──────────────────────────
+  const bucket = new Map<string, number>();
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(thirtyDaysAgo);
+    d.setDate(d.getDate() + i);
+    bucket.set(isoDate(d), 0);
+  }
+  for (const row of recent30d) {
+    const key = row.created_at.slice(0, 10);
+    if (bucket.has(key)) bucket.set(key, (bucket.get(key) ?? 0) + 1);
+  }
+  const dailyTrend30d: DailyPoint[] = Array.from(bucket.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // ── 分類分布 ─────────────────────────────────────
+  const catMap = new Map<string, number>();
+  for (const row of recent30d) {
+    catMap.set(row.category, (catMap.get(row.category) ?? 0) + 1);
+  }
+  const categoryCounts: CategoryCount[] = Array.from(catMap.entries())
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── 語系分布 ─────────────────────────────────────
+  const localeMap = new Map<string, number>();
+  for (const row of recent30d) {
+    localeMap.set(row.locale, (localeMap.get(row.locale) ?? 0) + 1);
+  }
+  const localeCounts: LocaleCount[] = Array.from(localeMap.entries())
+    .map(([locale, count]) => ({ locale, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── 7 天內活躍使用者 ─────────────────────────────
+  const activeSet = new Set<string>();
+  const sevenDaysAgoIso = sevenDaysAgo.toISOString();
+  for (const row of recent30d) {
+    if (row.user_id && row.created_at >= sevenDaysAgoIso) {
+      activeSet.add(row.user_id);
+    }
+  }
+  const activeUsers7d = activeSet.size;
+
+  const avgPerUser =
+    totalUsers > 0 ? Math.round((totalDivinations / totalUsers) * 10) / 10 : 0;
+
+  // ── 訪客 vs 會員拆分 ─────────────────────────────
+  // 訪客流量只會落在 guest_yesno_log + guest_daily_log(訪客沒帳號,進不了其他事件源)。
+  // 會員流量 = 全部 - 訪客,跟單獨各源相加同義,但用減法只需多 4 個欄位、不必再寫 sumCounts。
+  const guestDivinationsTotal =
+    (guestYesnoTotalRes.count ?? 0) + (guestDailyTotalRes.count ?? 0);
+  const guestDivinationsToday =
+    (guestYesnoTodayRes.count ?? 0) + (guestDailyTodayRes.count ?? 0);
+  const memberDivinationsTotal = totalDivinations - guestDivinationsTotal;
+  const memberDivinationsToday = divinationsToday - guestDivinationsToday;
+
+  // ── 訪客/會員 30 日趨勢 ──────────────────────────
+  const makeEmptyBucket = (): Map<string, number> => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(thirtyDaysAgo);
+      d.setDate(d.getDate() + i);
+      m.set(isoDate(d), 0);
+    }
+    return m;
+  };
+  const fillBucket = (
+    bucket: Map<string, number>,
+    rows: ReadonlyArray<Record<string, unknown>>,
+    field: "created_at" | "used_at",
+  ) => {
+    for (const r of rows) {
+      const ts = r[field];
+      if (typeof ts !== "string") continue;
+      const key = ts.slice(0, 10);
+      if (bucket.has(key)) bucket.set(key, (bucket.get(key) ?? 0) + 1);
+    }
+  };
+  const bucketToTrend = (bucket: Map<string, number>): DailyPoint[] =>
+    Array.from(bucket.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+  const memberBucket = makeEmptyBucket();
+  fillBucket(memberBucket, divAll30dRes.data ?? [], "created_at");
+  fillBucket(memberBucket, freeFlow30dRes.data ?? [], "created_at");
+  fillBucket(memberBucket, checkin30dRes.data ?? [], "used_at");
+
+  const guestBucket = makeEmptyBucket();
+  fillBucket(guestBucket, guestYesno30dRes.data ?? [], "used_at");
+  fillBucket(guestBucket, guestDaily30dRes.data ?? [], "used_at");
+
+  const memberDailyTrend30d = bucketToTrend(memberBucket);
+  const guestDailyTrend30d = bucketToTrend(guestBucket);
+
+  return {
+    totalUsers,
+    totalAdmins,
+    totalDivinations,
+    divinationsToday,
+    divinationsThisWeek,
+    divinationsThisMonth,
+    activeUsers7d,
+    newUsers7d,
+    avgPerUser,
+    dailyTrend30d,
+    categoryCounts,
+    localeCounts,
+    guestDivinationsTotal,
+    guestDivinationsToday,
+    memberDivinationsTotal,
+    memberDivinationsToday,
+    guestDailyTrend30d,
+    memberDailyTrend30d,
+    musicGenerateTotal: musicGenerateRes.count ?? 0,
+    musicCollectTotal: musicCollectRes.count ?? 0,
+  };
+}
+
+// ─────────────────────────────────────────────
+// Collection stats — 卡牌收集系統指標(phase 20)
+// ─────────────────────────────────────────────
+
+export interface CollectionStats {
+  totalRowsIching: number;          // user_collections 易經 row 總數(含重複次數)
+  totalRowsTarot: number;
+  uniqueOwnersIching: number;       // 至少抽過一張的 user 數(易經)
+  uniqueOwnersTarot: number;
+  milestonesGranted: number;         // 已發出里程碑次數
+  totalRewardCreditsGranted: number; // 透過 collection_milestone 發出的 credits
+  topIching: HexagramCount[];        // 最熱門 5 卦(distinct user 數量)
+  topTarot: Array<{ card_id: string; count: number }>;
+}
+
+export async function loadCollectionStats(): Promise<CollectionStats> {
+  const supabase = await createClient();
+
+  // 收藏筆數(分 type)
+  const [ichingCntRes, tarotCntRes] = await Promise.all([
+    supabase
+      .from("user_collections")
+      .select("user_id, card_id", { count: "exact" })
+      .eq("collection_type", "iching"),
+    supabase
+      .from("user_collections")
+      .select("user_id, card_id", { count: "exact" })
+      .eq("collection_type", "tarot"),
+  ]);
+
+  const ichingRows = ichingCntRes.data ?? [];
+  const tarotRows = tarotCntRes.data ?? [];
+
+  const totalRowsIching = ichingCntRes.count ?? ichingRows.length;
+  const totalRowsTarot = tarotCntRes.count ?? tarotRows.length;
+  const uniqueOwnersIching = new Set(ichingRows.map((r) => r.user_id)).size;
+  const uniqueOwnersTarot = new Set(tarotRows.map((r) => r.user_id)).size;
+
+  // 最熱門卡(被多少 distinct user 收到)
+  const ichingMap = new Map<string, Set<string>>();
+  for (const r of ichingRows) {
+    if (!ichingMap.has(r.card_id)) ichingMap.set(r.card_id, new Set());
+    ichingMap.get(r.card_id)!.add(r.user_id);
+  }
+  const topIching: HexagramCount[] = Array.from(ichingMap.entries())
+    .map(([card_id, users]) => ({
+      hexagram_number: parseInt(card_id, 10),
+      count: users.size,
+    }))
+    .filter((x) => Number.isFinite(x.hexagram_number))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const tarotMap = new Map<string, Set<string>>();
+  for (const r of tarotRows) {
+    if (!tarotMap.has(r.card_id)) tarotMap.set(r.card_id, new Set());
+    tarotMap.get(r.card_id)!.add(r.user_id);
+  }
+  const topTarot = Array.from(tarotMap.entries())
+    .map(([card_id, users]) => ({ card_id, count: users.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // 里程碑發出統計
+  const { count: milestonesCount } = await supabase
+    .from("collection_milestones")
+    .select("milestone_id", { count: "exact", head: true });
+
+  const { data: rewardRows } = await supabase
+    .from("collection_milestones")
+    .select("reward_credits");
+  const totalRewardCreditsGranted =
+    (rewardRows ?? []).reduce((sum, r) => sum + (r.reward_credits ?? 0), 0);
+
+  return {
+    totalRowsIching,
+    totalRowsTarot,
+    uniqueOwnersIching,
+    uniqueOwnersTarot,
+    milestonesGranted: milestonesCount ?? 0,
+    totalRewardCreditsGranted,
+    topIching,
+    topTarot,
+  };
+}

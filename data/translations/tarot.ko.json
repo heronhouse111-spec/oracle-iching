@@ -1,0 +1,1136 @@
+{
+  "cups-01": {
+    "name": "컵 에이스",
+    "uprightMeaning": "새로운 감정, 사랑, 직관이 솟아납니다. 마음이 열립니다.",
+    "reversedMeaning": "감정이 막히고, 공허하며, 감정을 억누릅니다.",
+    "keywordsUpright": [
+      "새로운 사랑",
+      "감정",
+      "직관"
+    ],
+    "keywordsReversed": [
+      "막힘",
+      "공허"
+    ]
+  },
+  "cups-02": {
+    "name": "컵 2",
+    "uprightMeaning": "파트너십, 매력, 하나 됨. 서로 공명하는 연결.",
+    "reversedMeaning": "관계 불균형, 오해, 단절.",
+    "keywordsUpright": [
+      "파트너십",
+      "매력",
+      "하나 됨"
+    ],
+    "keywordsReversed": [
+      "불균형",
+      "오해"
+    ]
+  },
+  "cups-03": {
+    "name": "컵 3",
+    "uprightMeaning": "우정, 축하, 공동체. 뜻이 맞는 사람들과 기쁨을 나눕니다.",
+    "reversedMeaning": "과도한 탐닉, 험담, 불화.",
+    "keywordsUpright": [
+      "우정",
+      "축하",
+      "공동체"
+    ],
+    "keywordsReversed": [
+      "탐닉",
+      "험담"
+    ]
+  },
+  "cups-04": {
+    "name": "컵 4",
+    "uprightMeaning": "무관심, 명상, 재평가. 눈앞의 것에 만족하지 못합니다.",
+    "reversedMeaning": "새로운 시각을 받아들이고, 삶에 다시 참여합니다.",
+    "keywordsUpright": [
+      "무관심",
+      "명상",
+      "재평가"
+    ],
+    "keywordsReversed": [
+      "새로운 시각",
+      "재참여"
+    ]
+  },
+  "cups-05": {
+    "name": "컵 5",
+    "uprightMeaning": "상실, 슬픔, 후회. 엎질러진 잔에 모든 시선이 쏠립니다.",
+    "reversedMeaning": "받아들임, 앞으로 나아감, 남은 선물을 발견함.",
+    "keywordsUpright": [
+      "상실",
+      "슬픔",
+      "후회"
+    ],
+    "keywordsReversed": [
+      "받아들임",
+      "앞으로 나아감"
+    ]
+  },
+  "cups-06": {
+    "name": "컵 6",
+    "uprightMeaning": "향수, 어린 시절, 순수함. 과거의 선함이 힘으로 돌아옵니다.",
+    "reversedMeaning": "과거에 머물러 있음, 놓지 못함, 비현실적.",
+    "keywordsUpright": [
+      "향수",
+      "어린 시절",
+      "순수함"
+    ],
+    "keywordsReversed": [
+      "과거에 집착",
+      "도피"
+    ]
+  },
+  "cups-07": {
+    "name": "컵 7",
+    "uprightMeaning": "환상, 많은 선택, 진실과 환상을 구분함. 진정으로 원하는 것을 찾으세요.",
+    "reversedMeaning": "명확함, 집중, 현실적인 선택.",
+    "keywordsUpright": [
+      "환상",
+      "선택",
+      "환영"
+    ],
+    "keywordsReversed": [
+      "명확함",
+      "집중"
+    ]
+  },
+  "cups-08": {
+    "name": "컵 8",
+    "uprightMeaning": "떠나기, 놓아주기, 더 깊은 의미 찾기. 더 이상 맞지 않습니다.",
+    "reversedMeaning": "변화에 대한 두려움, 제자리 걸음, 집착.",
+    "keywordsUpright": [
+      "떠나기",
+      "놓아주기",
+      "찾기"
+    ],
+    "keywordsReversed": [
+      "변화에 대한 두려움",
+      "집착"
+    ]
+  },
+  "cups-09": {
+    "name": "컵 9",
+    "uprightMeaning": "만족, 소원 성취, 작은 기쁨. 원하는 것을 손에 쥐었습니다.",
+    "reversedMeaning": "표면적 만족, 탐욕, 내면의 공허.",
+    "keywordsUpright": [
+      "만족",
+      "소원 성취"
+    ],
+    "keywordsReversed": [
+      "공허",
+      "탐욕"
+    ]
+  },
+  "cups-10": {
+    "name": "컵 10",
+    "uprightMeaning": "조화, 가족, 오래 지속되는 행복. 감정적 충만.",
+    "reversedMeaning": "가족 불화, 감정적 균열, 고립.",
+    "keywordsUpright": [
+      "조화",
+      "가족",
+      "행복"
+    ],
+    "keywordsReversed": [
+      "불화",
+      "균열"
+    ]
+  },
+  "cups-11": {
+    "name": "컵 시종",
+    "uprightMeaning": "창의적인 불꽃, 직관적인 메시지, 감정적인 새로운 시도.",
+    "reversedMeaning": "감정적 미성숙, 변덕스러움, 현실 도피.",
+    "keywordsUpright": [
+      "창의성",
+      "직관",
+      "새로운 시도"
+    ],
+    "keywordsReversed": [
+      "미성숙",
+      "변덕"
+    ]
+  },
+  "cups-12": {
+    "name": "컵 기사",
+    "uprightMeaning": "로맨스, 매력, 이상 추구. 마음에서 우러나와 행동합니다.",
+    "reversedMeaning": "변덕스러움, 실망, 지나친 이상화.",
+    "keywordsUpright": [
+      "로맨스",
+      "매력",
+      "이상"
+    ],
+    "keywordsReversed": [
+      "변덕",
+      "실망"
+    ]
+  },
+  "cups-13": {
+    "name": "컵 여왕",
+    "uprightMeaning": "자비, 정서적 안정, 깊은 경청. 물처럼 포용하는 마음.",
+    "reversedMeaning": "감정 불안, 공의존, 감정적 조종.",
+    "keywordsUpright": [
+      "자비",
+      "포용",
+      "경청"
+    ],
+    "keywordsReversed": [
+      "공의존",
+      "조종"
+    ]
+  },
+  "cups-14": {
+    "name": "컵 왕",
+    "uprightMeaning": "정서적 성숙, 외교, 균형. 파도 속에서도 안정을 유지함.",
+    "reversedMeaning": "감정적 조종, 억압, 감정 폭발.",
+    "keywordsUpright": [
+      "성숙",
+      "외교",
+      "균형"
+    ],
+    "keywordsReversed": [
+      "조종",
+      "폭발"
+    ]
+  },
+  "major-00-fool": {
+    "name": "바보",
+    "uprightMeaning": "완전히 새로운 시작, 순수함과 모험을 상징합니다. 믿음을 가지고 첫걸음을 내딛고, 미지의 것에 대해 열린 마음을 유지하세요.",
+    "reversedMeaning": "충동적이거나 무모하거나 위험을 감수하려 하지 않습니다. 계획이 충분한지 다시 고려해야 합니다.",
+    "keywordsUpright": [
+      "새로운 시작",
+      "모험",
+      "순수함",
+      "자유"
+    ],
+    "keywordsReversed": [
+      "무모함",
+      "망설임",
+      "순진함",
+      "경솔함"
+    ]
+  },
+  "major-01-magician": {
+    "name": "마술사",
+    "uprightMeaning": "현현, 의지력, 행동력. 당신은 소망을 실현하는 데 필요한 모든 도구를 가지고 있습니다.",
+    "reversedMeaning": "조종, 자기기만, 또는 재능을 발휘하지 못함. 동기가 순수한지 주의하세요.",
+    "keywordsUpright": [
+      "현현",
+      "의지력",
+      "행동",
+      "기술"
+    ],
+    "keywordsReversed": [
+      "조종",
+      "기만",
+      "잠재력 미발휘"
+    ]
+  },
+  "major-02-high-priestess": {
+    "name": "여사제",
+    "uprightMeaning": "직관, 신비, 내면의 지혜. 잠재의식의 소리에 귀 기울이세요. 답은 이미 당신 안에 있습니다.",
+    "reversedMeaning": "직관 무시, 비밀이 드러나거나 내면과의 연결 상실.",
+    "keywordsUpright": [
+      "직관",
+      "신비",
+      "잠재의식",
+      "지혜"
+    ],
+    "keywordsReversed": [
+      "숨겨짐",
+      "비밀",
+      "직관 차단"
+    ]
+  },
+  "major-03-empress": {
+    "name": "여황제",
+    "uprightMeaning": "풍요, 창의성, 모성적 에너지. 자신과 주변 사람들을 돌보고 감각적인 아름다움을 즐기세요.",
+    "reversedMeaning": "의존, 정체, 또는 창의성 차단. 내면의 힘과 다시 연결해야 합니다.",
+    "keywordsUpright": [
+      "풍요",
+      "창의성",
+      "양육",
+      "아름다움"
+    ],
+    "keywordsReversed": [
+      "의존",
+      "정체",
+      "창의성 차단"
+    ]
+  },
+  "major-04-emperor": {
+    "name": "황제",
+    "uprightMeaning": "권위, 견고한 구조, 리더십. 규율과 책임으로 기초를 다지세요.",
+    "reversedMeaning": "독재, 통제욕, 또는 경직됨. 지나친 통제가 오히려 방해가 됩니다.",
+    "keywordsUpright": [
+      "권위",
+      "구조",
+      "리더십",
+      "안정"
+    ],
+    "keywordsReversed": [
+      "독재",
+      "경직",
+      "통제"
+    ]
+  },
+  "major-05-hierophant": {
+    "name": "교황",
+    "uprightMeaning": "전통, 신념, 영적 지도. 멘토를 찾거나 기존 체계 안에서 배우세요.",
+    "reversedMeaning": "전통에 대한 반항, 규칙 파괴, 또는 기존 신념에 도전.",
+    "keywordsUpright": [
+      "전통",
+      "신념",
+      "멘토",
+      "체계"
+    ],
+    "keywordsReversed": [
+      "반항",
+      "비주류",
+      "규칙 도전"
+    ]
+  },
+  "major-06-lovers": {
+    "name": "연인",
+    "uprightMeaning": "사랑, 조화, 중요한 선택. 내면의 가치에 따라 결정하세요.",
+    "reversedMeaning": "관계 불균형, 잘못된 선택, 또는 가치관 충돌.",
+    "keywordsUpright": [
+      "사랑",
+      "조화",
+      "선택",
+      "결합"
+    ],
+    "keywordsReversed": [
+      "불균형",
+      "불화",
+      "잘못된 선택"
+    ]
+  },
+  "major-07-chariot": {
+    "name": "전차",
+    "uprightMeaning": "의지력, 결단력, 승리. 목표에 집중하고 장애물을 돌파하세요.",
+    "reversedMeaning": "방향 상실, 자기 의심, 또는 통제 불능의 공격성.",
+    "keywordsUpright": [
+      "승리",
+      "결단",
+      "통제",
+      "의지"
+    ],
+    "keywordsReversed": [
+      "통제 상실",
+      "방향 상실",
+      "장애"
+    ]
+  },
+  "major-08-strength": {
+    "name": "힘",
+    "uprightMeaning": "내면의 용기, 인내, 부드러운 통제. 힘이 아닌 온유함으로 도전을 극복하세요.",
+    "reversedMeaning": "자기 의심, 감정 통제 불능, 또는 폭력으로 문제 해결.",
+    "keywordsUpright": [
+      "용기",
+      "인내",
+      "부드러운 힘",
+      "자기 규율"
+    ],
+    "keywordsReversed": [
+      "자기 의심",
+      "감정적 혼란",
+      "나약함"
+    ]
+  },
+  "major-09-hermit": {
+    "name": "은둔자",
+    "uprightMeaning": "내성, 고독, 진리 추구. 한 걸음 물러나 조용히 하면 답이 내면에서 떠오릅니다.",
+    "reversedMeaning": "고립, 회피, 또는 내면 작업 거부. 다시 연결할 때입니다.",
+    "keywordsUpright": [
+      "내성",
+      "고독",
+      "지혜",
+      "인도"
+    ],
+    "keywordsReversed": [
+      "고립",
+      "회피",
+      "위축"
+    ]
+  },
+  "major-10-wheel-of-fortune": {
+    "name": "운명의 수레바퀴",
+    "uprightMeaning": "운명의 회전, 순환, 전환점. 변화를 받아들이세요. 기회가 다가오고 있습니다.",
+    "reversedMeaning": "불운, 변화에 대한 저항, 또는 불리한 순환에 갇힘.",
+    "keywordsUpright": [
+      "운명",
+      "전환점",
+      "순환",
+      "행운"
+    ],
+    "keywordsReversed": [
+      "불운",
+      "통제 불능",
+      "순환에 갇힘"
+    ]
+  },
+  "major-11-justice": {
+    "name": "정의",
+    "uprightMeaning": "공정, 진실, 인과응보. 사실을 정직하게 직면하고 윤리적으로 결정하세요.",
+    "reversedMeaning": "불공정, 책임 회피, 또는 결과 도피.",
+    "keywordsUpright": [
+      "공정",
+      "진실",
+      "책임",
+      "결단"
+    ],
+    "keywordsReversed": [
+      "불공정",
+      "기만",
+      "책임 회피"
+    ]
+  },
+  "major-12-hanged-man": {
+    "name": "매달린 사람",
+    "uprightMeaning": "일시 중지, 관점 전환, 희생. 집착을 놓아야 새로운 시각을 볼 수 있습니다.",
+    "reversedMeaning": "정체, 망설임, 또는 무의미한 희생.",
+    "keywordsUpright": [
+      "일시 중지",
+      "관점 전환",
+      "희생",
+      "항복"
+    ],
+    "keywordsReversed": [
+      "정체",
+      "망설임",
+      "저항"
+    ]
+  },
+  "major-13-death": {
+    "name": "죽음",
+    "uprightMeaning": "종말, 변환, 재생. 오래된 장이 막을 내리며 새로운 시작을 위한 공간을 만듭니다.",
+    "reversedMeaning": "변화에 대한 저항, 과거에 집착, 또는 변환 차단.",
+    "keywordsUpright": [
+      "종말",
+      "변환",
+      "재생",
+      "변태"
+    ],
+    "keywordsReversed": [
+      "저항",
+      "집착",
+      "놓지 못함"
+    ]
+  },
+  "major-14-temperance": {
+    "name": "절제",
+    "uprightMeaning": "균형, 조화, 인내. 중용의 길로 대립을 조화로 바꿉니다.",
+    "reversedMeaning": "불균형, 극단, 또는 인내 부족.",
+    "keywordsUpright": [
+      "균형",
+      "조화",
+      "인내",
+      "중용"
+    ],
+    "keywordsReversed": [
+      "불균형",
+      "극단",
+      "과도"
+    ]
+  },
+  "major-15-devil": {
+    "name": "악마",
+    "uprightMeaning": "속박, 욕망, 물질적 집착. 자신이 스스로를 묶고 있음을 깨닫습니다.",
+    "reversedMeaning": "속박에서 벗어남, 각성, 해방. 그림자를 용기 있게 마주합니다.",
+    "keywordsUpright": [
+      "속박",
+      "욕망",
+      "유혹",
+      "집착"
+    ],
+    "keywordsReversed": [
+      "해방",
+      "각성",
+      "해제"
+    ]
+  },
+  "major-16-tower": {
+    "name": "탑",
+    "uprightMeaning": "갑작스러운 격변, 환상의 붕괴, 진실의 드러남. 무너진 후에 재건이 옵니다.",
+    "reversedMeaning": "재앙 회피, 억압된 두려움, 또는 지연된 변동.",
+    "keywordsUpright": [
+      "격변",
+      "붕괴",
+      "진실",
+      "각성"
+    ],
+    "keywordsReversed": [
+      "회피",
+      "지연",
+      "억압"
+    ]
+  },
+  "major-17-star": {
+    "name": "별",
+    "uprightMeaning": "희망, 치유, 영감. 폭풍 후에 믿음과 평온이 돌아옵니다.",
+    "reversedMeaning": "희망 상실, 믿음 흔들림, 또는 안내와의 단절.",
+    "keywordsUpright": [
+      "희망",
+      "치유",
+      "영감",
+      "믿음"
+    ],
+    "keywordsReversed": [
+      "절망",
+      "믿음 상실",
+      "방황"
+    ]
+  },
+  "major-18-moon": {
+    "name": "달",
+    "uprightMeaning": "환상, 두려움, 잠재의식. 상황이 보이는 대로가 아닐 수 있으니 직감을 믿으세요.",
+    "reversedMeaning": "진실이 드러남, 안개가 걷힘, 또는 두려움 해소.",
+    "keywordsUpright": [
+      "환상",
+      "두려움",
+      "직감",
+      "신비"
+    ],
+    "keywordsReversed": [
+      "진실 드러남",
+      "명확함",
+      "해소"
+    ]
+  },
+  "major-19-sun": {
+    "name": "태양",
+    "uprightMeaning": "기쁨, 성공, 활력. 빛나는 순간을 순수하게 즐기세요.",
+    "reversedMeaning": "일시적 좌절, 흐려진 기쁨, 또는 과도한 낙관.",
+    "keywordsUpright": [
+      "기쁨",
+      "성공",
+      "활력",
+      "광명"
+    ],
+    "keywordsReversed": [
+      "좌절",
+      "흐려짐",
+      "과신"
+    ]
+  },
+  "major-20-judgement": {
+    "name": "심판",
+    "uprightMeaning": "재생, 각성, 소명. 인생을 되돌아보고 결정적인 전환을 만듭니다.",
+    "reversedMeaning": "과도한 자기 비판, 반성 거부, 또는 기회 상실.",
+    "keywordsUpright": [
+      "재생",
+      "각성",
+      "반성",
+      "소명"
+    ],
+    "keywordsReversed": [
+      "자책",
+      "반성 거부",
+      "놓침"
+    ]
+  },
+  "major-21-world": {
+    "name": "세계",
+    "uprightMeaning": "완성, 충족, 통합. 중요한 순환이 끝나고 새로운 여정이 시작됩니다.",
+    "reversedMeaning": "미완의 일, 마무리 부족, 또는 지연된 충족.",
+    "keywordsUpright": [
+      "완성",
+      "충족",
+      "통합",
+      "성취"
+    ],
+    "keywordsReversed": [
+      "미완",
+      "지연",
+      "불완전"
+    ]
+  },
+  "pentacles-01": {
+    "name": "펜타클 에이스",
+    "uprightMeaning": "새로운 물질적 기회, 풍요의 씨앗. 견고한 새로운 시작.",
+    "reversedMeaning": "기회 상실, 재정 지연, 근시안.",
+    "keywordsUpright": [
+      "새 기회",
+      "풍요",
+      "시작"
+    ],
+    "keywordsReversed": [
+      "상실",
+      "지연"
+    ]
+  },
+  "pentacles-02": {
+    "name": "펜타클 2",
+    "uprightMeaning": "균형, 멀티태스킹, 변화 적응. 우선순위를 조율함.",
+    "reversedMeaning": "과부하, 무질서, 모두 감당 못함.",
+    "keywordsUpright": [
+      "균형",
+      "멀티태스킹",
+      "적응"
+    ],
+    "keywordsReversed": [
+      "과부하",
+      "무질서"
+    ]
+  },
+  "pentacles-03": {
+    "name": "펜타클 3",
+    "uprightMeaning": "협력, 장인정신, 팀워크. 각자의 역할로 함께 만듦.",
+    "reversedMeaning": "팀 불화, 기술 불일치, 각자도생.",
+    "keywordsUpright": [
+      "협력",
+      "장인정신",
+      "팀워크"
+    ],
+    "keywordsReversed": [
+      "불화",
+      "각자도생"
+    ]
+  },
+  "pentacles-04": {
+    "name": "펜타클 4",
+    "uprightMeaning": "보수, 통제, 쥐고 있음. 너무 꽉 쥐면 경직됨.",
+    "reversedMeaning": "통제 놓기, 관대함, 흐름 회복.",
+    "keywordsUpright": [
+      "보수",
+      "통제",
+      "고수"
+    ],
+    "keywordsReversed": [
+      "놓음",
+      "관대"
+    ]
+  },
+  "pentacles-05": {
+    "name": "펜타클 5",
+    "uprightMeaning": "재정적 어려움, 고립, 불안. 도움은 가까이 있음.",
+    "reversedMeaning": "어려움에서 벗어남, 지원 받음, 재건.",
+    "keywordsUpright": [
+      "어려움",
+      "고립",
+      "불안"
+    ],
+    "keywordsReversed": [
+      "벗어남",
+      "지원"
+    ]
+  },
+  "pentacles-06": {
+    "name": "펜타클 6",
+    "uprightMeaning": "관대함, 베풂, 흐르는 자원. 주고 받음이 균형.",
+    "reversedMeaning": "이기심, 불균형, 빚 얽힘.",
+    "keywordsUpright": [
+      "관대",
+      "베풂",
+      "흐름"
+    ],
+    "keywordsReversed": [
+      "이기심",
+      "불균형"
+    ]
+  },
+  "pentacles-07": {
+    "name": "펜타클 7",
+    "uprightMeaning": "인내, 장기 투자, 중간 점검. 성장은 시간이 필요.",
+    "reversedMeaning": "조급함, 인내 상실, 보상 없는 노력.",
+    "keywordsUpright": [
+      "인내",
+      "장기",
+      "점검"
+    ],
+    "keywordsReversed": [
+      "조급",
+      "무보상"
+    ]
+  },
+  "pentacles-08": {
+    "name": "펜타클 8",
+    "uprightMeaning": "근면, 기술 연마, 집중 연습. 반복을 통해 완성.",
+    "reversedMeaning": "완벽주의, 쓸데없는 일, 잘못된 방향.",
+    "keywordsUpright": [
+      "근면",
+      "기술",
+      "집중"
+    ],
+    "keywordsReversed": [
+      "완벽주의",
+      "쓸데없는 일"
+    ]
+  },
+  "pentacles-09": {
+    "name": "펜타클 9",
+    "uprightMeaning": "풍요, 독립, 성과를 누림. 혼자 있어도 풍요롭다.",
+    "reversedMeaning": "재정적 좌절, 일 중독, 물질적 고립.",
+    "keywordsUpright": [
+      "풍요",
+      "독립",
+      "누림"
+    ],
+    "keywordsReversed": [
+      "좌절",
+      "일 중독"
+    ]
+  },
+  "pentacles-10": {
+    "name": "펜타클 10",
+    "uprightMeaning": "가족의 부, 유산, 장기적 안정. 성과가 세대를 넘어 이어짐.",
+    "reversedMeaning": "재정적 손실, 가족 갈등, 유산 단절.",
+    "keywordsUpright": [
+      "가족",
+      "유산",
+      "안정"
+    ],
+    "keywordsReversed": [
+      "손실",
+      "갈등"
+    ]
+  },
+  "pentacles-11": {
+    "name": "펜타클 시종",
+    "uprightMeaning": "학습, 새로운 시도의 현실화, 집중하는 젊은 제자.",
+    "reversedMeaning": "지연, 진전 부족, 기회를 놓침.",
+    "keywordsUpright": [
+      "학습",
+      "현실화",
+      "집중"
+    ],
+    "keywordsReversed": [
+      "지연",
+      "무진전"
+    ]
+  },
+  "pentacles-12": {
+    "name": "펜타클 기사",
+    "uprightMeaning": "신뢰할 수 있음, 규칙적, 천천히 정교하게. 착실히 한 걸음씩 나아감.",
+    "reversedMeaning": "고집, 지루함, 정체.",
+    "keywordsUpright": [
+      "신뢰",
+      "규칙",
+      "착실"
+    ],
+    "keywordsReversed": [
+      "고집",
+      "정체"
+    ]
+  },
+  "pentacles-13": {
+    "name": "펜타클 여왕",
+    "uprightMeaning": "양육, 실용적, 재정적 안정. 물질과 감정을 모두 돌봄.",
+    "reversedMeaning": "자기 방치, 공의존, 일과 삶의 불균형.",
+    "keywordsUpright": [
+      "양육",
+      "실용",
+      "안정"
+    ],
+    "keywordsReversed": [
+      "자기 방치",
+      "불균형"
+    ]
+  },
+  "pentacles-14": {
+    "name": "펜타클 왕",
+    "uprightMeaning": "풍요, 권위, 경력의 정점. 안정된 지혜로 성취를 지킴.",
+    "reversedMeaning": "탐욕, 물질주의, 부패.",
+    "keywordsUpright": [
+      "풍요",
+      "권위",
+      "정점"
+    ],
+    "keywordsReversed": [
+      "탐욕",
+      "부패"
+    ]
+  },
+  "swords-01": {
+    "name": "검 에이스",
+    "uprightMeaning": "명확함, 돌파, 진실. 예리한 생각이 안개를 가름.",
+    "reversedMeaning": "혼란, 의사소통 오류, 냉혹함.",
+    "keywordsUpright": [
+      "명확함",
+      "돌파",
+      "진실"
+    ],
+    "keywordsReversed": [
+      "혼란",
+      "오해"
+    ]
+  },
+  "swords-02": {
+    "name": "검 2",
+    "uprightMeaning": "교착, 망설임, 회피. 눈을 감는다고 문제가 사라지지 않음.",
+    "reversedMeaning": "결정 내림, 진실 부상, 교착 타파.",
+    "keywordsUpright": [
+      "교착",
+      "망설임",
+      "회피"
+    ],
+    "keywordsReversed": [
+      "결정",
+      "진실"
+    ]
+  },
+  "swords-03": {
+    "name": "검 3",
+    "uprightMeaning": "상심, 슬픔, 배신. 아픔을 인정해야 치유될 수 있음.",
+    "reversedMeaning": "치유, 놓아줌, 용서.",
+    "keywordsUpright": [
+      "상심",
+      "슬픔",
+      "배신"
+    ],
+    "keywordsReversed": [
+      "치유",
+      "용서"
+    ]
+  },
+  "swords-04": {
+    "name": "검 4",
+    "uprightMeaning": "휴식, 침전, 명상. 멈춰야 힘을 회복할 수 있음.",
+    "reversedMeaning": "소진, 불면증, 마음의 안정을 찾지 못함.",
+    "keywordsUpright": [
+      "휴식",
+      "침전",
+      "명상"
+    ],
+    "keywordsReversed": [
+      "소진",
+      "불안"
+    ]
+  },
+  "swords-05": {
+    "name": "검 5",
+    "uprightMeaning": "갈등, 공허한 승리, 대가가 보상보다 큼.",
+    "reversedMeaning": "화해, 관계 회복, 승패 내려놓기.",
+    "keywordsUpright": [
+      "갈등",
+      "공허한 승리"
+    ],
+    "keywordsReversed": [
+      "화해",
+      "회복"
+    ]
+  },
+  "swords-06": {
+    "name": "검 6",
+    "uprightMeaning": "과도기, 멀어짐, 출발. 과거의 무게를 싣고 새로운 곳으로.",
+    "reversedMeaning": "떠나지 못함, 과거에 갇힘, 여정 지연.",
+    "keywordsUpright": [
+      "과도기",
+      "멀어짐",
+      "출발"
+    ],
+    "keywordsReversed": [
+      "갇힘",
+      "지연"
+    ]
+  },
+  "swords-07": {
+    "name": "검 7",
+    "uprightMeaning": "전략, 속임수, 비밀 행동. 숨은 동기를 주의하라.",
+    "reversedMeaning": "양심의 등장, 솔직함, 계획 노출.",
+    "keywordsUpright": [
+      "전략",
+      "속임수",
+      "비밀"
+    ],
+    "keywordsReversed": [
+      "솔직함",
+      "노출"
+    ]
+  },
+  "swords-08": {
+    "name": "검 8",
+    "uprightMeaning": "자가 제한, 생각에 갇힘, 무력감. 묶인 것 같지만 걸어 나갈 수 있음.",
+    "reversedMeaning": "해방, 오래된 믿음 놓기, 자유 회복.",
+    "keywordsUpright": [
+      "자가 제한",
+      "갇힘"
+    ],
+    "keywordsReversed": [
+      "해방",
+      "자유"
+    ]
+  },
+  "swords-09": {
+    "name": "검 9",
+    "uprightMeaning": "불안, 불면증, 과도한 걱정. 밤의 두려움은 종종 과장됨.",
+    "reversedMeaning": "불안에서 벗어남, 희망의 귀환, 지지 구함.",
+    "keywordsUpright": [
+      "불안",
+      "걱정",
+      "악몽"
+    ],
+    "keywordsReversed": [
+      "회복",
+      "희망"
+    ]
+  },
+  "swords-10": {
+    "name": "검 10",
+    "uprightMeaning": "완전한 종말, 바닥, 고통스러운 마무리. 바닥을 쳐야 다시 일어날 수 있음.",
+    "reversedMeaning": "느린 회복, 최악 회피, 교훈을 얻음.",
+    "keywordsUpright": [
+      "종말",
+      "바닥",
+      "마무리"
+    ],
+    "keywordsReversed": [
+      "회복",
+      "교훈"
+    ]
+  },
+  "swords-11": {
+    "name": "검 시종",
+    "uprightMeaning": "호기심, 예리함, 경계심. 아이디어로 가득 찬 젊은 마음.",
+    "reversedMeaning": "헛소문, 조급함, 말이 많고 부정확함.",
+    "keywordsUpright": [
+      "호기심",
+      "예리함",
+      "경계심"
+    ],
+    "keywordsReversed": [
+      "헛소문",
+      "조급함"
+    ]
+  },
+  "swords-12": {
+    "name": "검 기사",
+    "uprightMeaning": "돌진, 신념 수호, 신속함. 진실을 위해 싸움.",
+    "reversedMeaning": "무모함, 오만함, 호전적.",
+    "keywordsUpright": [
+      "돌진",
+      "수호",
+      "신속함"
+    ],
+    "keywordsReversed": [
+      "무모함",
+      "호전적"
+    ]
+  },
+  "swords-13": {
+    "name": "검 여왕",
+    "uprightMeaning": "독립적, 통찰력, 직설적. 명확한 머리로 진위를 가림.",
+    "reversedMeaning": "냉담함, 신랄함, 비판적.",
+    "keywordsUpright": [
+      "독립",
+      "통찰",
+      "직설"
+    ],
+    "keywordsReversed": [
+      "냉담",
+      "신랄"
+    ]
+  },
+  "swords-14": {
+    "name": "검 왕",
+    "uprightMeaning": "지적 권위, 윤리, 공정한 판단. 지혜로 통치함.",
+    "reversedMeaning": "전제적, 냉혹함, 이성의 남용.",
+    "keywordsUpright": [
+      "지혜",
+      "윤리",
+      "공정"
+    ],
+    "keywordsReversed": [
+      "전제",
+      "남용"
+    ]
+  },
+  "wands-01": {
+    "name": "완드 에이스",
+    "uprightMeaning": "영감의 폭발, 새로운 기회. 잠재력 가득한 시작.",
+    "reversedMeaning": "동기 부족, 기회 지연.",
+    "keywordsUpright": [
+      "영감",
+      "새로운 기회",
+      "열정"
+    ],
+    "keywordsReversed": [
+      "동기 부족",
+      "지연"
+    ]
+  },
+  "wands-02": {
+    "name": "완드 2",
+    "uprightMeaning": "계획, 선택, 발견. 갈림길에서 미래를 조망합니다.",
+    "reversedMeaning": "미지에 대한 두려움, 안전지대에 머무름.",
+    "keywordsUpright": [
+      "계획",
+      "결정",
+      "조망"
+    ],
+    "keywordsReversed": [
+      "변화에 대한 두려움",
+      "제자리걸음"
+    ]
+  },
+  "wands-03": {
+    "name": "완드 3",
+    "uprightMeaning": "확장, 진전, 선견지명. 장기 계획이 결실을 맺기 시작합니다.",
+    "reversedMeaning": "진행이 막히거나 시야가 좁아집니다.",
+    "keywordsUpright": [
+      "확장",
+      "선견지명",
+      "진전"
+    ],
+    "keywordsReversed": [
+      "차단",
+      "지연"
+    ]
+  },
+  "wands-04": {
+    "name": "완드 4",
+    "uprightMeaning": "축하, 조화, 귀가. 단계적 성과를 축하할 만합니다.",
+    "reversedMeaning": "가정이나 공동체의 긴장, 축하 연기.",
+    "keywordsUpright": [
+      "축하",
+      "조화",
+      "소속감"
+    ],
+    "keywordsReversed": [
+      "긴장",
+      "지연"
+    ]
+  },
+  "wands-05": {
+    "name": "완드 5",
+    "uprightMeaning": "경쟁, 갈등, 의견 충돌. 건전한 경쟁은 성장을 가져올 수 있습니다.",
+    "reversedMeaning": "갈등 회피, 내적 투쟁, 해결책 모색.",
+    "keywordsUpright": [
+      "경쟁",
+      "갈등",
+      "불일치"
+    ],
+    "keywordsReversed": [
+      "해결",
+      "내적 투쟁"
+    ]
+  },
+  "wands-06": {
+    "name": "완드 6",
+    "uprightMeaning": "승리, 인정, 대중의 찬사. 노력이 마침내 인정받습니다.",
+    "reversedMeaning": "성공에 의문, 자기 의심, 혹은 총애 상실.",
+    "keywordsUpright": [
+      "승리",
+      "인정",
+      "찬사"
+    ],
+    "keywordsReversed": [
+      "실각",
+      "자기 의심"
+    ]
+  },
+  "wands-07": {
+    "name": "완드 7",
+    "uprightMeaning": "입장 고수, 도전, 방어. 수세에 있지만 유리합니다.",
+    "reversedMeaning": "압도당함, 포기하거나 물러서고 싶은 유혹.",
+    "keywordsUpright": [
+      "입장 고수",
+      "방어",
+      "도전"
+    ],
+    "keywordsReversed": [
+      "압도",
+      "양보"
+    ]
+  },
+  "wands-08": {
+    "name": "완드 8",
+    "uprightMeaning": "빠른 진전, 메시지 전달, 이동. 일이 가속화됩니다.",
+    "reversedMeaning": "지연, 소통 차단, 성급한 결정.",
+    "keywordsUpright": [
+      "신속",
+      "진전",
+      "메시지"
+    ],
+    "keywordsReversed": [
+      "지연",
+      "차단"
+    ]
+  },
+  "wands-09": {
+    "name": "완드 9",
+    "uprightMeaning": "회복력, 경계, 마지막 고비. 지쳤지만 아직 끝나지 않았습니다.",
+    "reversedMeaning": "탈진, 과도한 방어, 편집증.",
+    "keywordsUpright": [
+      "회복력",
+      "경계",
+      "인내"
+    ],
+    "keywordsReversed": [
+      "탈진",
+      "편집증"
+    ]
+  },
+  "wands-10": {
+    "name": "완드 10",
+    "uprightMeaning": "짐, 책임, 과부하. 내려놓거나 분담할 때입니다.",
+    "reversedMeaning": "내려놓기, 위임, 압박 해소.",
+    "keywordsUpright": [
+      "짐",
+      "책임",
+      "압박"
+    ],
+    "keywordsReversed": [
+      "해방",
+      "위임"
+    ]
+  },
+  "wands-11": {
+    "name": "완드 시종",
+    "uprightMeaning": "탐험, 열정, 호기심 많은 초보자. 가능성으로 가득한 소식.",
+    "reversedMeaning": "미성숙한 아이디어, 방향 상실, 작은 좌절.",
+    "keywordsUpright": [
+      "탐험",
+      "열정",
+      "호기심"
+    ],
+    "keywordsReversed": [
+      "미성숙",
+      "방향 상실"
+    ]
+  },
+  "wands-12": {
+    "name": "완드 기사",
+    "uprightMeaning": "돌진, 모험, 대담한 행동. 열정이 당신을 움직입니다.",
+    "reversedMeaning": "충동적, 무모함, 분산된 에너지.",
+    "keywordsUpright": [
+      "행동",
+      "모험",
+      "열정"
+    ],
+    "keywordsReversed": [
+      "충동",
+      "분산"
+    ]
+  },
+  "wands-13": {
+    "name": "완드 여왕",
+    "uprightMeaning": "따뜻함, 자신감, 카리스마 있는 리더. 대담하면서도 다정합니다.",
+    "reversedMeaning": "질투, 지나친 요구, 변덕스러움.",
+    "keywordsUpright": [
+      "따뜻함",
+      "자신감",
+      "카리스마"
+    ],
+    "keywordsReversed": [
+      "질투",
+      "요구가 많음"
+    ]
+  },
+  "wands-14": {
+    "name": "완드 왕",
+    "uprightMeaning": "비전, 리더십, 명예. 선견지명으로 다른 사람을 이끕니다.",
+    "reversedMeaning": "독단적, 폭군적, 충동적 결정.",
+    "keywordsUpright": [
+      "비전",
+      "리더십",
+      "명예"
+    ],
+    "keywordsReversed": [
+      "독단적",
+      "폭군적"
+    ]
+  }
+}

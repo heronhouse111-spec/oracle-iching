@@ -1,0 +1,1136 @@
+{
+  "cups-01": {
+    "name": "カップのエース",
+    "uprightMeaning": "新しい感情、愛、直感が湧き出る。心が開かれる。",
+    "reversedMeaning": "感情の停滞、空虚、感情の抑圧。",
+    "keywordsUpright": [
+      "新たな愛",
+      "感情",
+      "直感"
+    ],
+    "keywordsReversed": [
+      "停滞",
+      "空虚"
+    ]
+  },
+  "cups-02": {
+    "name": "カップの2",
+    "uprightMeaning": "パートナーシップ、魅力、一体感。共鳴し合う繋がり。",
+    "reversedMeaning": "関係の不均衡、誤解、断絶。",
+    "keywordsUpright": [
+      "パートナーシップ",
+      "魅力",
+      "一体感"
+    ],
+    "keywordsReversed": [
+      "不均衡",
+      "誤解"
+    ]
+  },
+  "cups-03": {
+    "name": "カップの3",
+    "uprightMeaning": "友情、祝祭、コミュニティ。志を同じくする者との喜びの共有。",
+    "reversedMeaning": "過度の耽溺、噂話、仲違い。",
+    "keywordsUpright": [
+      "友情",
+      "祝祭",
+      "コミュニティ"
+    ],
+    "keywordsReversed": [
+      "耽溺",
+      "噂話"
+    ]
+  },
+  "cups-04": {
+    "name": "カップの4",
+    "uprightMeaning": "無関心、熟考、再評価。目の前のものでは満足できない。",
+    "reversedMeaning": "新しい視点を受け入れ、人生に再び関わる。",
+    "keywordsUpright": [
+      "無関心",
+      "熟考",
+      "再評価"
+    ],
+    "keywordsReversed": [
+      "新しい視点",
+      "再関与"
+    ]
+  },
+  "cups-05": {
+    "name": "カップの5",
+    "uprightMeaning": "喪失、悲嘆、後悔。こぼれた杯に注目が集まる。",
+    "reversedMeaning": "受け入れ、前進し、残されたものを見つける。",
+    "keywordsUpright": [
+      "喪失",
+      "悲嘆",
+      "後悔"
+    ],
+    "keywordsReversed": [
+      "受容",
+      "前進"
+    ]
+  },
+  "cups-06": {
+    "name": "カップの6",
+    "uprightMeaning": "郷愁、子供時代、無邪気。過去の優しさが力となる。",
+    "reversedMeaning": "過去に生きる、手放せない、非現実的。",
+    "keywordsUpright": [
+      "郷愁",
+      "子供時代",
+      "無邪気"
+    ],
+    "keywordsReversed": [
+      "過去への固執",
+      "逃避"
+    ]
+  },
+  "cups-07": {
+    "name": "カップの7",
+    "uprightMeaning": "幻想、多くの選択肢、虚実の見極め。本当に欲しいものを見極める。",
+    "reversedMeaning": "明確さ、集中、現実的な選択。",
+    "keywordsUpright": [
+      "幻想",
+      "選択肢",
+      "虚実"
+    ],
+    "keywordsReversed": [
+      "明確さ",
+      "集中"
+    ]
+  },
+  "cups-08": {
+    "name": "カップの8",
+    "uprightMeaning": "離れる、手放す、より深い意味を求める。もう合わない。",
+    "reversedMeaning": "変化への恐れ、堂々巡り、執着。",
+    "keywordsUpright": [
+      "離別",
+      "手放し",
+      "探求"
+    ],
+    "keywordsReversed": [
+      "変化への恐れ",
+      "執着"
+    ]
+  },
+  "cups-09": {
+    "name": "カップの9",
+    "uprightMeaning": "満足、願いの成就、小さな幸せ。心の望みが手に入る。",
+    "reversedMeaning": "表面的な満足、貪欲、内なる空虚。",
+    "keywordsUpright": [
+      "満足",
+      "願いの成就"
+    ],
+    "keywordsReversed": [
+      "空虚",
+      "貪欲"
+    ]
+  },
+  "cups-10": {
+    "name": "カップの10",
+    "uprightMeaning": "調和、家族、永続的な幸福。感情的な充足。",
+    "reversedMeaning": "家族の不和、感情の断絶、孤立。",
+    "keywordsUpright": [
+      "調和",
+      "家族",
+      "幸福"
+    ],
+    "keywordsReversed": [
+      "不和",
+      "断絶"
+    ]
+  },
+  "cups-11": {
+    "name": "カップのペイジ",
+    "uprightMeaning": "創造のひらめき、直感のメッセージ、感情的な新しい試み。",
+    "reversedMeaning": "感情的な未熟さ、気分屋、現実逃避。",
+    "keywordsUpright": [
+      "創造性",
+      "直感",
+      "新しい試み"
+    ],
+    "keywordsReversed": [
+      "未熟",
+      "気分屋"
+    ]
+  },
+  "cups-12": {
+    "name": "カップのナイト",
+    "uprightMeaning": "ロマンス、魅力、理想の追求。心の赴くままに行動する。",
+    "reversedMeaning": "気分の変わりやすさ、失望、過度な理想化。",
+    "keywordsUpright": [
+      "ロマンス",
+      "魅力",
+      "理想"
+    ],
+    "keywordsReversed": [
+      "気分屋",
+      "失望"
+    ]
+  },
+  "cups-13": {
+    "name": "カップのクイーン",
+    "uprightMeaning": "慈悲、感情的な安心、深い傾聴。水のように包み込む。",
+    "reversedMeaning": "感情の不安定、共依存、感情操作。",
+    "keywordsUpright": [
+      "慈悲",
+      "包み込み",
+      "傾聴"
+    ],
+    "keywordsReversed": [
+      "共依存",
+      "操作"
+    ]
+  },
+  "cups-14": {
+    "name": "カップのキング",
+    "uprightMeaning": "感情の成熟、外交、バランス。波の中でも安定を保つ。",
+    "reversedMeaning": "感情操作、抑圧、感情の爆発。",
+    "keywordsUpright": [
+      "成熟",
+      "外交",
+      "バランス"
+    ],
+    "keywordsReversed": [
+      "操作",
+      "爆発"
+    ]
+  },
+  "major-00-fool": {
+    "name": "愚者",
+    "uprightMeaning": "新たな始まり、無邪気さ、冒険を象徴します。信念を持って第一歩を踏み出し、未知に対してオープンでいましょう。",
+    "reversedMeaning": "衝動的、無謀、またはリスクを取ることを嫌がります。計画が十分かどうか再考する必要があります。",
+    "keywordsUpright": [
+      "新たな始まり",
+      "冒険",
+      "純真",
+      "自由"
+    ],
+    "keywordsReversed": [
+      "無謀",
+      "ためらい",
+      "純真さ",
+      "愚かさ"
+    ]
+  },
+  "major-01-magician": {
+    "name": "魔術師",
+    "uprightMeaning": "顕現、意志力、行動力を示します。願望を実現するために必要なすべてのツールを手にしています。",
+    "reversedMeaning": "操作、自己欺瞞、または才能が発揮されていません。動機が純粋かどうかに注意してください。",
+    "keywordsUpright": [
+      "顕現",
+      "意志力",
+      "行動",
+      "スキル"
+    ],
+    "keywordsReversed": [
+      "操作",
+      "欺瞞",
+      "未発揮の可能性"
+    ]
+  },
+  "major-02-high-priestess": {
+    "name": "女教皇",
+    "uprightMeaning": "直感、神秘、内なる知恵。潜在意識に耳を傾けてください。答えはすでに心の中にあります。",
+    "reversedMeaning": "直感の無視、秘密の露呈、または内なる声との断絶。",
+    "keywordsUpright": [
+      "直感",
+      "神秘",
+      "潜在意識",
+      "知恵"
+    ],
+    "keywordsReversed": [
+      "隠された",
+      "秘密",
+      "直感の阻害"
+    ]
+  },
+  "major-03-empress": {
+    "name": "女帝",
+    "uprightMeaning": "豊穣、創造性、母性的エネルギー。自分自身と周りの人々を育み、感覚的な美しさを楽しみましょう。",
+    "reversedMeaning": "依存、停滞、または創造性のブロック。内なる力と再びつながる必要があります。",
+    "keywordsUpright": [
+      "豊穣",
+      "創造性",
+      "育み",
+      "美"
+    ],
+    "keywordsReversed": [
+      "依存",
+      "停滞",
+      "創造性のブロック"
+    ]
+  },
+  "major-04-emperor": {
+    "name": "皇帝",
+    "uprightMeaning": "権威、安定した構造、リーダーシップ。規律と責任をもって基盤を築きましょう。",
+    "reversedMeaning": "専制、硬直、または過度のコントロール。支配に固執することが障害となります。",
+    "keywordsUpright": [
+      "権威",
+      "構造",
+      "リーダーシップ",
+      "安定"
+    ],
+    "keywordsReversed": [
+      "専制",
+      "硬直",
+      "コントロール"
+    ]
+  },
+  "major-05-hierophant": {
+    "name": "教皇",
+    "uprightMeaning": "伝統、信念、精神的な導き。指導者を求めたり、既存の体制の中で学びましょう。",
+    "reversedMeaning": "伝統への反逆、ルール破り、または既存の信念への挑戦。",
+    "keywordsUpright": [
+      "伝統",
+      "信念",
+      "指導者",
+      "体制"
+    ],
+    "keywordsReversed": [
+      "反逆",
+      "非主流",
+      "規範への挑戦"
+    ]
+  },
+  "major-06-lovers": {
+    "name": "恋人",
+    "uprightMeaning": "愛、調和、重要な選択。自分の核となる価値観に従って決断しましょう。",
+    "reversedMeaning": "関係の不均衡、誤った選択、または価値観の衝突。",
+    "keywordsUpright": [
+      "愛",
+      "調和",
+      "選択",
+      "結合"
+    ],
+    "keywordsReversed": [
+      "不均衡",
+      "不和",
+      "誤った選択"
+    ]
+  },
+  "major-07-chariot": {
+    "name": "戦車",
+    "uprightMeaning": "意志力、決意、勝利。目標に集中し、障害を突破しましょう。",
+    "reversedMeaning": "方向性の喪失、自己不信、または制御不能な攻撃性。",
+    "keywordsUpright": [
+      "勝利",
+      "決意",
+      "コントロール",
+      "意志力"
+    ],
+    "keywordsReversed": [
+      "制御不能",
+      "方向喪失",
+      "障害"
+    ]
+  },
+  "major-08-strength": {
+    "name": "力",
+    "uprightMeaning": "内なる勇気、忍耐、優しい支配。力を行使するのではなく、思いやりをもって課題を克服しましょう。",
+    "reversedMeaning": "自己不信、感情の乱れ、または力による解決。",
+    "keywordsUpright": [
+      "勇気",
+      "忍耐",
+      "優しい力",
+      "自己規律"
+    ],
+    "keywordsReversed": [
+      "自己不信",
+      "感情の乱れ",
+      "弱さ"
+    ]
+  },
+  "major-09-hermit": {
+    "name": "隠者",
+    "uprightMeaning": "内省、孤独、真理の探求。一歩下がって静かにし、内側から答えが浮かぶのを待ちましょう。",
+    "reversedMeaning": "孤立、逃避、または内なる作業の拒否。再びつながる時です。",
+    "keywordsUpright": [
+      "内省",
+      "孤独",
+      "知恵",
+      "導き"
+    ],
+    "keywordsReversed": [
+      "孤立",
+      "逃避",
+      "引きこもり"
+    ]
+  },
+  "major-10-wheel-of-fortune": {
+    "name": "運命の輪",
+    "uprightMeaning": "運命の回転、循環、転機。変化を受け入れましょう。チャンスが訪れています。",
+    "reversedMeaning": "不運、変化への抵抗、または悪循環にはまっている。",
+    "keywordsUpright": [
+      "運命",
+      "転機",
+      "循環",
+      "幸運"
+    ],
+    "keywordsReversed": [
+      "不運",
+      "制御不能",
+      "循環にはまる"
+    ]
+  },
+  "major-11-justice": {
+    "name": "正義",
+    "uprightMeaning": "公平、真実、因果応報。事実に正直に向き合い、倫理的に決断しましょう。",
+    "reversedMeaning": "不公平、欺瞞、または責任回避。",
+    "keywordsUpright": [
+      "公平",
+      "真実",
+      "責任",
+      "決断"
+    ],
+    "keywordsReversed": [
+      "不公平",
+      "欺瞞",
+      "責任回避"
+    ]
+  },
+  "major-12-hanged-man": {
+    "name": "吊るされた男",
+    "uprightMeaning": "一時停止、視点の転換、犠牲。執着を手放すことで新たな視点が見える。",
+    "reversedMeaning": "停滞、優柔不断、または無駄な犠牲。",
+    "keywordsUpright": [
+      "一時停止",
+      "視点の転換",
+      "犠牲",
+      "降伏"
+    ],
+    "keywordsReversed": [
+      "停滞",
+      "優柔不断",
+      "抵抗"
+    ]
+  },
+  "major-13-death": {
+    "name": "死神",
+    "uprightMeaning": "終わり、変容、再生。古い章を閉じて、新しいもののための場所を作る。",
+    "reversedMeaning": "変化への抵抗、過去への執着、または変容の妨げ。",
+    "keywordsUpright": [
+      "終わり",
+      "変容",
+      "再生",
+      "変態"
+    ],
+    "keywordsReversed": [
+      "抵抗",
+      "執着",
+      "手放せない"
+    ]
+  },
+  "major-14-temperance": {
+    "name": "節制",
+    "uprightMeaning": "バランス、調和、忍耐。中庸の道で対立を調和させる。",
+    "reversedMeaning": "不均衡、極端、または焦り。",
+    "keywordsUpright": [
+      "バランス",
+      "調和",
+      "忍耐",
+      "中庸"
+    ],
+    "keywordsReversed": [
+      "不均衡",
+      "極端",
+      "過剰"
+    ]
+  },
+  "major-15-devil": {
+    "name": "悪魔",
+    "uprightMeaning": "束縛、欲望、物質的執着。鎖は自分でかけていることに気づく。",
+    "reversedMeaning": "束縛からの解放、目覚め、解放。影の部分に向き合う。",
+    "keywordsUpright": [
+      "束縛",
+      "欲望",
+      "誘惑",
+      "執着"
+    ],
+    "keywordsReversed": [
+      "解放",
+      "目覚め",
+      "解放"
+    ]
+  },
+  "major-16-tower": {
+    "name": "塔",
+    "uprightMeaning": "突然の激変、幻想の崩壊、真実の露呈。崩壊が再建への道を開く。",
+    "reversedMeaning": "災難の回避、抑圧された恐怖、または遅れた変動。",
+    "keywordsUpright": [
+      "激変",
+      "崩壊",
+      "真実",
+      "目覚め"
+    ],
+    "keywordsReversed": [
+      "回避",
+      "遅延",
+      "抑圧"
+    ]
+  },
+  "major-17-star": {
+    "name": "星",
+    "uprightMeaning": "希望、癒し、インスピレーション。嵐の後、信仰と平穏が戻る。",
+    "reversedMeaning": "希望の喪失、信仰の揺らぎ、または導きとの断絶。",
+    "keywordsUpright": [
+      "希望",
+      "癒し",
+      "インスピレーション",
+      "信仰"
+    ],
+    "keywordsReversed": [
+      "絶望",
+      "信仰喪失",
+      "断絶"
+    ]
+  },
+  "major-18-moon": {
+    "name": "月",
+    "uprightMeaning": "幻想、恐怖、潜在意識。物事は見かけ通りではないかもしれない—直感を信じよ。",
+    "reversedMeaning": "真実の浮上、霧の晴れ、または恐怖の解放。",
+    "keywordsUpright": [
+      "幻想",
+      "恐怖",
+      "直感",
+      "神秘"
+    ],
+    "keywordsReversed": [
+      "真実の露呈",
+      "明確化",
+      "解放"
+    ]
+  },
+  "major-19-sun": {
+    "name": "太陽",
+    "uprightMeaning": "喜び、成功、活力。輝かしい瞬間—ただ楽しめ。",
+    "reversedMeaning": "一時的な挫折、曇った喜び、または過度の楽観。",
+    "keywordsUpright": [
+      "喜び",
+      "成功",
+      "活力",
+      "輝き"
+    ],
+    "keywordsReversed": [
+      "挫折",
+      "曇り",
+      "過信"
+    ]
+  },
+  "major-20-judgement": {
+    "name": "審判",
+    "uprightMeaning": "再生、目覚め、召命。人生を振り返り、決定的な転換をせよ。",
+    "reversedMeaning": "過度の自己批判、反省の拒否、または機会の喪失。",
+    "keywordsUpright": [
+      "再生",
+      "目覚め",
+      "反省",
+      "召命"
+    ],
+    "keywordsReversed": [
+      "自己批判",
+      "反省拒否",
+      "見逃し"
+    ]
+  },
+  "major-21-world": {
+    "name": "世界",
+    "uprightMeaning": "完成、充足、統合。大きなサイクルが閉じ、新たな旅が待つ。",
+    "reversedMeaning": "未完了の仕事、決着の欠如、または遅れた充足。",
+    "keywordsUpright": [
+      "完成",
+      "充足",
+      "統合",
+      "達成"
+    ],
+    "keywordsReversed": [
+      "未完了",
+      "遅延",
+      "決着の欠如"
+    ]
+  },
+  "pentacles-01": {
+    "name": "ペンタクルのエース",
+    "uprightMeaning": "新しい物質的機会、豊かさの種。確かな新たな始まり。",
+    "reversedMeaning": "機会損失、金銭的遅延、近視眼。",
+    "keywordsUpright": [
+      "新機会",
+      "豊かさ",
+      "始まり"
+    ],
+    "keywordsReversed": [
+      "機会損失",
+      "遅延"
+    ]
+  },
+  "pentacles-02": {
+    "name": "ペンタクルの2",
+    "uprightMeaning": "バランス、マルチタスク、変化への適応。優先順位をやりくりする。",
+    "reversedMeaning": "過負荷、混乱、両立不能。",
+    "keywordsUpright": [
+      "バランス",
+      "マルチタスク",
+      "適応力"
+    ],
+    "keywordsReversed": [
+      "過負荷",
+      "混乱"
+    ]
+  },
+  "pentacles-03": {
+    "name": "ペンタクルの3",
+    "uprightMeaning": "協力、職人技、チームワーク。各々の役割が全体を築く。",
+    "reversedMeaning": "チームの不和、スキルの不一致、縦割り。",
+    "keywordsUpright": [
+      "協力",
+      "職人技",
+      "チームワーク"
+    ],
+    "keywordsReversed": [
+      "不和",
+      "縦割り"
+    ]
+  },
+  "pentacles-04": {
+    "name": "ペンタクルの4",
+    "uprightMeaning": "保守、コントロール、固執。握りしめすぎると硬直する。",
+    "reversedMeaning": "手放し、寛大さ、再び流れが戻る。",
+    "keywordsUpright": [
+      "保守",
+      "コントロール",
+      "固執"
+    ],
+    "keywordsReversed": [
+      "手放し",
+      "寛大さ"
+    ]
+  },
+  "pentacles-05": {
+    "name": "ペンタクルの5",
+    "uprightMeaning": "金銭的困難、孤立、不安。助けは近くにある、目を向ければ。",
+    "reversedMeaning": "困難からの脱出、支援の受領、再建。",
+    "keywordsUpright": [
+      "困難",
+      "孤立",
+      "不安"
+    ],
+    "keywordsReversed": [
+      "脱出",
+      "支援"
+    ]
+  },
+  "pentacles-06": {
+    "name": "ペンタクルの6",
+    "uprightMeaning": "寛大さ、与えること、流れる資源。与えることと受け取ることのバランス。",
+    "reversedMeaning": "利己主義、不均衡、借金のもつれ。",
+    "keywordsUpright": [
+      "寛大さ",
+      "与える",
+      "流れ"
+    ],
+    "keywordsReversed": [
+      "利己主義",
+      "不均衡"
+    ]
+  },
+  "pentacles-07": {
+    "name": "ペンタクルの7",
+    "uprightMeaning": "忍耐、長期投資、段階的評価。成長には時間がかかる。",
+    "reversedMeaning": "焦り、忍耐の喪失、報われない努力。",
+    "keywordsUpright": [
+      "忍耐",
+      "長期",
+      "評価"
+    ],
+    "keywordsReversed": [
+      "焦り",
+      "無報酬"
+    ]
+  },
+  "pentacles-08": {
+    "name": "ペンタクルの8",
+    "uprightMeaning": "勤勉、技術の研鑽、集中した練習。反復による洗練。",
+    "reversedMeaning": "完璧主義、無駄な忙しさ、方向違いの努力。",
+    "keywordsUpright": [
+      "勤勉",
+      "技術",
+      "集中"
+    ],
+    "keywordsReversed": [
+      "完璧主義",
+      "無駄な忙しさ"
+    ]
+  },
+  "pentacles-09": {
+    "name": "ペンタクルの9",
+    "uprightMeaning": "豊かさ、自立、成果を楽しむ。一人でも豊かに過ごせる。",
+    "reversedMeaning": "経済的挫折、仕事中毒、物質的な孤立。",
+    "keywordsUpright": [
+      "豊かさ",
+      "自立",
+      "楽しみ"
+    ],
+    "keywordsReversed": [
+      "挫折",
+      "仕事中毒"
+    ]
+  },
+  "pentacles-10": {
+    "name": "ペンタクルの10",
+    "uprightMeaning": "家族の富、遺産、長期的安定。成果が世代を超えて続く。",
+    "reversedMeaning": "経済的損失、家族間の争い、遺産の断絶。",
+    "keywordsUpright": [
+      "家族",
+      "遺産",
+      "安定"
+    ],
+    "keywordsReversed": [
+      "損失",
+      "争い"
+    ]
+  },
+  "pentacles-11": {
+    "name": "ペンタクルのペイジ",
+    "uprightMeaning": "勉強熱心、新しい試みの具現化、集中した若い見習い。",
+    "reversedMeaning": "先延ばし、進展の欠如、機会を逃す。",
+    "keywordsUpright": [
+      "勉強熱心",
+      "具現化",
+      "集中"
+    ],
+    "keywordsReversed": [
+      "先延ばし",
+      "進展なし"
+    ]
+  },
+  "pentacles-12": {
+    "name": "ペンタクルのナイト",
+    "uprightMeaning": "信頼できる、規則正しい、丁寧な仕事。着実に一歩ずつ進む。",
+    "reversedMeaning": "頑固、退屈、停滞。",
+    "keywordsUpright": [
+      "信頼",
+      "規則正しさ",
+      "着実"
+    ],
+    "keywordsReversed": [
+      "頑固",
+      "停滞"
+    ]
+  },
+  "pentacles-13": {
+    "name": "ペンタクルのクイーン",
+    "uprightMeaning": "養育、実用的、経済的に安定。物質と感情の両方を大切にする。",
+    "reversedMeaning": "自己無視、共依存、仕事と生活のバランス崩壊。",
+    "keywordsUpright": [
+      "養育",
+      "実用的",
+      "安定"
+    ],
+    "keywordsReversed": [
+      "自己無視",
+      "バランス崩壊"
+    ]
+  },
+  "pentacles-14": {
+    "name": "ペンタクルのキング",
+    "uprightMeaning": "豊かさ、権威、キャリアの頂点。安定した知恵で成果を守る。",
+    "reversedMeaning": "貪欲、物質主義、腐敗。",
+    "keywordsUpright": [
+      "豊かさ",
+      "権威",
+      "頂点"
+    ],
+    "keywordsReversed": [
+      "貪欲",
+      "腐敗"
+    ]
+  },
+  "swords-01": {
+    "name": "ソードのエース",
+    "uprightMeaning": "明晰さ、突破、真実。鋭い思考が霧を切り裂く。",
+    "reversedMeaning": "混乱、誤解、冷酷さ。",
+    "keywordsUpright": [
+      "明晰",
+      "突破",
+      "真実"
+    ],
+    "keywordsReversed": [
+      "混乱",
+      "誤解"
+    ]
+  },
+  "swords-02": {
+    "name": "ソードの2",
+    "uprightMeaning": "膠着、優柔不断、回避。目を閉じても問題は消えない。",
+    "reversedMeaning": "決断、真実の浮上、膠着の打破。",
+    "keywordsUpright": [
+      "膠着",
+      "優柔不断",
+      "回避"
+    ],
+    "keywordsReversed": [
+      "決断",
+      "真実"
+    ]
+  },
+  "swords-03": {
+    "name": "ソードの3",
+    "uprightMeaning": "失恋、悲嘆、裏切り。痛みを認めて初めて癒える。",
+    "reversedMeaning": "癒し、解放、許し。",
+    "keywordsUpright": [
+      "失恋",
+      "悲嘆",
+      "裏切り"
+    ],
+    "keywordsReversed": [
+      "癒し",
+      "許し"
+    ]
+  },
+  "swords-04": {
+    "name": "ソードの4",
+    "uprightMeaning": "休息、回復、瞑想。一時停止して力を取り戻す。",
+    "reversedMeaning": "燃え尽き、不眠、落ち着かない。",
+    "keywordsUpright": [
+      "休息",
+      "回復",
+      "瞑想"
+    ],
+    "keywordsReversed": [
+      "燃え尽き",
+      "不眠"
+    ]
+  },
+  "swords-05": {
+    "name": "ソードの5",
+    "uprightMeaning": "対立、虚しい勝利、代償が報酬を上回る。",
+    "reversedMeaning": "和解、修復、エゴを手放す。",
+    "keywordsUpright": [
+      "対立",
+      "虚しい勝利"
+    ],
+    "keywordsReversed": [
+      "和解",
+      "修復"
+    ]
+  },
+  "swords-06": {
+    "name": "ソードの6",
+    "uprightMeaning": "移行、立ち直り、出発。過去の重荷を抱えて新たな岸へ。",
+    "reversedMeaning": "立ち直れない、過去に囚われる、旅の遅延。",
+    "keywordsUpright": [
+      "移行",
+      "立ち直り",
+      "出発"
+    ],
+    "keywordsReversed": [
+      "囚われる",
+      "遅延"
+    ]
+  },
+  "swords-07": {
+    "name": "ソードの7",
+    "uprightMeaning": "策略、欺瞞、秘密行動。隠された動機に注意。",
+    "reversedMeaning": "良心の目覚め、正直、計画の露見。",
+    "keywordsUpright": [
+      "策略",
+      "欺瞞",
+      "秘密"
+    ],
+    "keywordsReversed": [
+      "正直",
+      "露見"
+    ]
+  },
+  "swords-08": {
+    "name": "ソードの8",
+    "uprightMeaning": "自己制限、思考の罠、無力感。縛られているように見えても実は動ける。",
+    "reversedMeaning": "解放、古い信念の手放し、自由の回復。",
+    "keywordsUpright": [
+      "自己制限",
+      "罠"
+    ],
+    "keywordsReversed": [
+      "解放",
+      "自由"
+    ]
+  },
+  "swords-09": {
+    "name": "ソードの9",
+    "uprightMeaning": "不安、不眠、過度の心配。夜の恐怖は現実より誇張されがち。",
+    "reversedMeaning": "不安からの脱却、希望の回復、支援を求める。",
+    "keywordsUpright": [
+      "不安",
+      "心配",
+      "悪夢"
+    ],
+    "keywordsReversed": [
+      "回復",
+      "希望"
+    ]
+  },
+  "swords-10": {
+    "name": "ソードの10",
+    "uprightMeaning": "完全な終わり、どん底、苦しい決着。底を打ってから立ち上がる。",
+    "reversedMeaning": "ゆっくりとした回復、最悪の回避、教訓を得る。",
+    "keywordsUpright": [
+      "終わり",
+      "どん底",
+      "決着"
+    ],
+    "keywordsReversed": [
+      "回復",
+      "教訓"
+    ]
+  },
+  "swords-11": {
+    "name": "ソードのペイジ",
+    "uprightMeaning": "好奇心、鋭敏、警戒心。アイデアに満ちた若い心。",
+    "reversedMeaning": "噂話、性急、軽率な言葉。",
+    "keywordsUpright": [
+      "好奇心",
+      "鋭敏",
+      "警戒心"
+    ],
+    "keywordsReversed": [
+      "噂話",
+      "性急"
+    ]
+  },
+  "swords-12": {
+    "name": "ソードのナイト",
+    "uprightMeaning": "突撃、信念の擁護、迅速。真理のために戦う。",
+    "reversedMeaning": "無謀、傲慢、好戦的。",
+    "keywordsUpright": [
+      "突撃",
+      "擁護",
+      "迅速"
+    ],
+    "keywordsReversed": [
+      "無謀",
+      "好戦的"
+    ]
+  },
+  "swords-13": {
+    "name": "ソードのクイーン",
+    "uprightMeaning": "独立、洞察、直言。明晰な頭脳で真偽を見極める。",
+    "reversedMeaning": "冷淡、辛辣、過度に批判的。",
+    "keywordsUpright": [
+      "独立",
+      "洞察",
+      "直言"
+    ],
+    "keywordsReversed": [
+      "冷淡",
+      "辛辣"
+    ]
+  },
+  "swords-14": {
+    "name": "ソードのキング",
+    "uprightMeaning": "知的権威、倫理、公正な判断。知恵をもって統治する。",
+    "reversedMeaning": "専制的、冷酷、論理の悪用。",
+    "keywordsUpright": [
+      "知恵",
+      "倫理",
+      "公正"
+    ],
+    "keywordsReversed": [
+      "専制的",
+      "悪用"
+    ]
+  },
+  "wands-01": {
+    "name": "ワンドのエース",
+    "uprightMeaning": "インスピレーションの爆発、新たな機会。力強い始まり。",
+    "reversedMeaning": "モチベーションの欠如、機会の遅延。",
+    "keywordsUpright": [
+      "インスピレーション",
+      "機会",
+      "情熱"
+    ],
+    "keywordsReversed": [
+      "モチベーション不足",
+      "遅延"
+    ]
+  },
+  "wands-02": {
+    "name": "ワンドの2",
+    "uprightMeaning": "計画、選択、発見。岐路に立ち未来を見据える。",
+    "reversedMeaning": "未知への恐怖、安全圏に留まる。",
+    "keywordsUpright": [
+      "計画",
+      "決断",
+      "展望"
+    ],
+    "keywordsReversed": [
+      "変化への恐怖",
+      "停滞"
+    ]
+  },
+  "wands-03": {
+    "name": "ワンドの3",
+    "uprightMeaning": "拡大、進展、先見の明。長期的な計画が実を結び始める。",
+    "reversedMeaning": "進捗の妨害、視野の狭さ。",
+    "keywordsUpright": [
+      "拡大",
+      "先見の明",
+      "進展"
+    ],
+    "keywordsReversed": [
+      "妨害",
+      "遅延"
+    ]
+  },
+  "wands-04": {
+    "name": "ワンドの4",
+    "uprightMeaning": "祝賀、調和、帰属。節目となる成果を祝う時。",
+    "reversedMeaning": "家庭やコミュニティの緊張、祝賀の遅れ。",
+    "keywordsUpright": [
+      "祝賀",
+      "調和",
+      "帰属"
+    ],
+    "keywordsReversed": [
+      "緊張",
+      "遅延"
+    ]
+  },
+  "wands-05": {
+    "name": "ワンドの5",
+    "uprightMeaning": "競争、対立、意見の相違。摩擦が成長を促すことも。",
+    "reversedMeaning": "対立の回避、内面の葛藤、解決策を模索。",
+    "keywordsUpright": [
+      "競争",
+      "対立",
+      "相違"
+    ],
+    "keywordsReversed": [
+      "解決",
+      "内面の葛藤"
+    ]
+  },
+  "wands-06": {
+    "name": "ワンドの6",
+    "uprightMeaning": "勝利、認知、公的成功。努力がついに認められる。",
+    "reversedMeaning": "成功への疑問、自己不信、または寵愛を失う。",
+    "keywordsUpright": [
+      "勝利",
+      "認知",
+      "称賛"
+    ],
+    "keywordsReversed": [
+      "失寵",
+      "自己不信"
+    ]
+  },
+  "wands-07": {
+    "name": "ワンドの7",
+    "uprightMeaning": "立場を守る、挑戦、防御。数では劣るが有利な立場。",
+    "reversedMeaning": "圧倒される、諦めたい、または退く誘惑。",
+    "keywordsUpright": [
+      "堅守",
+      "防御",
+      "挑戦"
+    ],
+    "keywordsReversed": [
+      "圧倒",
+      "譲歩"
+    ]
+  },
+  "wands-08": {
+    "name": "ワンドの8",
+    "uprightMeaning": "迅速な進展、メッセージ、移動。物事が加速する。",
+    "reversedMeaning": "遅延、コミュニケーションの妨害、性急な決断。",
+    "keywordsUpright": [
+      "迅速",
+      "進展",
+      "メッセージ"
+    ],
+    "keywordsReversed": [
+      "遅延",
+      "妨害"
+    ]
+  },
+  "wands-09": {
+    "name": "ワンドの9",
+    "uprightMeaning": "回復力、警戒、最終段階。疲れているがまだ終わっていない。",
+    "reversedMeaning": "疲労困憊、過剰な防御、偏執。",
+    "keywordsUpright": [
+      "回復力",
+      "警戒",
+      "粘り強さ"
+    ],
+    "keywordsReversed": [
+      "疲労",
+      "偏執"
+    ]
+  },
+  "wands-10": {
+    "name": "ワンドの10",
+    "uprightMeaning": "重荷、責任、過負荷。委任か手放す時。",
+    "reversedMeaning": "手放す、委任、プレッシャーからの解放。",
+    "keywordsUpright": [
+      "重荷",
+      "責任",
+      "プレッシャー"
+    ],
+    "keywordsReversed": [
+      "解放",
+      "委任"
+    ]
+  },
+  "wands-11": {
+    "name": "ワンドのペイジ",
+    "uprightMeaning": "探求、熱意、好奇心旺盛な初心者。可能性に満ちた知らせ。",
+    "reversedMeaning": "未熟なアイデア、方向性の欠如、小さな挫折。",
+    "keywordsUpright": [
+      "探求",
+      "熱意",
+      "好奇心"
+    ],
+    "keywordsReversed": [
+      "未熟",
+      "方向性の喪失"
+    ]
+  },
+  "wands-12": {
+    "name": "ワンドのナイト",
+    "uprightMeaning": "突進、冒険、大胆な行動。情熱があなたを駆り立てる。",
+    "reversedMeaning": "衝動的、無謀、散漫なエネルギー。",
+    "keywordsUpright": [
+      "行動",
+      "冒険",
+      "情熱"
+    ],
+    "keywordsReversed": [
+      "衝動的",
+      "散漫"
+    ]
+  },
+  "wands-13": {
+    "name": "ワンドのクイーン",
+    "uprightMeaning": "温かさ、自信、カリスマ性のあるリーダー。大胆でありながら思いやりがある。",
+    "reversedMeaning": "嫉妬深い、要求が厳しい、気分屋。",
+    "keywordsUpright": [
+      "温かさ",
+      "自信",
+      "カリスマ"
+    ],
+    "keywordsReversed": [
+      "嫉妬",
+      "要求が厳しい"
+    ]
+  },
+  "wands-14": {
+    "name": "ワンドのキング",
+    "uprightMeaning": "ビジョン、リーダーシップ、名誉。先見の明をもって他者を導く。",
+    "reversedMeaning": "独裁的、暴君的、衝動的な決断。",
+    "keywordsUpright": [
+      "ビジョン",
+      "リーダーシップ",
+      "名誉"
+    ],
+    "keywordsReversed": [
+      "独裁的",
+      "暴君的"
+    ]
+  }
+}
