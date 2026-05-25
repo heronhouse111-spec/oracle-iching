@@ -131,11 +131,13 @@ Sidebar → **Monetize** → **Products** → **In-app products** → **Create p
 
 | 欄位 | 值 |
 |---|---|
-| Product ID | `orc.credits.pack200` |
+| Product ID | `orc.credits.pack200v2` ⚠️ **v2** |
 | Name | 易問 200 點 |
 | Description | 加購包:獲得 200 點數,單價 NT$0.60 / 點 |
 | Default price | `TWD 120` (US: `$3.99`) |
 | Status | Active |
+
+> ⚠️ **為什麼是 v2** — 原本 SKU `orc.credits.pack200` 在 Play Console 被誤刪過,Google 政策「已刪除的 Product ID 永久保留、不能再用」(同 app 同開發者也擋,客服救不回),所以重發成 v2。日後若再誤刪要繼續 v3、v4。`lib/billing/playSkus.ts` 第 33 行 `pack_200` 對應的 SKU 就是 `orc.credits.pack200v2`。
 
 ### 2.3 pack_500(主推)
 
