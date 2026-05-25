@@ -18,7 +18,11 @@
 // 每次換靜態資源(塔羅圖、logo、字型...)就 bump 這個版本號,
 // activate 階段會自動把舊 CACHE 整個砍掉,避免使用者卡在舊快取。
 // v3 (2026-05-17): navigate 改 stale-while-revalidate,清掉 v2 cache 避免舊 HTML 黏住。
-const CACHE_VERSION = "oracle-v3";
+// v4 (2026-05-26): 強制 invalidate v3 的舊 _next/static JS bundle —— PR #24 後
+//   credits/page.tsx 移除了 `if (isTwa) return false` filter,但 TWA 端 SW 還
+//   黏在 v3 cache,starter pack 在 TWA 顯示不出來(已驗證:web 看得到、TWA 看不到)。
+//   bump 後 activate 會砍掉 v3 整個 cache,TWA 重開拉新 JS,starter 就會出現。
+const CACHE_VERSION = "oracle-v4";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 // 明確跳過 SW 的 path prefix —— 這些都會動態變,絕不 cache。
