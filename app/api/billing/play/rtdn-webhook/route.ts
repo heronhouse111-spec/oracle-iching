@@ -31,7 +31,7 @@
  * data 解碼後:
  *   {
  *     "version": "1.0",
- *     "packageName": "me.heronhouse.oracle",
+ *     "packageName": "me.heronhouse.tarogram",
  *     "eventTimeMillis": "1234567890000",
  *     "subscriptionNotification": {
  *       "version": "1.0",
