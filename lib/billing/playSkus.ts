@@ -25,7 +25,12 @@ export const CREDIT_PACK_SKUS: Record<CreditPackId, string> = {
   // ⚠️ firstTimeOnly 在 Play 端沒有原生限制,verify-purchase route 會 query
   //    credit_transactions 阻擋重複購買(同 ECPay checkout 邏輯)。
   pack_100_starter: "orc.credits.pack100starter",
-  pack_200: "orc.credits.pack200",
+  // ⚠️ 原本 SKU 是 orc.credits.pack200,在 Play Console 被誤刪。
+  //    Google 政策:已刪除的 Product ID 永久保留、不能再用(同 app 同開發者
+  //    都不行,客服也救不回)。所以重發成 v2,Play Console 上對應的新產品 ID
+  //    也是 orc.credits.pack200v2。內部 pack_200 ID 保持不變,只有 Play 端
+  //    對外字串換版。
+  pack_200: "orc.credits.pack200v2",
   pack_500: "orc.credits.pack500",
   pack_1200: "orc.credits.pack1200",
 };
@@ -44,7 +49,7 @@ export const SKU_TO_CREDIT_PACK: Record<string, CreditPackId> = Object.fromEntri
  */
 export const SKU_CREDITS_GRANTED: Record<string, number> = {
   "orc.credits.pack100starter": 130, // 100 + 30 bonus(firstTimeOnly,server 擋重複)
-  "orc.credits.pack200": 200,    // 200 + 0 bonus
+  "orc.credits.pack200v2": 200,  // 200 + 0 bonus(舊 SKU orc.credits.pack200 被誤刪、Play 永久保留 ID)
   "orc.credits.pack500": 550,    // 500 + 50 bonus
   "orc.credits.pack1200": 1400,  // 1200 + 200 bonus
 };
