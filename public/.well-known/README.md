@@ -18,8 +18,8 @@ Digital Asset Links — Google Chrome 用這支檔案確認 TWA (Trusted Web Act
 
 ## package_name
 
-目前設 `me.heronhouse.oracle` —— 跟著網域命名慣例。如果之後 Bubblewrap 建的 package
-name 不同,**兩邊都要一致**(Play Console + assetlinks.json)。
+目前設 `me.heronhouse.tarogram` —— 跟著產品名命名(Tarogram 易問)。Play Console 上架時
+的 Application ID **必須完全一致**,動了一邊另一邊就要跟著動(Play Console + assetlinks.json)。
 
 ## 如何驗證
 

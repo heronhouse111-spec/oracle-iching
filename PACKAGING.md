@@ -16,7 +16,7 @@
 | Icons 16–1024 全尺寸 | ✅ |
 | TWA guard (`useIsTWA` + `TwaPurchaseNotice`) | ✅ 已合規 |
 | Play App Signing | 待 Console 啟用(預設自動啟用) |
-| `me.heronhouse.oracle` package name | ✅ 預留 |
+| `me.heronhouse.tarogram` package name | ✅ 預留 |
 
 ---
 
@@ -128,7 +128,7 @@ bubblewrap init --manifest https://tarogram.heronhouse.me/manifest.json
 | Domain being opened in the TWA | `tarogram.heronhouse.me` | 自動帶,確認 |
 | Name of the application | `Tarogram 易問` | 中文 launcher name |
 | Short name | `Tarogram` | 桌面 icon 底下的短名,太長會被截 |
-| Application ID (package name) | `me.heronhouse.oracle` | **必須跟 assetlinks.json 裡的 `package_name` 一致** |
+| Application ID (package name) | `me.heronhouse.tarogram` | **必須跟 assetlinks.json 裡的 `package_name` 一致** |
 | Display mode | `standalone` | 不要 `fullscreen`(會藏狀態列,UX 差) |
 | Status bar color | `#0a0a1a` | 跟 manifest `theme_color` 一致 |
 | Background color (啟動閃屏) | `#0a0a1a` | 開 app 時黑底那瞬間,跟主題色一致才不閃 |
@@ -235,7 +235,7 @@ SHA-256 Fingerprint:
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "me.heronhouse.oracle",
+      "package_name": "me.heronhouse.tarogram",
       "sha256_cert_fingerprints": [
         "12:AB:34:CD:56:EF:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90"
       ]
@@ -266,7 +266,7 @@ https://tarogram.heronhouse.me/.well-known/assetlinks.json
 再用 Google 官方工具驗:
 https://developers.google.com/digital-asset-links/tools/generator
 - Hosting site domain: `tarogram.heronhouse.me`
-- App package name: `me.heronhouse.oracle`
+- App package name: `me.heronhouse.tarogram`
 - App package fingerprint: 剛那串 SHA256
 - 按 **Test statement** → 應該 ✅ 綠勾
 

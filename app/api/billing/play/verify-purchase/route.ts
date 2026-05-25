@@ -28,9 +28,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CREDIT_PACKS } from "@/lib/pricing";
 import {
   PLAY_PACKAGE_NAME,
   SKU_CREDITS_GRANTED,
+  SKU_TO_CREDIT_PACK,
   SKU_TO_SUBSCRIPTION_PLAN,
   isCreditPackSku,
   isSubscriptionSku,
@@ -279,6 +281,66 @@ export async function POST(req: NextRequest) {
   // ============================================
   // 4B. Consumable(點數包)路徑
   // ============================================
+
+  // -------- 4B.0 firstTimeOnly 限購檢查 ----------------------------------
+  // 對 lib/pricing.ts 標 firstTimeOnly 的 pack(目前只有 pack_100_starter),
+  // 阻擋已有付費紀錄的使用者重複購買。
+  //
+  // 為什麼要 server check —— UI visiblePacks filter 已先一道:hasPurchased===false 才顯示卡片,
+  //   但 attacker 可繞 UI、直接呼叫 PaymentRequest 帶 starter SKU,所以這裡是最後一道。
+  //
+  // 邏輯跟 /api/billing/ecpay/checkout 相同(query credit_transactions 看是否有
+  // ecpay_purchase / play_billing_purchase / purchase_pack / subscription_refill 任一筆)。
+  //
+  // 觸發後我們**不 acknowledge / 不 consume** Google 端,3 天後 Google 會自動退款。
+  // 同時寫 play_purchases status=failed,留 audit trace。
+  const packIdForFirstTimeCheck = SKU_TO_CREDIT_PACK[sku];
+  const packForFirstTimeCheck = packIdForFirstTimeCheck
+    ? CREDIT_PACKS.find((p) => p.id === packIdForFirstTimeCheck)
+    : null;
+  if (packForFirstTimeCheck?.firstTimeOnly) {
+    const { data: existingPurchase, error: histErr } = await admin
+      .from("credit_transactions")
+      .select("id")
+      .eq("user_id", user.id)
+      .in("reason", [
+        "ecpay_purchase",
+        "play_billing_purchase",
+        "purchase_pack",
+        "subscription_refill",
+      ])
+      .limit(1)
+      .maybeSingle();
+    if (histErr) {
+      console.error("[play/verify] first-time check failed", histErr);
+      return NextResponse.json(
+        { error: "first_time_check_failed", detail: histErr.message },
+        { status: 500 }
+      );
+    }
+    if (existingPurchase) {
+      console.warn("[play/verify] starter purchase by returning user, rejected", {
+        userId: user.id,
+        sku,
+        purchaseToken,
+      });
+      await upsertFailed(admin, {
+        userId: user.id,
+        sku,
+        purchaseToken,
+        productType: "consumable",
+        reason: "first_time_only_violation",
+      });
+      return NextResponse.json(
+        {
+          error: "first_time_only",
+          detail: `${packForFirstTimeCheck.id} 限首購,你已有付費紀錄`,
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   let productInfo;
   try {
     const res = await publisher.purchases.products.get({

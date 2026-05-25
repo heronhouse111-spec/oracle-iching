@@ -89,13 +89,11 @@ export default function CreditsPurchasePage() {
 
   // 過濾出可以顯示的 packs:
   //   - firstTimeOnly 的要 hasPurchased === false
-  //   - TWA 環境(Play Billing)下,starter pack 暫時隱藏
-  //     (因為 Play Console 還沒建立 orc.credits.pack100_starter SKU)
+  //   - TWA + web 兩條路徑都支援 starter:Play Billing 端 SKU = orc.credits.pack100starter
+  //     (定義在 lib/billing/playSkus.ts),server-side firstTimeOnly 阻擋在
+  //     /api/billing/play/verify-purchase。
   const visiblePacks = CREDIT_PACKS.filter((p) => {
-    if (p.firstTimeOnly) {
-      if (hasPurchased !== false) return false;
-      if (isTwa) return false;  // TWA 暫時走 ECPay 路徑無 starter,等 Play SKU 建好移除
-    }
+    if (p.firstTimeOnly && hasPurchased !== false) return false;
     return true;
   });
 

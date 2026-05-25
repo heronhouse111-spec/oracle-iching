@@ -20,6 +20,11 @@ import type { CreditPackId, SubscriptionPlanId } from "@/lib/pricing";
 
 /** 點數方案 SKU IDs(對應 Play Console In-app Products) */
 export const CREDIT_PACK_SKUS: Record<CreditPackId, string> = {
+  // Phase 26 新增 — 限首購一次。Play Console SKU ID 不含底線(Google 慣例),
+  // 跟內部 pack_100_starter 字面不一樣;反向查 SKU_TO_CREDIT_PACK 一定要走這張表。
+  // ⚠️ firstTimeOnly 在 Play 端沒有原生限制,verify-purchase route 會 query
+  //    credit_transactions 阻擋重複購買(同 ECPay checkout 邏輯)。
+  pack_100_starter: "orc.credits.pack100starter",
   pack_200: "orc.credits.pack200",
   pack_500: "orc.credits.pack500",
   pack_1200: "orc.credits.pack1200",
@@ -38,6 +43,7 @@ export const SKU_TO_CREDIT_PACK: Record<string, CreditPackId> = Object.fromEntri
  *   修改時記得兩邊一起改。
  */
 export const SKU_CREDITS_GRANTED: Record<string, number> = {
+  "orc.credits.pack100starter": 130, // 100 + 30 bonus(firstTimeOnly,server 擋重複)
   "orc.credits.pack200": 200,    // 200 + 0 bonus
   "orc.credits.pack500": 550,    // 500 + 50 bonus
   "orc.credits.pack1200": 1400,  // 1200 + 200 bonus
