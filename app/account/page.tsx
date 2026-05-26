@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
+import { SUBSCRIPTION_SKUS, PLAY_PACKAGE_NAME } from "@/lib/billing/playSkus";
 
 interface SubscriptionSummary {
   user_id: string;
@@ -35,6 +36,13 @@ export default function AccountPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [summary, setSummary] = useState<SubscriptionSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 目前有效訂閱來自哪個 provider(用來決定取消流程走哪邊)
+  // ecpay → call /api/billing/ecpay/cancel-subscription
+  // google_play → 引導至 Play Store(API 取消是 Google 政策禁止)
+  const [activeProvider, setActiveProvider] = useState<
+    "ecpay" | "google_play" | null
+  >(null);
 
   // 取消訂閱
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -107,13 +115,35 @@ export default function AccountPage() {
     }
   };
 
-  // 是否該顯示「取消訂閱」按鈕
+  // 是否該顯示「取消訂閱」按鈕(僅 ECPay 訂閱可在站內直接取消)
   // 條件:有效中(is_active) + 還沒被取消(status=active) + 是月/年訂閱(lifetime 不能取消,本來就一次付清)
+  //      + provider === "ecpay"(Google Play 訂閱受政策限制,只能在 Play Store 取消,見下方專屬 block)
   const canCancelSubscription =
     summary?.is_active === true &&
     summary?.subscription_status === "active" &&
     (summary?.subscription_plan === "monthly" ||
-      summary?.subscription_plan === "yearly");
+      summary?.subscription_plan === "yearly") &&
+    activeProvider === "ecpay";
+
+  // 是否該顯示「前往 Play Store 管理訂閱」連結(Google Play 訂閱戶)
+  // 條件:有效中 + active + 月/年訂閱 + provider === "google_play"
+  // 點下去開 Play Store 訂閱管理頁;真正取消後 Google 透過 RTDN webhook 通知我們更新 DB。
+  const showPlayManageLink =
+    summary?.is_active === true &&
+    summary?.subscription_status === "active" &&
+    (summary?.subscription_plan === "monthly" ||
+      summary?.subscription_plan === "yearly") &&
+    activeProvider === "google_play";
+
+  // Play Store 訂閱管理 deep link(TWA 中 Chrome 會把它導到 Play Store app)
+  // 格式:https://play.google.com/store/account/subscriptions?sku=<SKU>&package=<PKG>
+  const playManageUrl = (() => {
+    const plan = summary?.subscription_plan;
+    if (plan !== "monthly" && plan !== "yearly") return null;
+    const sku = SUBSCRIPTION_SKUS[plan];
+    if (!sku) return null;
+    return `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(sku)}&package=${encodeURIComponent(PLAY_PACKAGE_NAME)}`;
+  })();
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -136,6 +166,21 @@ export default function AccountPage() {
         .eq("user_id", user.id)
         .maybeSingle();
       if (data) setSummary(data as SubscriptionSummary);
+
+      // 撈最新一筆 active 訂閱的 provider — 決定取消流程走 ECPay endpoint
+      // 還是引導到 Play Store。RLS 允許使用者讀自己的 subscriptions row。
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .select("provider")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (subRow?.provider === "ecpay" || subRow?.provider === "google_play") {
+        setActiveProvider(subRow.provider);
+      }
+
       setIsLoading(false);
     });
   }, []);
@@ -905,6 +950,34 @@ export default function AccountPage() {
             >
               {cancelMessage.text}
             </div>
+          )}
+
+          {/* Google Play 訂閱:Google 政策只允許使用者在 Play Store 取消,
+              這裡僅提示 + 提供 deep link;真正取消後 RTDN webhook 會把 DB 同步成 canceled。 */}
+          {showPlayManageLink && playManageUrl && (
+            <a
+              href={playManageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "block",
+                padding: "8px 12px",
+                color: "rgba(192,192,208,0.4)",
+                fontSize: 11,
+                textDecoration: "underline",
+              }}
+              title={t(
+                "Google Play 訂閱僅能在 Play Store 中取消。會員權益保留到目前期限結束。",
+                "Google Play subscriptions can only be canceled in the Play Store. Benefits remain until the current period ends.",
+              )}
+            >
+              {t(
+                "前往 Play Store 管理 / 取消訂閱",
+                "Manage / cancel in Play Store",
+                "Play Store でサブスクを管理 / 解約",
+                "Play Store에서 구독 관리 / 취소",
+              )}
+            </a>
           )}
 
           <Link
