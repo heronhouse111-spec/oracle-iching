@@ -29,9 +29,18 @@ export default function Header() {
       }}>
         <HomeMenu />
 
-        <nav style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <nav style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <CreditsBadge />
-          <Link href="/history" style={{ color: "#c0c0d0", fontSize: 14, textDecoration: "none" }}>
+          <Link
+            href="/history"
+            style={{
+              color: "#c0c0d0",
+              fontSize: 13,
+              textDecoration: "none",
+              // 避免 CJK 「占い履歴 / 점 기록 / 占卜紀錄」在窄寬被逐字斷行
+              whiteSpace: "nowrap",
+            }}
+          >
             {t("占卜紀錄", "History", "占い履歴", "점 기록")}
           </Link>
           <LocaleDropdown />

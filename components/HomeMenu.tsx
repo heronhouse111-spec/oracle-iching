@@ -222,13 +222,16 @@ export default function HomeMenu() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: 8,
           background: "none",
           border: "none",
           padding: 0,
           cursor: "pointer",
           fontFamily: "inherit",
           color: "inherit",
+          // 防止整顆按鈕被右側 nav 擠到無空間時被 flex 壓縮 —
+          // 不然 CJK 標題會逐字斷行、英文 Tarogram 會直接溢出重疊到 credits。
+          flexShrink: 0,
         }}
       >
         <Image
@@ -247,7 +250,13 @@ export default function HomeMenu() {
         />
         <span
           className="text-gold-gradient"
-          style={{ fontFamily: "'Noto Serif TC', serif", fontWeight: 700, fontSize: 18 }}
+          style={{
+            fontFamily: "'Noto Serif TC', serif",
+            fontWeight: 700,
+            fontSize: 17,
+            // 標題一律單行 — CJK 在窄寬會逐字斷行,英文 Tarogram 不能斷字會撞到 credits。
+            whiteSpace: "nowrap",
+          }}
         >
           {t("易問", "Tarogram", "易問", "타로그램")}
         </span>

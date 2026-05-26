@@ -93,15 +93,15 @@ export default function LocaleDropdown() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 4,
-          padding: "6px 10px 6px 12px",
+          gap: 3,
+          padding: "5px 8px 5px 10px",
           borderRadius: 9999,
           border: "1px solid rgba(212,168,85,0.3)",
           color: "#d4a855",
           fontSize: 12,
           background: "none",
           cursor: "pointer",
-          minWidth: 56,
+          minWidth: 44,
           fontFamily: "inherit",
         }}
       >
