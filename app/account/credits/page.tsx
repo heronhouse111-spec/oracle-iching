@@ -483,8 +483,29 @@ export default function CreditsPurchasePage() {
           </div>
         )}
 
-        {/* ---- Currency switcher (web only) ---- */}
-        {!isTwa && <CurrencySwitcher />}
+        {/* ---- Currency switcher (web + TWA 都顯示) ----
+             理由同 /account/upgrade — 讓非中文 UI 的 TWA 使用者能手動切到 USD。
+             ⚠ TWA 限制:顯示幣別不等於 Google Play 實際扣款幣別,以下加備註。 */}
+        <CurrencySwitcher />
+        {isTwa && (
+          <p
+            style={{
+              textAlign: "center",
+              color: "rgba(192,192,208,0.45)",
+              fontSize: 10.5,
+              marginTop: -10,
+              marginBottom: 16,
+              lineHeight: 1.5,
+            }}
+          >
+            {t(
+              "顯示幣別僅供參考,實際扣款金額依您的 Google Play 帳號所在國家為準",
+              "Display currency is for reference; actual charge follows your Google Play account country.",
+              "表示通貨は参考用です。実際の請求額は Google Play アカウントの国に従います。",
+              "표시 통화는 참고용이며 실제 청구 금액은 Google Play 계정 국가에 따릅니다."
+            )}
+          </p>
+        )}
 
         {/* ---- Pack grid (TWA + web 都顯示;onClick 行為依環境分流) ---- */}
         {(

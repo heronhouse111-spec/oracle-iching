@@ -5,10 +5,12 @@
  *
  * 偵測優先序(mount effect 跑一次):
  *   1. localStorage `oracle_currency_override`(使用者手動切換過)
- *   2. cookie `oracle_country`(middleware 從 Vercel geo header 寫入),
+ *   2. cookie `locale`(由 LanguageContext 寫入)→ 非中文 UI 一律 USD
+ *      ← 2026-05 新增 — 修掉「英文/日文/韓文 UI 卻顯示 NT$」的問題
+ *   3. cookie `oracle_country`(middleware 從 Vercel geo header 寫入),
  *      map 成幣別(TW → TWD, 其他 → USD)
- *   3. navigator.language 粗略判斷(本地開發沒 geo cookie 時的 fallback)
- *   4. 預設 USD
+ *   4. navigator.language 粗略判斷(本地開發沒 geo cookie 時的 fallback)
+ *   5. 預設 USD
  *
  * SSR:首次渲染固定回 "TWD"(因為台灣主市場,閃動視覺可接受,跟 LanguageContext
  * 的 "zh" 預設同思路)。mount 後 effect 校正。
@@ -23,7 +25,12 @@ import {
   GEO_COOKIE,
   countryToCurrency,
   isValidCurrency,
+  localeToCurrency,
 } from "./country";
+
+// 跟 i18n/LanguageContext.tsx 的 COOKIE_LOCALE 對齊,
+// 為避免循環依賴(i18n → geo → i18n),這裡就直接寫字串而非 import
+const LOCALE_COOKIE = "locale";
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -107,7 +114,17 @@ export function useCurrency(): UseCurrencyResult {
         /* 無 localStorage */
       }
 
-      // 2. middleware 的 geo cookie
+      // 2. locale cookie(LanguageContext 寫入)→ 非中文 UI 一律 USD
+      //    這條優先於 geo,因為「人在台灣但選英文 UI」的 TWA 使用者很常見,
+      //    過去走 geo 會把他們的價格顯示成 NT$,跟介面語言不一致引起認知落差
+      const locale = readCookie(LOCALE_COOKIE);
+      if (locale && !locale.toLowerCase().startsWith("zh")) {
+        setCurrencyState(localeToCurrency(locale));
+        setAutoDetected(true);
+        return;
+      }
+
+      // 3. middleware 的 geo cookie(走到這裡通常是中文 UI 或沒設 locale)
       const country = readCookie(GEO_COOKIE);
       if (country) {
         setCurrencyState(countryToCurrency(country));
@@ -115,7 +132,7 @@ export function useCurrency(): UseCurrencyResult {
         return;
       }
 
-      // 3. 瀏覽器語系粗判(本地開發 / 非 Vercel 部署的 fallback)
+      // 4. 瀏覽器語系粗判(本地開發 / 非 Vercel 部署的 fallback)
       setCurrencyState(detectFromBrowser());
       setAutoDetected(true);
     };
@@ -171,9 +188,15 @@ export function useCurrency(): UseCurrencyResult {
       /* ignore */
     }
     writeCookie(CURRENCY_OVERRIDE_KEY, ""); // 立刻過期
-    // 重新依偵測優先序
-    const country = readCookie(GEO_COOKIE);
-    const next = country ? countryToCurrency(country) : detectFromBrowser();
+    // 重新依偵測優先序(locale > geo > browser)
+    const locale = readCookie(LOCALE_COOKIE);
+    let next: Currency;
+    if (locale && !locale.toLowerCase().startsWith("zh")) {
+      next = localeToCurrency(locale);
+    } else {
+      const country = readCookie(GEO_COOKIE);
+      next = country ? countryToCurrency(country) : detectFromBrowser();
+    }
     setCurrencyState(next);
     setAutoDetected(true);
     broadcastCurrency({ currency: next, autoDetected: true });

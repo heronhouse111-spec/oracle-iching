@@ -396,8 +396,33 @@ export default function UpgradePage() {
           </div>
         )}
 
-        {/* ---- Currency switcher (web only) ---- */}
-        {!isTwa && <CurrencySwitcher />}
+        {/* ---- Currency switcher (web + TWA 都顯示) ----
+             為什麼 TWA 也要:很多在台灣的使用者選英文 / 日文 / 韓文 UI,過去
+             被 geo cookie 強制顯示 NT$,跟介面語言不一致;讓他們能手動切到 USD。
+             ⚠ TWA 限制:這個切換只改顯示,Google Play 實際扣款幣別依使用者
+             Play 帳號國家為準,可能跟畫面顯示不同(顯示 $4.99 但實際扣 NT$150)。
+             理想方案是改用 lib/billing/playBilling.ts 的 fetchAllSkuDetails
+             拉 Play 在地化價格,留待後續優化。 */}
+        <CurrencySwitcher />
+        {isTwa && (
+          <p
+            style={{
+              textAlign: "center",
+              color: "rgba(192,192,208,0.45)",
+              fontSize: 10.5,
+              marginTop: -10,
+              marginBottom: 16,
+              lineHeight: 1.5,
+            }}
+          >
+            {t(
+              "顯示幣別僅供參考,實際扣款金額依您的 Google Play 帳號所在國家為準",
+              "Display currency is for reference; actual charge follows your Google Play account country.",
+              "表示通貨は参考用です。実際の請求額は Google Play アカウントの国に従います。",
+              "표시 통화는 참고용이며 실제 청구 금액은 Google Play 계정 국가에 따릅니다."
+            )}
+          </p>
+        )}
 
         {!isTwa && ecpayError && (
           <div
