@@ -17,6 +17,7 @@ import {
   GSI_CLIENT_ID_CONFIGURED,
   renderGoogleButton,
 } from "@/lib/auth/googleIdentity";
+import { useIsIos } from "@/lib/hooks/useIsNativeWrapper";
 
 export interface LoginOptionsModalProps {
   open: boolean;
@@ -31,9 +32,17 @@ export interface LoginOptionsModalProps {
   lineEnabled?: boolean;
 }
 
-// Apple 登入開關 —— 需 $99/yr Apple Developer Program 才能配 Services ID,
-// 尚未取得前先用 env flag 隱藏,避免使用者點了踩雷。
-// 未來要啟用:在 .env 設 NEXT_PUBLIC_APPLE_LOGIN_ENABLED=true
+// Apple 登入開關 —— 需 $99/yr Apple Developer Program 才能配 Services ID + .p8 key,
+// Supabase Auth Provider 也要先啟用 Apple,否則點下去會收到 400「unsupported provider」。
+// 尚未配齊前用 env flag 隱藏,避免使用者踩雷。
+// 啟用條件(全部完成才把 flag 設 true):
+//   1. Apple Developer Program 通過(年費 $99)
+//   2. Apple Developer Console:App ID 開 Sign in with Apple、建 Services ID、產 .p8 key
+//   3. Supabase Dashboard → Auth → Providers → Apple 啟用 + 填 Services ID / Team ID / Key
+//   4. 設定 NEXT_PUBLIC_APPLE_LOGIN_ENABLED=true 並 redeploy
+// 完成後此 flag 一打開,iOS App + Web 兩邊登入畫面會自動出現 Apple 按鈕。
+// App Store 第 4.8 條(有 Google/FB 等社群登入就必須提供 Sign in with Apple)
+// 在送審前必須滿足,但「現在還沒送審」所以暫時 iOS 只用 Email magic link 可以。
 const APPLE_LOGIN_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED === "true";
@@ -64,6 +73,12 @@ export default function LoginOptionsModal({
   // In-app browser 偵測 —— LINE/FB/IG/Messenger 等內嵌 WebView 會被 Google 擋 OAuth
   // (錯誤碼 disallowed_useragent / 403)。偵測到後顯示警示橫幅並提供脫困動線。
   const { isInApp, app: inAppName } = useIsInAppBrowser();
+
+  // iOS Capacitor 偵測 —— WKWebView 內 Google GSI 100% 被擋(同 in-app browser 機制),
+  // 因此 iOS App 內隱藏整個 Google 登入。
+  // 目前 Apple Developer 還沒通過,Apple 按鈕也不能用 → iOS 過渡期只剩 Email magic link。
+  // 等 Apple 配齊後(見 APPLE_LOGIN_ENABLED 註解)flag 一開,iOS 自動出現 Apple 按鈕。
+  const isIos = useIsIos();
 
   const [busy, setBusy] = useState<SocialProvider | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +134,8 @@ export default function LoginOptionsModal({
     if (!open) return;
     if (!GSI_CLIENT_ID_CONFIGURED) return;
     if (isInApp) return;
+    // iOS Capacitor 內 GSI 一定失敗,連嘗試都不要,以免渲染空白 div
+    if (isIos) return;
     if (!googleBtnRef.current) return;
     // 重覆 render 會累加按鈕,每次先清空
     googleBtnRef.current.innerHTML = "";
@@ -133,7 +150,7 @@ export default function LoginOptionsModal({
     }).catch((e) => {
       console.warn("[LoginOptionsModal] GSI render 失敗:", e);
     });
-  }, [open, isInApp]);
+  }, [open, isInApp, isIos]);
 
   if (!open || !mounted) return null;
 
@@ -294,33 +311,36 @@ export default function LoginOptionsModal({
             Apple / LINE:用 env flag 控制,預設隱藏。
             Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-          {GSI_CLIENT_ID_CONFIGURED && !isInApp ? (
-            // Google 官方 rendered button —— width 320 跟 modal 內容區等寬感受
-            <div
-              ref={googleBtnRef}
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                width: "100%",
-                minHeight: 40,
-              }}
-            />
-          ) : (
-            <ProviderButton
-              label={t(
-                "使用 Google 帳號登入",
-                "Continue with Google",
-                "Google アカウントでログイン",
-                "Google 계정으로 계속"
-              )}
-              iconBg="#fff"
-              icon={<GoogleIcon />}
-              onClick={() => handleSocial("google")}
-              busy={busy === "google"}
-              // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
-              disabled={busy !== null || isInApp}
-            />
-          )}
+          {/* iOS Capacitor:Google 完全隱藏(GSI 在 WKWebView 必失敗,且 App Store 4.8 要求不可只有 Google);
+              其他環境:GSI + fallback OAuth 維持原本邏輯 */}
+          {!isIos &&
+            (GSI_CLIENT_ID_CONFIGURED && !isInApp ? (
+              // Google 官方 rendered button —— width 320 跟 modal 內容區等寬感受
+              <div
+                ref={googleBtnRef}
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  minHeight: 40,
+                }}
+              />
+            ) : (
+              <ProviderButton
+                label={t(
+                  "使用 Google 帳號登入",
+                  "Continue with Google",
+                  "Google アカウントでログイン",
+                  "Google 계정으로 계속"
+                )}
+                iconBg="#fff"
+                icon={<GoogleIcon />}
+                onClick={() => handleSocial("google")}
+                busy={busy === "google"}
+                // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
+                disabled={busy !== null || isInApp}
+              />
+            ))}
           {APPLE_LOGIN_ENABLED && (
             <ProviderButton
               label={t(

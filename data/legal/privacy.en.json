@@ -1,6 +1,6 @@
 {
   "title": "Privacy Policy",
-  "lastUpdated": "Last updated: April 21, 2026",
+  "lastUpdated": "Last updated: June 4, 2026",
   "sections": [
     {
       "blocks": [
@@ -16,7 +16,7 @@
         {
           "type": "list",
           "content": [
-            "**Account data**: When you sign in with Google OAuth, we receive your email address, display name, and avatar URL. We do not access your contacts, Drive, or other Google account data.",
+            "**Account data**: Depending on your chosen sign-in method, we collect the following: (1) Google OAuth — your email address, display name, and avatar URL. We do not access your contacts, Drive, or other Google account data. (2) Apple Sign In — your email address (if you choose to hide your email, you'll get an Apple-provided relay address) and display name. (3) Email magic link — only the email address you provide.",
             "**Divination content**: Questions you submit, chosen categories, hexagrams or tarot cards drawn, AI-generated readings, follow-up threads, and chat messages.",
             "**Credits & subscription**: Credit balance, consumption records, subscription plan and expiration date.",
             "**Technical data**: Browser type, IP address, timestamps, and error logs. Used only for debugging and abuse prevention; never disclosed externally."
@@ -65,7 +65,7 @@
         {
           "type": "list",
           "content": [
-            "**Authentication providers**: You can sign in via Google OAuth or Facebook Login. We receive only email, display name, and avatar. We do not access your contacts, Drive, friend list, or any other social account data.",
+            "**Authentication providers**: You can sign in via Google OAuth, Apple Sign In, or Email magic link. We receive only the necessary email, display name, and (where applicable) avatar. We do not access your contacts, Drive, friend list, or any other social account data. Within the iOS app, only Apple Sign In and Email magic link are offered.",
             "**AI service providers**: Your question, hexagram/cards, and follow-up chat are forwarded to a third-party AI service for generation. Email, real name, and IP address are not included.",
             "**Cloud infrastructure providers**: Database hosting and website hosting for your account and divination data."
           ]
@@ -106,7 +106,7 @@
           "type": "list",
           "content": [
             "Access and obtain a copy (see the History page)",
-            "Request correction (Google profile data via your Google account)",
+            "Request correction (Google / Apple profile data via the respective service)",
             "Request deletion or stop processing (see \"Account Deletion\" below)",
             "Withdraw consent (equivalent to account deletion)"
           ]
