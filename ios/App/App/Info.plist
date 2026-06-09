@@ -47,5 +47,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- 原生 Google 登入(@capgo/capacitor-social-login)的回呼 URL scheme。
+	     值 = Google iOS OAuth client 的「反轉 client ID」。 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.437841841993-t93kf8ab5dakc97mouoeha0jte7c6m82</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

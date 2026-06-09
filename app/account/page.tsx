@@ -869,6 +869,28 @@ export default function AccountPage() {
               "→ 로그인 방법 연동"
             )}
           </Link>
+          {/* 合併其他帳號入口 —— 會把既有帳號的訂閱與點數同步過來。
+              因為動到點數/訂閱且需先測試,用 env flag 控制顯示,預設隱藏;
+              測試通過後設 NEXT_PUBLIC_ACCOUNT_MERGE_ENABLED=true 才對使用者出現。 */}
+          {process.env.NEXT_PUBLIC_ACCOUNT_MERGE_ENABLED === "true" && (
+            <Link
+              href="/account/merge"
+              style={{
+                display: "block",
+                padding: "10px 12px",
+                color: "rgba(192,192,208,0.9)",
+                fontSize: 13,
+                textDecoration: "none",
+              }}
+            >
+              {t(
+                "→ 連結其他帳號(將同步訂閱與點數)",
+                "→ Merge another account (syncs subscription & credits)",
+                "→ 他のアカウントを統合(サブスク・ポイントを引き継ぎ)",
+                "→ 다른 계정 통합(구독·포인트 동기화)"
+              )}
+            </Link>
+          )}
           <Link
             href="/"
             style={{

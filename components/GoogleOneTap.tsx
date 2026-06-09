@@ -5,6 +5,8 @@ import {
   GSI_CLIENT_ID_CONFIGURED,
   promptOneTap,
 } from "@/lib/auth/googleIdentity";
+import { isIos } from "@/lib/billing/platform";
+import { detectInAppBrowserSync } from "@/lib/env/useIsInAppBrowser";
 
 /**
  * Google One Tap — 進站後,if 未登入就自動跳「以 xxx 身份繼續」卡片。
@@ -33,6 +35,13 @@ export default function GoogleOneTap() {
       (window as typeof window & {
         requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       }).requestIdleCallback;
+
+    // iOS Capacitor(WKWebView)與 LINE/FB/IG 等 in-app 瀏覽器:Google GSI / One Tap
+    // 會被擋或失敗,且這些環境刻意「只用 Apple + Email」(與 LoginOptionsModal 一致)。
+    // → 完全不自動彈 One Tap,避免使用者被強迫跳 Google 登入。
+    //   Google 改為使用者「自己想連結才連結」(/account/linked)的選項。
+    if (isIos()) return;
+    if (detectInAppBrowserSync().isInApp) return;
 
     const start = () => {
       if (cancelled) return;

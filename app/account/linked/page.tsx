@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/i18n/LanguageContext";
 import Header from "@/components/Header";
 import { linkIdentity, unlinkIdentity, type SocialProvider } from "@/lib/auth/signIn";
+import { useIsIos } from "@/lib/hooks/useIsNativeWrapper";
 
 interface Identity {
   identity_id: string;
@@ -67,6 +68,10 @@ const PROVIDERS = ALL_PROVIDERS.filter((p) => {
 export default function LinkedAccountsPage() {
   const { t } = useLanguage();
   const router = useRouter();
+
+  // iOS Capacitor(WKWebView)會擋 Google / Facebook 的網頁版 OAuth,
+  // 所以這兩個在 iOS App 內無法綁定(同登入頁的限制)。改顯示提示,不給空按。
+  const isIos = useIsIos();
 
   const [isLoading, setIsLoading] = useState(true);
   const [identities, setIdentities] = useState<Identity[]>([]);
@@ -378,6 +383,25 @@ export default function LinkedAccountsPage() {
                     >
                       {isBusy ? "…" : t("移除", "Unlink", "削除", "연동 해제")}
                     </button>
+                  ) : isIos && (p.key === "google" || p.key === "facebook") ? (
+                    // iOS App 內 WKWebView 擋 Google/FB 網頁登入,無法綁定 → 提示改用網頁版
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "rgba(192,192,208,0.5)",
+                        textAlign: "right",
+                        maxWidth: 130,
+                        lineHeight: 1.4,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {t(
+                        "請用瀏覽器開啟網站綁定",
+                        "Link via website in a browser",
+                        "ブラウザでサイトを開いて連携",
+                        "브라우저에서 사이트를 열어 연동"
+                      )}
+                    </span>
                   ) : (
                     <button
                       type="button"

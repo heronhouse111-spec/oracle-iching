@@ -17,6 +17,7 @@ import {
   GSI_CLIENT_ID_CONFIGURED,
   renderGoogleButton,
 } from "@/lib/auth/googleIdentity";
+import { signInWithNativeGoogle } from "@/lib/auth/nativeGoogle";
 import { useIsIos } from "@/lib/hooks/useIsNativeWrapper";
 
 export interface LoginOptionsModalProps {
@@ -169,6 +170,20 @@ export default function LoginOptionsModal({
     }
   };
 
+  // iOS Capacitor:Google 走原生 SDK(WKWebView 擋網頁 GSI)。
+  // 成功後 reload 讓 Header / 點數等 auth-aware 元件吃到新 session。
+  const handleNativeGoogle = async () => {
+    setError(null);
+    setBusy("google");
+    try {
+      await signInWithNativeGoogle();
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -314,36 +329,51 @@ export default function LoginOptionsModal({
             Apple / LINE:用 env flag 控制,預設隱藏。
             Facebook 刻意不放登入頁 —— 避免孤兒帳號,改從 /account/linked 追加綁定。 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-          {/* iOS Capacitor:Google 完全隱藏(GSI 在 WKWebView 必失敗,且 App Store 4.8 要求不可只有 Google);
-              其他環境:GSI + fallback OAuth 維持原本邏輯 */}
-          {!isIos &&
-            (GSI_CLIENT_ID_CONFIGURED && !isInApp ? (
-              // Google 官方 rendered button —— width 320 跟 modal 內容區等寬感受
-              <div
-                ref={googleBtnRef}
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  width: "100%",
-                  minHeight: 40,
-                }}
-              />
-            ) : (
-              <ProviderButton
-                label={t(
-                  "使用 Google 帳號登入",
-                  "Continue with Google",
-                  "Google アカウントでログイン",
-                  "Google 계정으로 계속"
-                )}
-                iconBg="#fff"
-                icon={<GoogleIcon />}
-                onClick={() => handleSocial("google")}
-                busy={busy === "google"}
-                // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
-                disabled={busy !== null || isInApp}
-              />
-            ))}
+          {/* Google:
+              - iOS Capacitor:WKWebView 擋網頁 GSI,改走「原生」Google(@capgo/capacitor-social-login)
+                → handleNativeGoogle → signInWithIdToken。
+              - 其他環境:GSI rendered button;沒設 Client ID / in-app browser 時 fallback 回 OAuth 按鈕。 */}
+          {isIos ? (
+            <ProviderButton
+              label={t(
+                "使用 Google 帳號登入",
+                "Continue with Google",
+                "Google アカウントでログイン",
+                "Google 계정으로 계속"
+              )}
+              iconBg="#fff"
+              icon={<GoogleIcon />}
+              onClick={handleNativeGoogle}
+              busy={busy === "google"}
+              disabled={busy !== null}
+            />
+          ) : GSI_CLIENT_ID_CONFIGURED && !isInApp ? (
+            // Google 官方 rendered button —— width 320 跟 modal 內容區等寬感受
+            <div
+              ref={googleBtnRef}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                width: "100%",
+                minHeight: 40,
+              }}
+            />
+          ) : (
+            <ProviderButton
+              label={t(
+                "使用 Google 帳號登入",
+                "Continue with Google",
+                "Google アカウントでログイン",
+                "Google 계정으로 계속"
+              )}
+              iconBg="#fff"
+              icon={<GoogleIcon />}
+              onClick={() => handleSocial("google")}
+              busy={busy === "google"}
+              // in-app browser 下 Google 一定會撞 disallowed_useragent,直接 disabled
+              disabled={busy !== null || isInApp}
+            />
+          )}
           {APPLE_LOGIN_ENABLED && (
             <ProviderButton
               label={t(
