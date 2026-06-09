@@ -41,9 +41,11 @@ const LINE_LOGIN_ENABLED =
   typeof process !== "undefined" &&
   process.env.NEXT_PUBLIC_LINE_LOGIN_ENABLED === "true";
 
+// Apple 登入已於 2026-06-09 上線,預設開啟(與 LoginOptionsModal 一致)。
+// 僅在環境變數明確設成 "false" 時關閉。
 const APPLE_LOGIN_ENABLED =
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED === "true";
+  typeof process === "undefined" ||
+  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED !== "false";
 
 // 支援的登入方式清單(對外顯示順序)
 // Apple / LINE 需 env flag 開啟,未開啟時整列不 render(避免使用者看到無法用的選項)。
