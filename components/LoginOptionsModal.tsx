@@ -32,20 +32,23 @@ export interface LoginOptionsModalProps {
   lineEnabled?: boolean;
 }
 
-// Apple 登入開關 —— 需 $99/yr Apple Developer Program 才能配 Services ID + .p8 key,
-// Supabase Auth Provider 也要先啟用 Apple,否則點下去會收到 400「unsupported provider」。
-// 尚未配齊前用 env flag 隱藏,避免使用者踩雷。
-// 啟用條件(全部完成才把 flag 設 true):
-//   1. Apple Developer Program 通過(年費 $99)
-//   2. Apple Developer Console:App ID 開 Sign in with Apple、建 Services ID、產 .p8 key
-//   3. Supabase Dashboard → Auth → Providers → Apple 啟用 + 填 Services ID / Team ID / Key
-//   4. 設定 NEXT_PUBLIC_APPLE_LOGIN_ENABLED=true 並 redeploy
-// 完成後此 flag 一打開,iOS App + Web 兩邊登入畫面會自動出現 Apple 按鈕。
-// App Store 第 4.8 條(有 Google/FB 等社群登入就必須提供 Sign in with Apple)
-// 在送審前必須滿足,但「現在還沒送審」所以暫時 iOS 只用 Email magic link 可以。
+// Apple 登入開關 —— 後台已配置完成(2026-06-09),預設開啟。
+// 配置內容(供日後維護參考):
+//   1. Apple Developer Program 已通過(Team ID: D82AH8CVF4)
+//   2. App ID me.heronhouse.tarogram 已開 Sign in with Apple
+//   3. Services ID(client_id): me.heronhouse.tarogram.web
+//      Return URL: https://xpijubxjokrpysrpjrct.supabase.co/auth/v1/callback
+//   4. Sign in with Apple Key(Key ID: RTX3JT326R,.p8 私鑰另存安全處)
+//   5. Supabase → Auth → Providers → Apple 已啟用,填入 Services ID + client secret(JWT)
+//
+// ⚠️ Supabase 的 Apple client secret(JWT)每 6 個月過期,目前這份效期到 2026-12-06,
+//    到期前要用同一把 .p8 重簽一段並更新到 Supabase,否則網頁版 Apple 登入會失效。
+//
+// 預設開啟;若要緊急停用,設環境變數 NEXT_PUBLIC_APPLE_LOGIN_ENABLED=false 即可。
+// App Store 第 4.8 條:有 Google/FB 等社群登入就必須提供 Sign in with Apple —— 現已滿足。
 const APPLE_LOGIN_ENABLED =
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED === "true";
+  typeof process === "undefined" ||
+  process.env.NEXT_PUBLIC_APPLE_LOGIN_ENABLED !== "false";
 
 /**
  * 統一的登入 modal —— Google + Email magic link 為主,Apple / LINE 視開關顯示。
