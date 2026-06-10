@@ -18,6 +18,7 @@ import {
   renderGoogleButton,
 } from "@/lib/auth/googleIdentity";
 import { signInWithNativeGoogle } from "@/lib/auth/nativeGoogle";
+import { signInWithNativeApple } from "@/lib/auth/nativeApple";
 import { useIsIos } from "@/lib/hooks/useIsNativeWrapper";
 
 export interface LoginOptionsModalProps {
@@ -177,6 +178,21 @@ export default function LoginOptionsModal({
     setBusy("google");
     try {
       await signInWithNativeGoogle();
+      if (typeof window !== "undefined") window.location.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
+  // iOS Capacitor:Apple 走原生 ASAuthorization(WKWebView 跑網頁版 OAuth 會開外部
+  // Safari,登入完停在網頁、不跳回 App)。拿 idToken 後 signInWithIdToken 換 session,
+  // 全程留在 App —— 跟 handleNativeGoogle 同一套。成功後 reload 讓 auth-aware 元件吃到新 session。
+  const handleNativeApple = async () => {
+    setError(null);
+    setBusy("apple");
+    try {
+      await signInWithNativeApple();
       if (typeof window !== "undefined") window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -387,7 +403,8 @@ export default function LoginOptionsModal({
               labelColor="#fff"
               bg="#000"
               border="1px solid #000"
-              onClick={() => handleSocial("apple")}
+              // iOS Capacitor 走原生 Apple;其他環境(網頁)維持 Supabase 網頁版 OAuth。
+              onClick={isIos ? handleNativeApple : () => handleSocial("apple")}
               busy={busy === "apple"}
               disabled={busy !== null || isInApp}
             />
